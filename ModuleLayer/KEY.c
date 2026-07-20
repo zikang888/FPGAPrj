@@ -14,7 +14,7 @@
 #define DOUBLECLICK_MS  300
 
 /* 菜单项个数 */
-#define MENU_ITEM_CNT   7
+#define MENU_ITEM_CNT   8
 
 /* 菜单项名称 (英文缩写, 每行最多16字符) */
 static const char * const MENU_NAMES[MENU_ITEM_CNT] = {
@@ -25,6 +25,7 @@ static const char * const MENU_NAMES[MENU_ITEM_CNT] = {
     "Phase",    /* 多径信号初相位差 */
     "Attn",     /* 多径信号幅度衰减 */
     "Type",     /* 信号类型 */
+    "Final",    /* 最终输出选择: SD/SM/Sout */
 };
 
 /* 参数范围 */
@@ -66,6 +67,7 @@ MenuState g_menu = {
         .phase       = 0,       /* index 0 -> 0 deg */
         .attenuation = 0,       /* index 0 -> 0 dB */
         .signal_type = 0,       /* 默认 CW */
+        .final_out   = 0,       /* 默认 SD */
     }
 };
 
@@ -130,6 +132,14 @@ static void param_to_str(uint8_t index, char *buf)
             else
                 { buf[0]='C'; buf[1]='W'; buf[2]='\0'; }
             break;
+        case 7: /* 最终输出选择 */
+            if (g_menu.params.final_out == 0)
+                { buf[0]='S'; buf[1]='D'; buf[2]='\0'; }
+            else if (g_menu.params.final_out == 1)
+                { buf[0]='S'; buf[1]='M'; buf[2]='\0'; }
+            else
+                { buf[0]='S'; buf[1]='O'; buf[2]='\0'; }
+            break;
         default:
             buf[0] = '\0';
             break;
@@ -175,6 +185,11 @@ static void param_adjust(uint8_t index, int8_t direction)
             val = (int16_t)g_menu.params.signal_type + direction;
             if (val >= 0 && val <= 1)
                 g_menu.params.signal_type = (uint8_t)val;
+            break;
+        case 7: /* 最终输出选择: 0=SD, 1=SM, 2=Sout */
+            val = (int16_t)g_menu.params.final_out + direction;
+            if (val >= 0 && val <= 2)
+                g_menu.params.final_out = (uint8_t)val;
             break;
         default:
             break;
@@ -433,6 +448,7 @@ void Menu_DisplayUpdate(void)
                 case 4: range_str = "Range:0-180deg"; break;
                 case 5: range_str = "Range:0-20dB";   break;
                 case 6: range_str = "CW/AM";          break;
+                case 7: range_str = "SD/SM/Sout";    break;
             }
             for (n = 0; n < 16; n++) line_buf[n] = ' ';
             for (n = 0; range_str[n] != '\0' && n < 16; n++)

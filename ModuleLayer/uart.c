@@ -5,7 +5,7 @@
 
 /*
  * UART 数据帧格式 (发送给 ZYNQ):
- *   $F035A0500M50D110P000L00TCW*<CRC2>\r\n
+ *   $F035A0500M50D110P000L00TCWOSD*<CRC2>\r\n
  *
  * 字段说明:
  *   F   — 载波频率 (30~40 MHz), 3位数字, 如 F035
@@ -15,6 +15,7 @@
  *   P   — 多径信号初相位差 (0~180 deg), 3位数字, 如 P000
  *   L   — 多径信号幅度衰减 (0~20 dB), 2位数字, 如 L00
  *   T   — 信号类型, CW 或 AM, 如 TCW
+ *   O   — 最终输出选择, SD/SM/SO (SO=Sout), 如 OSD
  *   CRC — CRC8 校验值, 2个十六进制字符
  */
 
@@ -113,6 +114,24 @@ void UART_SendParams(void)
         tx_buf[idx++] = 'W';
     }
 
+    /* --- O: 最终输出选择 (3字符: OSD/OSM/OSO) --- */
+    tx_buf[idx++] = 'O';
+    if (g_menu.params.final_out == 0)
+    {
+        tx_buf[idx++] = 'S';
+        tx_buf[idx++] = 'D';
+    }
+    else if (g_menu.params.final_out == 1)
+    {
+        tx_buf[idx++] = 'S';
+        tx_buf[idx++] = 'M';
+    }
+    else
+    {
+        tx_buf[idx++] = 'S';
+        tx_buf[idx++] = 'O';
+    }
+
     /* --- CRC: 对 $ 之后到 * 之前的数据计算 CRC8 --- */
     crc_len = idx - 1;  /* 跳过 '$' */
     for (i = 0; i < crc_len; i++)
@@ -139,7 +158,7 @@ void UART_SendParams(void)
 /* ========== FreeRTOS __weak 覆盖函数: uart_work ========== */
 void uart_work(void const * argument)
 {
-    uint8_t last_params[7] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    uint8_t last_params[8] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
     for (;;)
     {
@@ -147,19 +166,20 @@ void uart_work(void const * argument)
         if (g_menu.params_changed)
         {
             /* 确认确有变化, 避免重复发送 */
-            uint8_t curr[7] = {
+            uint8_t curr[8] = {
                 g_menu.params.freq,
                 (uint8_t)(g_menu.params.amplitude >> 8),
                 (uint8_t)(g_menu.params.amplitude & 0xFF),
                 g_menu.params.modulation,
                 g_menu.params.delay,
                 g_menu.params.phase,
-                g_menu.params.attenuation
+                g_menu.params.attenuation,
+                g_menu.params.final_out
             };
 
-            if (memcmp(last_params, curr, 7) != 0)
+            if (memcmp(last_params, curr, 8) != 0)
             {
-                memcpy(last_params, curr, 7);
+                memcpy(last_params, curr, 8);
                 UART_SendParams();
             }
             g_menu.params_changed = 0;
