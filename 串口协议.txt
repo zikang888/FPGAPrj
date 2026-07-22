@@ -1,0 +1,48 @@
+## UART 串口数据格式 (v2.0 — 10字节帧)
+通信参数 : 115200 bps, 8N1 (8数据位, 无校验, 1停止位)
+ 发送周期 : 100ms (每100ms发一帧)
+ 引脚 : AA12 (P7扩展口 B13_L7_P)
+
+### 帧结构
+字节 名称 有效位 含义 0 SYNC 0xAA 帧头同步字 1 fc_index [3:0] 载波频率索引 2 am_mode [0] AM/CW模式 3 mod_index [2:0] AM调制度索引 4 amp_index [3:0] SD幅度索引 5 dac_mode [1:0] DAC输出模式 6 delay_index [2:0] 多径延时索引 7 atten_index [3:0] 多径衰减索引 8 phase_index [2:0] 多径初相索引 9 XOR 8bit Byte[0]^Byte[1]^…^Byte[8]
+
+### Byte[1] fc_index — 载波频率 (Page A, sw_sel=00)
+值 频率 值 频率 0 30 MHz 6 36 MHz 1 31 MHz 7 37 MHz 2 32 MHz 8 38 MHz 3 33 MHz 9 39 MHz 4 34 MHz 10 40 MHz 5 35 MHz (默认)
+
+### Byte[2] am_mode — 调制模式 (Page A, sw_sel=01)
+值 模式 0 CW (纯载波) 1 AM (调幅, 默认)
+
+### Byte[3] mod_index — AM调制度 (Page A, sw_sel=10)
+值 调制度 值 调制度 0 30% 4 70% 1 40% 5 80% 2 50% (默认) 6 90% 3 60%
+
+### Byte[4] amp_index — SD直达幅度 (Page A, sw_sel=11)
+值 幅度 值 幅度 0 0.1 5 0.6 1 0.2 6 0.7 2 0.3 7 0.8 3 0.4 8 0.9 4 0.5 9 1.0 (默认)
+
+### Byte[5] dac_mode — DAC输出模式 (Page B, sw_sel=01)
+值 模式 说明 0 SD (默认) Direct直达信号 1 SM Sum合路(直达+多径) 2 SOut 仅多径输出
+
+### Byte[6] delay_index — 多径延时 (Page B, sw_sel=00)
+值 延时 周期数(@250MHz) 0 50ns (默认) 13 1 80ns 20 2 110ns 28 3 140ns 35 4 170ns 43 5 200ns 50
+
+### Byte[7] atten_index — 多径衰减 (Page B, sw_sel=10)
+值 衰减 值 衰减 0 0dB (默认) 6 12dB 1 2dB 7 14dB 2 4dB 8 16dB 3 6dB 9 18dB 4 8dB 10 20dB 5 10dB
+
+### Byte[8] phase_index — 多径初相 (Page B, sw_sel=11)
+值 相位 值 相位 0 0° (默认) 4 120° 1 30° 5 150° 2 60° 6 180° 3 90°
+
+### 示例帧
+默认状态载波35MHz + AM + 50%调制 + 幅度1.0 + SD + 50ns + 0dB + 0°:
+
+```
+AA  05  01  02  09  00  00  00  00  A5
+│   │   │   │   │   │   │   │   │   └─ XOR校验
+│   │   │   │   │   │   │   │   └─── 初相 0°
+│   │   │   │   │   │   │   └───── 衰减 0dB
+│   │   │   │   │   │   └─────── 延时 50ns
+│   │   │   │   │   └───────── DAC模式 SD
+│   │   │   │   └─────────── 幅度 1.0
+│   │   │   └───────────── 调制度 50%
+│   │   └─────────────── AM模式
+│   └───────────────── 载波 35MHz
+└─────────────────── 帧头
+```
