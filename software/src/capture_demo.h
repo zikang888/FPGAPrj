@@ -12,9 +12,11 @@ typedef struct {
     u32 first_index;
     u32 dropped_count;
     u32 transaction_id[CAPTURE_DISPLAY_EVENTS];
+    u32 event_word[CAPTURE_DISPLAY_EVENTS][4];
     u8 shown;
 } CaptureDemoSnapshot;
 
 int capture_demo_run(CaptureDemoSnapshot *snapshot);
+int capture_demo_read_window(CaptureDemoSnapshot *snapshot, u32 first_index);
 
 #endif

@@ -121,6 +121,27 @@ int main(void)
         } else if (action == PLATFORM_UI_ACTION_EVENTS) {
             page = PLATFORM_UI_PAGE_EVENTS;
             xil_printf("UI PAGE EVENTS\r\n");
+        } else if (action == PLATFORM_UI_ACTION_EVENTS_PREVIOUS) {
+            u32 first = capture_snapshot.first_index;
+            first = first > 6U ? first - 6U : 0U;
+            if (capture_ok != 0U &&
+                capture_demo_read_window(&capture_snapshot, first) ==
+                XST_SUCCESS) {
+                xil_printf("UI EVENTS VIEW: %lu-%lu\r\n",
+                           (unsigned long)capture_snapshot.first_index,
+                           (unsigned long)(capture_snapshot.first_index +
+                                           capture_snapshot.shown - 1U));
+            }
+        } else if (action == PLATFORM_UI_ACTION_EVENTS_NEXT) {
+            u32 first = capture_snapshot.first_index + 6U;
+            if (capture_ok != 0U &&
+                capture_demo_read_window(&capture_snapshot, first) ==
+                XST_SUCCESS) {
+                xil_printf("UI EVENTS VIEW: %lu-%lu\r\n",
+                           (unsigned long)capture_snapshot.first_index,
+                           (unsigned long)(capture_snapshot.first_index +
+                                           capture_snapshot.shown - 1U));
+            }
         } else if (action == PLATFORM_UI_ACTION_LED_TOGGLE) {
             led_on ^= 1U;
             Xil_Out32(REG_LED_CTRL, (u32)led_on);

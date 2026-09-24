@@ -27,6 +27,33 @@ static u32 snapshot_word(u32 event_index, u32 word_index)
     return Xil_In32(SNAPSHOT_BASE + event_index * 16U + word_index * 4U);
 }
 
+int capture_demo_read_window(CaptureDemoSnapshot *snapshot, u32 first_index)
+{
+    u32 index;
+    u32 shown;
+    u32 maximum_first;
+
+    if (snapshot == 0 || snapshot->count == 0U) return XST_FAILURE;
+
+    maximum_first = snapshot->count > CAPTURE_DISPLAY_EVENTS ?
+                    snapshot->count - CAPTURE_DISPLAY_EVENTS : 0U;
+    if (first_index > maximum_first) first_index = maximum_first;
+    shown = snapshot->count - first_index;
+    if (shown > CAPTURE_DISPLAY_EVENTS) shown = CAPTURE_DISPLAY_EVENTS;
+
+    snapshot->first_index = first_index;
+    snapshot->shown = (u8)shown;
+    for (index = 0U; index < shown; ++index) {
+        snapshot->event_word[index][0] = snapshot_word(first_index + index, 0U);
+        snapshot->event_word[index][1] = snapshot_word(first_index + index, 1U);
+        snapshot->event_word[index][2] = snapshot_word(first_index + index, 2U);
+        snapshot->event_word[index][3] = snapshot_word(first_index + index, 3U);
+        snapshot->transaction_id[index] =
+            snapshot->event_word[index][0] & 0x00FFFFFFU;
+    }
+    return XST_SUCCESS;
+}
+
 int capture_demo_run(CaptureDemoSnapshot *snapshot)
 {
     u32 status;
@@ -83,12 +110,10 @@ int capture_demo_run(CaptureDemoSnapshot *snapshot)
     }
     shown = snapshot->count - first;
     if (shown > CAPTURE_DISPLAY_EVENTS) shown = CAPTURE_DISPLAY_EVENTS;
-    snapshot->first_index = first;
-    snapshot->shown = (u8)shown;
-
-    for (index = 0U; index < shown; ++index) {
-        snapshot->transaction_id[index] =
-            snapshot_word(first + index, 0U) & 0x00FFFFFFU;
+    if (capture_demo_read_window(snapshot, first) != XST_SUCCESS) {
+        xil_printf("CAPTURE WINDOW ERROR: first=%lu shown=%lu\r\n",
+                   (unsigned long)first, (unsigned long)shown);
+        return XST_FAILURE;
     }
 
     xil_printf("CAPTURE READY: id=%lu count=%lu trigger=%lu dropped=%lu\r\n",
@@ -96,6 +121,8 @@ int capture_demo_run(CaptureDemoSnapshot *snapshot)
                (unsigned long)snapshot->count,
                (unsigned long)snapshot->trigger_index,
                (unsigned long)snapshot->dropped_count);
-    Xil_Out32(REG_CAPTURE_CTRL, CAPTURE_CTRL_ACK);
+    /* Keep READY asserted so the frozen AXI snapshot remains readable while
+     * the EVENTS page scrolls. The next capture_demo_run() acknowledges the
+     * previous snapshot before issuing ARM. */
     return XST_SUCCESS;
 }
