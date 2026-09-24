@@ -49,9 +49,22 @@ catch {configapp -app platform_app compiler-optimization {Optimize most (-O3)}}
 
 # SDK 2018.3's headless application builder expects both the GNU tools and
 # Xilinx.spec to be directly available from the generated Debug directory.
-set sdk_root {D:/Xilinx/SDK/2018.3}
+if {[info exists ::env(XILINX_SDK)] &&
+    [file isdirectory $::env(XILINX_SDK)]} {
+    set sdk_root [file normalize $::env(XILINX_SDK)]
+} elseif {[info exists ::env(RDI_APPROOT)] &&
+          [file isdirectory $::env(RDI_APPROOT)]} {
+    set sdk_root [file normalize $::env(RDI_APPROOT)]
+} else {
+    # Compatibility fallbacks for the original development machines.
+    set sdk_root {D:/Xilinx/SDK/2018.3}
+    if {![file isdirectory $sdk_root]} {
+        set sdk_root {D:/Vivado2018.3/SDK/2018.3}
+    }
+}
 if {![file isdirectory $sdk_root]} {
-    set sdk_root {D:/Vivado2018.3/SDK/2018.3}
+    puts "ERROR: Xilinx SDK root not found; run this script with xsct.bat"
+    exit 1
 }
 set gcc_bin [file join $sdk_root gnu aarch32 nt gcc-arm-none-eabi bin]
 set make_bin [file join $sdk_root gnuwin bin]
