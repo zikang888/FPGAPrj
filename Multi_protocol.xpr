@@ -93,23 +93,14 @@
           <Attr Name="UsedIn" Val="implementation"/>
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
-        <CompFileExtendedInfo CompFileName="multi_protocol_bd.bd" FileRelPathName="ip/multi_protocol_bd_multi_protocol_core_0_0/multi_protocol_bd_multi_protocol_core_0_0.xci">
-          <Proxy FileSetName="multi_protocol_bd_multi_protocol_core_0_0"/>
+        <CompFileExtendedInfo CompFileName="multi_protocol_bd.bd" FileRelPathName="ip/multi_protocol_bd_axi_protocol_converter_0_0/multi_protocol_bd_axi_protocol_converter_0_0.xci">
+          <Proxy FileSetName="multi_protocol_bd_axi_protocol_converter_0_0"/>
         </CompFileExtendedInfo>
         <CompFileExtendedInfo CompFileName="multi_protocol_bd.bd" FileRelPathName="ip/multi_protocol_bd_axi_vdma_0_0/multi_protocol_bd_axi_vdma_0_0.xci">
           <Proxy FileSetName="multi_protocol_bd_axi_vdma_0_0"/>
         </CompFileExtendedInfo>
-        <CompFileExtendedInfo CompFileName="multi_protocol_bd.bd" FileRelPathName="ip/multi_protocol_bd_v_tc_0_0/multi_protocol_bd_v_tc_0_0.xci">
-          <Proxy FileSetName="multi_protocol_bd_v_tc_0_0"/>
-        </CompFileExtendedInfo>
-        <CompFileExtendedInfo CompFileName="multi_protocol_bd.bd" FileRelPathName="ip/multi_protocol_bd_v_axi4s_vid_out_0_0/multi_protocol_bd_v_axi4s_vid_out_0_0.xci">
-          <Proxy FileSetName="multi_protocol_bd_v_axi4s_vid_out_0_0"/>
-        </CompFileExtendedInfo>
-        <CompFileExtendedInfo CompFileName="multi_protocol_bd.bd" FileRelPathName="ip/multi_protocol_bd_rgb888torgb565_0_0/multi_protocol_bd_rgb888torgb565_0_0.xci">
-          <Proxy FileSetName="multi_protocol_bd_rgb888torgb565_0_0"/>
-        </CompFileExtendedInfo>
-        <CompFileExtendedInfo CompFileName="multi_protocol_bd.bd" FileRelPathName="ip/multi_protocol_bd_axi_protocol_converter_0_0/multi_protocol_bd_axi_protocol_converter_0_0.xci">
-          <Proxy FileSetName="multi_protocol_bd_axi_protocol_converter_0_0"/>
+        <CompFileExtendedInfo CompFileName="multi_protocol_bd.bd" FileRelPathName="ip/multi_protocol_bd_multi_protocol_core_0_0/multi_protocol_bd_multi_protocol_core_0_0.xci">
+          <Proxy FileSetName="multi_protocol_bd_multi_protocol_core_0_0"/>
         </CompFileExtendedInfo>
         <CompFileExtendedInfo CompFileName="multi_protocol_bd.bd" FileRelPathName="ip/multi_protocol_bd_proc_sys_reset_0_0/multi_protocol_bd_proc_sys_reset_0_0.xci">
           <Proxy FileSetName="multi_protocol_bd_proc_sys_reset_0_0"/>
@@ -117,11 +108,20 @@
         <CompFileExtendedInfo CompFileName="multi_protocol_bd.bd" FileRelPathName="ip/multi_protocol_bd_processing_system7_0_0/multi_protocol_bd_processing_system7_0_0.xci">
           <Proxy FileSetName="multi_protocol_bd_processing_system7_0_0"/>
         </CompFileExtendedInfo>
+        <CompFileExtendedInfo CompFileName="multi_protocol_bd.bd" FileRelPathName="ip/multi_protocol_bd_xbar_0/multi_protocol_bd_xbar_0.xci">
+          <Proxy FileSetName="multi_protocol_bd_xbar_0"/>
+        </CompFileExtendedInfo>
         <CompFileExtendedInfo CompFileName="multi_protocol_bd.bd" FileRelPathName="ip/multi_protocol_bd_axi_smc_0_0/multi_protocol_bd_axi_smc_0_0.xci">
           <Proxy FileSetName="multi_protocol_bd_axi_smc_0_0"/>
         </CompFileExtendedInfo>
-        <CompFileExtendedInfo CompFileName="multi_protocol_bd.bd" FileRelPathName="ip/multi_protocol_bd_xbar_0/multi_protocol_bd_xbar_0.xci">
-          <Proxy FileSetName="multi_protocol_bd_xbar_0"/>
+        <CompFileExtendedInfo CompFileName="multi_protocol_bd.bd" FileRelPathName="ip/multi_protocol_bd_v_tc_0_0/multi_protocol_bd_v_tc_0_0.xci">
+          <Proxy FileSetName="multi_protocol_bd_v_tc_0_0"/>
+        </CompFileExtendedInfo>
+        <CompFileExtendedInfo CompFileName="multi_protocol_bd.bd" FileRelPathName="ip/multi_protocol_bd_rgb888torgb565_0_0/multi_protocol_bd_rgb888torgb565_0_0.xci">
+          <Proxy FileSetName="multi_protocol_bd_rgb888torgb565_0_0"/>
+        </CompFileExtendedInfo>
+        <CompFileExtendedInfo CompFileName="multi_protocol_bd.bd" FileRelPathName="ip/multi_protocol_bd_v_axi4s_vid_out_0_0/multi_protocol_bd_v_axi4s_vid_out_0_0.xci">
+          <Proxy FileSetName="multi_protocol_bd_v_axi4s_vid_out_0_0"/>
         </CompFileExtendedInfo>
       </File>
       <File Path="$PSRCDIR/sources_1/bd/multi_protocol_bd/hdl/multi_protocol_bd_wrapper.v">

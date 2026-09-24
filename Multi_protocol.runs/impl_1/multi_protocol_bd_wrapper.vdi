@@ -2,8 +2,8 @@
 # Vivado v2018.3 (64-bit)
 # SW Build 2405991 on Thu Dec  6 23:38:27 MST 2018
 # IP Build 2404404 on Fri Dec  7 01:43:56 MST 2018
-# Start of session at: Thu Sep 24 17:14:12 2026
-# Process ID: 46732
+# Start of session at: Thu Sep 24 22:47:34 2026
+# Process ID: 24544
 # Current directory: D:/Vivado/Project/Multi_protocol/Multi_protocol.runs/impl_1
 # Command line: vivado.exe -log multi_protocol_bd_wrapper.vdi -applog -product Vivado -messageDb vivado.pb -mode batch -source multi_protocol_bd_wrapper.tcl -notrace
 # Log file: D:/Vivado/Project/Multi_protocol/Multi_protocol.runs/impl_1/multi_protocol_bd_wrapper.vdi
@@ -14,7 +14,7 @@ Command: open_checkpoint multi_protocol_bd_wrapper_routed.dcp
 
 Starting open_checkpoint Task
 
-Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.023 . Memory (MB): peak = 251.367 ; gain = 0.000
+Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.023 . Memory (MB): peak = 258.910 ; gain = 0.000
 INFO: [Netlist 29-17] Analyzing 391 Unisim elements for replacement
 INFO: [Netlist 29-28] Unisim Transformation completed in 0 CPU seconds
 INFO: [Project 1-479] Netlist was created with Vivado 2018.3
@@ -29,17 +29,17 @@ INFO: [Project 1-853] Binary constraint restore complete.
 Reading XDEF placement.
 Reading placer database...
 Reading XDEF routing.
-Read XDEF File: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.863 . Memory (MB): peak = 1277.844 ; gain = 3.680
+Read XDEF File: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.892 . Memory (MB): peak = 1278.344 ; gain = 3.973
 Restored from archive | CPU: 0.000000 secs | Memory: 0.000000 MB |
-Finished XDEF File Restore: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.863 . Memory (MB): peak = 1277.844 ; gain = 3.680
-Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.004 . Memory (MB): peak = 1277.859 ; gain = 0.000
+Finished XDEF File Restore: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.893 . Memory (MB): peak = 1278.344 ; gain = 3.973
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.003 . Memory (MB): peak = 1278.359 ; gain = 0.000
 INFO: [Project 1-111] Unisim Transformation Summary:
   A total of 52 instances were transformed.
   IOBUF => IOBUF (IBUF, OBUFT): 1 instances
   RAM32M => RAM32M (RAMD32, RAMD32, RAMD32, RAMD32, RAMD32, RAMD32, RAMS32, RAMS32): 51 instances
 
 INFO: [Project 1-604] Checkpoint was created with Vivado v2018.3 (64-bit) build 2405991
-open_checkpoint: Time (s): cpu = 00:00:03 ; elapsed = 00:00:15 . Memory (MB): peak = 1277.859 ; gain = 1026.492
+open_checkpoint: Time (s): cpu = 00:00:04 ; elapsed = 00:00:16 . Memory (MB): peak = 1278.359 ; gain = 1019.449
 INFO: [Memdata 28-208] The XPM instance: <multi_protocol_bd_i/v_axi4s_vid_out_0/inst/COUPLER_INST/generate_async_fifo.FIFO_INST/XPM_FIFO_ASYNC_INST/gnuram_async_fifo.xpm_fifo_base_inst/gen_sdpram.xpm_memory_base_inst> is part of IP: <multi_protocol_bd_i/v_axi4s_vid_out_0>. This XPM instance will be excluded from the .mmi because updatemem is prohibited from making changes to an XPM that is part of an IP.
 INFO: [Memdata 28-208] The XPM instance: <multi_protocol_bd_i/axi_vdma_0/U0/I_PRMRY_DATAMOVER/GEN_MM2S_FULL.I_MM2S_FULL_WRAPPER/GEN_INCLUDE_MM2S_SF.I_RD_SF/I_DATA_FIFO/BLK_MEM.I_SYNC_FIFOGEN_FIFO/xpm_fifo_instance.xpm_fifo_sync_inst/xpm_fifo_base_inst/gen_sdpram.xpm_memory_base_inst> is part of IP: <multi_protocol_bd_i/axi_vdma_0>. This XPM instance will be excluded from the .mmi because updatemem is prohibited from making changes to an XPM that is part of an IP.
 INFO: [Memdata 28-208] The XPM instance: <multi_protocol_bd_i/axi_vdma_0/U0/GEN_SPRT_FOR_MM2S.MM2S_LINEBUFFER_I/GEN_LINEBUF_NO_SOF.GEN_LINEBUFFER.GEN_SYNC_FIFO.I_LINEBUFFER_FIFO/xpm_fifo_sync_inst/xpm_fifo_base_inst/gen_sdpram.xpm_memory_base_inst> is part of IP: <multi_protocol_bd_i/axi_vdma_0>. This XPM instance will be excluded from the .mmi because updatemem is prohibited from making changes to an XPM that is part of an IP.
@@ -73,5 +73,5 @@ INFO: [Project 1-120] WebTalk data collection is mandatory when using a WebPACK 
 INFO: [Common 17-83] Releasing license: Implementation
 33 Infos, 0 Warnings, 0 Critical Warnings and 0 Errors encountered.
 write_bitstream completed successfully
-write_bitstream: Time (s): cpu = 00:00:03 ; elapsed = 00:00:16 . Memory (MB): peak = 1805.633 ; gain = 527.406
-INFO: [Common 17-206] Exiting Vivado at Thu Sep 24 17:14:45 2026...
+write_bitstream: Time (s): cpu = 00:00:08 ; elapsed = 00:00:15 . Memory (MB): peak = 1800.324 ; gain = 521.605
+INFO: [Common 17-206] Exiting Vivado at Thu Sep 24 22:48:07 2026...
