@@ -1,0 +1,16 @@
+.Xil/
+*.jou
+*.log
+*.str
+*.zip
+Multi_protocol.cache/
+Multi_protocol.gen/
+Multi_protocol.hw/
+Multi_protocol.ip_user_files/
+Multi_protocol.runs/
+Multi_protocol.sim/
+Multi_protocol.srcs/
+Multi_protocol.sdk/
+Multi_protocol.sdk_build/
+xsim.dir/
+reports/*.rpx
