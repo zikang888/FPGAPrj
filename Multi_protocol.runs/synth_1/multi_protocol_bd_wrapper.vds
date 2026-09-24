@@ -1,0 +1,448 @@
+#-----------------------------------------------------------
+# Vivado v2018.3 (64-bit)
+# SW Build 2405991 on Thu Dec  6 23:38:27 MST 2018
+# IP Build 2404404 on Fri Dec  7 01:43:56 MST 2018
+# Start of session at: Thu Sep 24 16:23:09 2026
+# Process ID: 46912
+# Current directory: D:/Vivado/Project/Multi_protocol/Multi_protocol.runs/synth_1
+# Command line: vivado.exe -log multi_protocol_bd_wrapper.vds -product Vivado -mode batch -messageDb vivado.pb -notrace -source multi_protocol_bd_wrapper.tcl
+# Log file: D:/Vivado/Project/Multi_protocol/Multi_protocol.runs/synth_1/multi_protocol_bd_wrapper.vds
+# Journal file: D:/Vivado/Project/Multi_protocol/Multi_protocol.runs/synth_1\vivado.jou
+#-----------------------------------------------------------
+source multi_protocol_bd_wrapper.tcl -notrace
+INFO: [IP_Flow 19-234] Refreshing IP repositories
+INFO: [IP_Flow 19-1704] No user IP repositories specified
+INFO: [IP_Flow 19-2313] Loaded Vivado IP repository 'D:/Xilinx/Vivado/2018.3/data/ip'.
+add_files: Time (s): cpu = 00:00:00 ; elapsed = 00:00:07 . Memory (MB): peak = 329.508 ; gain = 55.973
+Command: synth_design -top multi_protocol_bd_wrapper -part xc7z020clg484-2
+Starting synth_design
+Attempting to get a license for feature 'Synthesis' and/or device 'xc7z020'
+INFO: [Common 17-349] Got license for feature 'Synthesis' and/or device 'xc7z020'
+INFO: Launching helper process for spawning children vivado processes
+INFO: Helper process launched with PID 23660 
+---------------------------------------------------------------------------------
+Starting RTL Elaboration : Time (s): cpu = 00:00:01 ; elapsed = 00:00:01 . Memory (MB): peak = 450.434 ; gain = 108.352
+---------------------------------------------------------------------------------
+INFO: [Synth 8-6157] synthesizing module 'multi_protocol_bd_wrapper' [D:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/hdl/multi_protocol_bd_wrapper.v:12]
+INFO: [Synth 8-6157] synthesizing module 'multi_protocol_bd' [D:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/synth/multi_protocol_bd.v:402]
+INFO: [Synth 8-6157] synthesizing module 'multi_protocol_bd_axi_interconnect_0_0' [D:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/synth/multi_protocol_bd.v:1032]
+INFO: [Synth 8-6157] synthesizing module 'm00_couplers_imp_12TH8ZP' [D:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/synth/multi_protocol_bd.v:12]
+INFO: [Synth 8-6155] done synthesizing module 'm00_couplers_imp_12TH8ZP' (1#1) [D:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/synth/multi_protocol_bd.v:12]
+INFO: [Synth 8-6157] synthesizing module 'm01_couplers_imp_1RNMETG' [D:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/synth/multi_protocol_bd.v:144]
+INFO: [Synth 8-6155] done synthesizing module 'm01_couplers_imp_1RNMETG' (2#1) [D:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/synth/multi_protocol_bd.v:144]
+INFO: [Synth 8-6157] synthesizing module 'm02_couplers_imp_O50K07' [D:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/synth/multi_protocol_bd.v:269]
+INFO: [Synth 8-6155] done synthesizing module 'm02_couplers_imp_O50K07' (3#1) [D:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/synth/multi_protocol_bd.v:269]
+INFO: [Synth 8-6157] synthesizing module 's00_couplers_imp_E155OB' [D:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/synth/multi_protocol_bd.v:1604]
+INFO: [Synth 8-6155] done synthesizing module 's00_couplers_imp_E155OB' (4#1) [D:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/synth/multi_protocol_bd.v:1604]
+INFO: [Synth 8-6157] synthesizing module 'multi_protocol_bd_xbar_0' [D:/Vivado/Project/Multi_protocol/Multi_protocol.runs/synth_1/.Xil/Vivado-46912-LAPTOP-MK9F4NL5/realtime/multi_protocol_bd_xbar_0_stub.v:6]
+INFO: [Synth 8-6155] done synthesizing module 'multi_protocol_bd_xbar_0' (5#1) [D:/Vivado/Project/Multi_protocol/Multi_protocol.runs/synth_1/.Xil/Vivado-46912-LAPTOP-MK9F4NL5/realtime/multi_protocol_bd_xbar_0_stub.v:6]
+WARNING: [Synth 8-350] instance 'xbar' of module 'multi_protocol_bd_xbar_0' requires 40 connections, but only 38 given [D:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/synth/multi_protocol_bd.v:1563]
+INFO: [Synth 8-6155] done synthesizing module 'multi_protocol_bd_axi_interconnect_0_0' (6#1) [D:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/synth/multi_protocol_bd.v:1032]
+INFO: [Synth 8-6157] synthesizing module 'multi_protocol_bd_axi_protocol_converter_0_0' [D:/Vivado/Project/Multi_protocol/Multi_protocol.runs/synth_1/.Xil/Vivado-46912-LAPTOP-MK9F4NL5/realtime/multi_protocol_bd_axi_protocol_converter_0_0_stub.v:6]
+INFO: [Synth 8-6155] done synthesizing module 'multi_protocol_bd_axi_protocol_converter_0_0' (7#1) [D:/Vivado/Project/Multi_protocol/Multi_protocol.runs/synth_1/.Xil/Vivado-46912-LAPTOP-MK9F4NL5/realtime/multi_protocol_bd_axi_protocol_converter_0_0_stub.v:6]
+INFO: [Synth 8-6157] synthesizing module 'multi_protocol_bd_axi_smc_0_0' [D:/Vivado/Project/Multi_protocol/Multi_protocol.runs/synth_1/.Xil/Vivado-46912-LAPTOP-MK9F4NL5/realtime/multi_protocol_bd_axi_smc_0_0_stub.v:6]
+INFO: [Synth 8-6155] done synthesizing module 'multi_protocol_bd_axi_smc_0_0' (8#1) [D:/Vivado/Project/Multi_protocol/Multi_protocol.runs/synth_1/.Xil/Vivado-46912-LAPTOP-MK9F4NL5/realtime/multi_protocol_bd_axi_smc_0_0_stub.v:6]
+WARNING: [Synth 8-350] instance 'axi_smc_0' of module 'multi_protocol_bd_axi_smc_0_0' requires 77 connections, but only 64 given [D:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/synth/multi_protocol_bd.v:743]
+INFO: [Synth 8-6157] synthesizing module 'multi_protocol_bd_axi_vdma_0_0' [D:/Vivado/Project/Multi_protocol/Multi_protocol.runs/synth_1/.Xil/Vivado-46912-LAPTOP-MK9F4NL5/realtime/multi_protocol_bd_axi_vdma_0_0_stub.v:6]
+INFO: [Synth 8-6155] done synthesizing module 'multi_protocol_bd_axi_vdma_0_0' (9#1) [D:/Vivado/Project/Multi_protocol/Multi_protocol.runs/synth_1/.Xil/Vivado-46912-LAPTOP-MK9F4NL5/realtime/multi_protocol_bd_axi_vdma_0_0_stub.v:6]
+WARNING: [Synth 8-350] instance 'axi_vdma_0' of module 'multi_protocol_bd_axi_vdma_0_0' requires 42 connections, but only 39 given [D:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/synth/multi_protocol_bd.v:808]
+INFO: [Synth 8-6157] synthesizing module 'multi_protocol_bd_multi_protocol_core_0_0' [D:/Vivado/Project/Multi_protocol/Multi_protocol.runs/synth_1/.Xil/Vivado-46912-LAPTOP-MK9F4NL5/realtime/multi_protocol_bd_multi_protocol_core_0_0_stub.v:6]
+INFO: [Synth 8-6155] done synthesizing module 'multi_protocol_bd_multi_protocol_core_0_0' (10#1) [D:/Vivado/Project/Multi_protocol/Multi_protocol.runs/synth_1/.Xil/Vivado-46912-LAPTOP-MK9F4NL5/realtime/multi_protocol_bd_multi_protocol_core_0_0_stub.v:6]
+WARNING: [Synth 8-350] instance 'multi_protocol_core_0' of module 'multi_protocol_bd_multi_protocol_core_0_0' requires 26 connections, but only 25 given [D:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/synth/multi_protocol_bd.v:848]
+INFO: [Synth 8-6157] synthesizing module 'multi_protocol_bd_proc_sys_reset_0_0' [D:/Vivado/Project/Multi_protocol/Multi_protocol.runs/synth_1/.Xil/Vivado-46912-LAPTOP-MK9F4NL5/realtime/multi_protocol_bd_proc_sys_reset_0_0_stub.v:6]
+INFO: [Synth 8-6155] done synthesizing module 'multi_protocol_bd_proc_sys_reset_0_0' (11#1) [D:/Vivado/Project/Multi_protocol/Multi_protocol.runs/synth_1/.Xil/Vivado-46912-LAPTOP-MK9F4NL5/realtime/multi_protocol_bd_proc_sys_reset_0_0_stub.v:6]
+WARNING: [Synth 8-350] instance 'proc_sys_reset_0' of module 'multi_protocol_bd_proc_sys_reset_0_0' requires 10 connections, but only 6 given [D:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/synth/multi_protocol_bd.v:874]
+INFO: [Synth 8-6157] synthesizing module 'multi_protocol_bd_processing_system7_0_0' [D:/Vivado/Project/Multi_protocol/Multi_protocol.runs/synth_1/.Xil/Vivado-46912-LAPTOP-MK9F4NL5/realtime/multi_protocol_bd_processing_system7_0_0_stub.v:6]
+INFO: [Synth 8-6155] done synthesizing module 'multi_protocol_bd_processing_system7_0_0' (12#1) [D:/Vivado/Project/Multi_protocol/Multi_protocol.runs/synth_1/.Xil/Vivado-46912-LAPTOP-MK9F4NL5/realtime/multi_protocol_bd_processing_system7_0_0_stub.v:6]
+WARNING: [Synth 8-350] instance 'processing_system7_0' of module 'multi_protocol_bd_processing_system7_0_0' requires 111 connections, but only 80 given [D:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/synth/multi_protocol_bd.v:881]
+INFO: [Synth 8-6157] synthesizing module 'multi_protocol_bd_rgb888torgb565_0_0' [D:/Vivado/Project/Multi_protocol/Multi_protocol.runs/synth_1/.Xil/Vivado-46912-LAPTOP-MK9F4NL5/realtime/multi_protocol_bd_rgb888torgb565_0_0_stub.v:6]
+INFO: [Synth 8-6155] done synthesizing module 'multi_protocol_bd_rgb888torgb565_0_0' (13#1) [D:/Vivado/Project/Multi_protocol/Multi_protocol.runs/synth_1/.Xil/Vivado-46912-LAPTOP-MK9F4NL5/realtime/multi_protocol_bd_rgb888torgb565_0_0_stub.v:6]
+INFO: [Synth 8-6157] synthesizing module 'multi_protocol_bd_v_axi4s_vid_out_0_0' [D:/Vivado/Project/Multi_protocol/Multi_protocol.runs/synth_1/.Xil/Vivado-46912-LAPTOP-MK9F4NL5/realtime/multi_protocol_bd_v_axi4s_vid_out_0_0_stub.v:6]
+INFO: [Synth 8-6155] done synthesizing module 'multi_protocol_bd_v_axi4s_vid_out_0_0' (14#1) [D:/Vivado/Project/Multi_protocol/Multi_protocol.runs/synth_1/.Xil/Vivado-46912-LAPTOP-MK9F4NL5/realtime/multi_protocol_bd_v_axi4s_vid_out_0_0_stub.v:6]
+WARNING: [Synth 8-350] instance 'v_axi4s_vid_out_0' of module 'multi_protocol_bd_v_axi4s_vid_out_0_0' requires 31 connections, but only 23 given [D:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/synth/multi_protocol_bd.v:965]
+INFO: [Synth 8-6157] synthesizing module 'multi_protocol_bd_v_tc_0_0' [D:/Vivado/Project/Multi_protocol/Multi_protocol.runs/synth_1/.Xil/Vivado-46912-LAPTOP-MK9F4NL5/realtime/multi_protocol_bd_v_tc_0_0_stub.v:6]
+INFO: [Synth 8-6155] done synthesizing module 'multi_protocol_bd_v_tc_0_0' (15#1) [D:/Vivado/Project/Multi_protocol/Multi_protocol.runs/synth_1/.Xil/Vivado-46912-LAPTOP-MK9F4NL5/realtime/multi_protocol_bd_v_tc_0_0_stub.v:6]
+WARNING: [Synth 8-350] instance 'v_tc_0' of module 'multi_protocol_bd_v_tc_0_0' requires 32 connections, but only 30 given [D:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/synth/multi_protocol_bd.v:989]
+INFO: [Synth 8-6157] synthesizing module 'multi_protocol_bd_xlconstant_evt_data_0' [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ip/multi_protocol_bd_xlconstant_evt_data_0/synth/multi_protocol_bd_xlconstant_evt_data_0.v:57]
+INFO: [Synth 8-6157] synthesizing module 'xlconstant_v1_1_5_xlconstant' [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ipshared/4649/hdl/xlconstant_v1_1_vl_rfs.v:23]
+	Parameter CONST_VAL bound to: 128'b00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 
+	Parameter CONST_WIDTH bound to: 128 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'xlconstant_v1_1_5_xlconstant' (16#1) [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ipshared/4649/hdl/xlconstant_v1_1_vl_rfs.v:23]
+INFO: [Synth 8-6155] done synthesizing module 'multi_protocol_bd_xlconstant_evt_data_0' (17#1) [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ip/multi_protocol_bd_xlconstant_evt_data_0/synth/multi_protocol_bd_xlconstant_evt_data_0.v:57]
+INFO: [Synth 8-6157] synthesizing module 'multi_protocol_bd_xlconstant_evt_dropped_0' [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ip/multi_protocol_bd_xlconstant_evt_dropped_0/synth/multi_protocol_bd_xlconstant_evt_dropped_0.v:57]
+INFO: [Synth 8-6157] synthesizing module 'xlconstant_v1_1_5_xlconstant__parameterized0' [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ipshared/4649/hdl/xlconstant_v1_1_vl_rfs.v:23]
+	Parameter CONST_VAL bound to: 0 - type: integer 
+	Parameter CONST_WIDTH bound to: 32 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'xlconstant_v1_1_5_xlconstant__parameterized0' (17#1) [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ipshared/4649/hdl/xlconstant_v1_1_vl_rfs.v:23]
+INFO: [Synth 8-6155] done synthesizing module 'multi_protocol_bd_xlconstant_evt_dropped_0' (18#1) [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ip/multi_protocol_bd_xlconstant_evt_dropped_0/synth/multi_protocol_bd_xlconstant_evt_dropped_0.v:57]
+INFO: [Synth 8-6157] synthesizing module 'multi_protocol_bd_xlconstant_evt_trigger_0' [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ip/multi_protocol_bd_xlconstant_evt_trigger_0/synth/multi_protocol_bd_xlconstant_evt_trigger_0.v:57]
+INFO: [Synth 8-6157] synthesizing module 'xlconstant_v1_1_5_xlconstant__parameterized1' [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ipshared/4649/hdl/xlconstant_v1_1_vl_rfs.v:23]
+	Parameter CONST_VAL bound to: 0 - type: integer 
+	Parameter CONST_WIDTH bound to: 1 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'xlconstant_v1_1_5_xlconstant__parameterized1' (18#1) [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ipshared/4649/hdl/xlconstant_v1_1_vl_rfs.v:23]
+INFO: [Synth 8-6155] done synthesizing module 'multi_protocol_bd_xlconstant_evt_trigger_0' (19#1) [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ip/multi_protocol_bd_xlconstant_evt_trigger_0/synth/multi_protocol_bd_xlconstant_evt_trigger_0.v:57]
+INFO: [Synth 8-6157] synthesizing module 'multi_protocol_bd_xlconstant_evt_valid_0' [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ip/multi_protocol_bd_xlconstant_evt_valid_0/synth/multi_protocol_bd_xlconstant_evt_valid_0.v:57]
+INFO: [Synth 8-6155] done synthesizing module 'multi_protocol_bd_xlconstant_evt_valid_0' (20#1) [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ip/multi_protocol_bd_xlconstant_evt_valid_0/synth/multi_protocol_bd_xlconstant_evt_valid_0.v:57]
+INFO: [Synth 8-6157] synthesizing module 'multi_protocol_bd_xlconstant_lcd_bl_0' [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ip/multi_protocol_bd_xlconstant_lcd_bl_0/synth/multi_protocol_bd_xlconstant_lcd_bl_0.v:57]
+INFO: [Synth 8-6157] synthesizing module 'xlconstant_v1_1_5_xlconstant__parameterized2' [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ipshared/4649/hdl/xlconstant_v1_1_vl_rfs.v:23]
+	Parameter CONST_VAL bound to: 1 - type: integer 
+	Parameter CONST_WIDTH bound to: 1 - type: integer 
+INFO: [Synth 8-6155] done synthesizing module 'xlconstant_v1_1_5_xlconstant__parameterized2' (20#1) [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ipshared/4649/hdl/xlconstant_v1_1_vl_rfs.v:23]
+INFO: [Synth 8-6155] done synthesizing module 'multi_protocol_bd_xlconstant_lcd_bl_0' (21#1) [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ip/multi_protocol_bd_xlconstant_lcd_bl_0/synth/multi_protocol_bd_xlconstant_lcd_bl_0.v:57]
+INFO: [Synth 8-6155] done synthesizing module 'multi_protocol_bd' (22#1) [D:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/synth/multi_protocol_bd.v:402]
+INFO: [Synth 8-6157] synthesizing module 'IOBUF' [D:/Xilinx/Vivado/2018.3/scripts/rt/data/unisim_comp.v:23615]
+	Parameter DRIVE bound to: 12 - type: integer 
+	Parameter IBUF_LOW_PWR bound to: TRUE - type: string 
+	Parameter IOSTANDARD bound to: DEFAULT - type: string 
+	Parameter SLEW bound to: SLOW - type: string 
+INFO: [Synth 8-6155] done synthesizing module 'IOBUF' (23#1) [D:/Xilinx/Vivado/2018.3/scripts/rt/data/unisim_comp.v:23615]
+INFO: [Synth 8-6155] done synthesizing module 'multi_protocol_bd_wrapper' (24#1) [D:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/hdl/multi_protocol_bd_wrapper.v:12]
+WARNING: [Synth 8-3331] design s00_couplers_imp_E155OB has unconnected port M_ACLK
+WARNING: [Synth 8-3331] design s00_couplers_imp_E155OB has unconnected port M_ARESETN
+WARNING: [Synth 8-3331] design s00_couplers_imp_E155OB has unconnected port S_ACLK
+WARNING: [Synth 8-3331] design s00_couplers_imp_E155OB has unconnected port S_ARESETN
+WARNING: [Synth 8-3331] design m02_couplers_imp_O50K07 has unconnected port M_ACLK
+WARNING: [Synth 8-3331] design m02_couplers_imp_O50K07 has unconnected port M_ARESETN
+WARNING: [Synth 8-3331] design m02_couplers_imp_O50K07 has unconnected port S_ACLK
+WARNING: [Synth 8-3331] design m02_couplers_imp_O50K07 has unconnected port S_ARESETN
+WARNING: [Synth 8-3331] design m01_couplers_imp_1RNMETG has unconnected port M_ACLK
+WARNING: [Synth 8-3331] design m01_couplers_imp_1RNMETG has unconnected port M_ARESETN
+WARNING: [Synth 8-3331] design m01_couplers_imp_1RNMETG has unconnected port S_ACLK
+WARNING: [Synth 8-3331] design m01_couplers_imp_1RNMETG has unconnected port S_ARESETN
+WARNING: [Synth 8-3331] design m00_couplers_imp_12TH8ZP has unconnected port M_ACLK
+WARNING: [Synth 8-3331] design m00_couplers_imp_12TH8ZP has unconnected port M_ARESETN
+WARNING: [Synth 8-3331] design m00_couplers_imp_12TH8ZP has unconnected port S_ACLK
+WARNING: [Synth 8-3331] design m00_couplers_imp_12TH8ZP has unconnected port S_ARESETN
+WARNING: [Synth 8-3331] design multi_protocol_bd_axi_interconnect_0_0 has unconnected port M00_ACLK
+WARNING: [Synth 8-3331] design multi_protocol_bd_axi_interconnect_0_0 has unconnected port M00_ARESETN
+WARNING: [Synth 8-3331] design multi_protocol_bd_axi_interconnect_0_0 has unconnected port M01_ACLK
+WARNING: [Synth 8-3331] design multi_protocol_bd_axi_interconnect_0_0 has unconnected port M01_ARESETN
+WARNING: [Synth 8-3331] design multi_protocol_bd_axi_interconnect_0_0 has unconnected port M02_ACLK
+WARNING: [Synth 8-3331] design multi_protocol_bd_axi_interconnect_0_0 has unconnected port M02_ARESETN
+WARNING: [Synth 8-3331] design multi_protocol_bd_axi_interconnect_0_0 has unconnected port S00_ACLK
+WARNING: [Synth 8-3331] design multi_protocol_bd_axi_interconnect_0_0 has unconnected port S00_ARESETN
+---------------------------------------------------------------------------------
+Finished RTL Elaboration : Time (s): cpu = 00:00:02 ; elapsed = 00:00:02 . Memory (MB): peak = 507.547 ; gain = 165.465
+---------------------------------------------------------------------------------
+
+Report Check Netlist: 
++------+------------------+-------+---------+-------+------------------+
+|      |Item              |Errors |Warnings |Status |Description       |
++------+------------------+-------+---------+-------+------------------+
+|1     |multi_driven_nets |      0|        0|Passed |Multi driven nets |
++------+------------------+-------+---------+-------+------------------+
+---------------------------------------------------------------------------------
+Start Handling Custom Attributes
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Handling Custom Attributes : Time (s): cpu = 00:00:02 ; elapsed = 00:00:02 . Memory (MB): peak = 507.547 ; gain = 165.465
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished RTL Optimization Phase 1 : Time (s): cpu = 00:00:02 ; elapsed = 00:00:02 . Memory (MB): peak = 507.547 ; gain = 165.465
+---------------------------------------------------------------------------------
+INFO: [Netlist 29-17] Analyzing 1 Unisim elements for replacement
+INFO: [Netlist 29-28] Unisim Transformation completed in 0 CPU seconds
+INFO: [Device 21-403] Loading part xc7z020clg484-2
+INFO: [Project 1-570] Preparing netlist for logic optimization
+
+Processing XDC Constraints
+Initializing timing engine
+Parsing XDC File [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ip/multi_protocol_bd_processing_system7_0_0/multi_protocol_bd_processing_system7_0_0/multi_protocol_bd_processing_system7_0_0_in_context.xdc] for cell 'multi_protocol_bd_i/processing_system7_0'
+Finished Parsing XDC File [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ip/multi_protocol_bd_processing_system7_0_0/multi_protocol_bd_processing_system7_0_0/multi_protocol_bd_processing_system7_0_0_in_context.xdc] for cell 'multi_protocol_bd_i/processing_system7_0'
+Parsing XDC File [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ip/multi_protocol_bd_xbar_0/multi_protocol_bd_xbar_0/multi_protocol_bd_xbar_0_in_context.xdc] for cell 'multi_protocol_bd_i/axi_interconnect_0/xbar'
+Finished Parsing XDC File [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ip/multi_protocol_bd_xbar_0/multi_protocol_bd_xbar_0/multi_protocol_bd_xbar_0_in_context.xdc] for cell 'multi_protocol_bd_i/axi_interconnect_0/xbar'
+Parsing XDC File [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ip/multi_protocol_bd_axi_protocol_converter_0_0/multi_protocol_bd_axi_protocol_converter_0_0/multi_protocol_bd_axi_protocol_converter_0_0_in_context.xdc] for cell 'multi_protocol_bd_i/axi_protocol_converter_0'
+Finished Parsing XDC File [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ip/multi_protocol_bd_axi_protocol_converter_0_0/multi_protocol_bd_axi_protocol_converter_0_0/multi_protocol_bd_axi_protocol_converter_0_0_in_context.xdc] for cell 'multi_protocol_bd_i/axi_protocol_converter_0'
+Parsing XDC File [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ip/multi_protocol_bd_proc_sys_reset_0_0/multi_protocol_bd_proc_sys_reset_0_0/multi_protocol_bd_proc_sys_reset_0_0_in_context.xdc] for cell 'multi_protocol_bd_i/proc_sys_reset_0'
+Finished Parsing XDC File [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ip/multi_protocol_bd_proc_sys_reset_0_0/multi_protocol_bd_proc_sys_reset_0_0/multi_protocol_bd_proc_sys_reset_0_0_in_context.xdc] for cell 'multi_protocol_bd_i/proc_sys_reset_0'
+Parsing XDC File [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ip/multi_protocol_bd_multi_protocol_core_0_0/multi_protocol_bd_multi_protocol_core_0_0/multi_protocol_bd_multi_protocol_core_0_0_in_context.xdc] for cell 'multi_protocol_bd_i/multi_protocol_core_0'
+Finished Parsing XDC File [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ip/multi_protocol_bd_multi_protocol_core_0_0/multi_protocol_bd_multi_protocol_core_0_0/multi_protocol_bd_multi_protocol_core_0_0_in_context.xdc] for cell 'multi_protocol_bd_i/multi_protocol_core_0'
+Parsing XDC File [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ip/multi_protocol_bd_axi_vdma_0_0/multi_protocol_bd_axi_vdma_0_0/multi_protocol_bd_axi_vdma_0_0_in_context.xdc] for cell 'multi_protocol_bd_i/axi_vdma_0'
+Finished Parsing XDC File [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ip/multi_protocol_bd_axi_vdma_0_0/multi_protocol_bd_axi_vdma_0_0/multi_protocol_bd_axi_vdma_0_0_in_context.xdc] for cell 'multi_protocol_bd_i/axi_vdma_0'
+Parsing XDC File [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ip/multi_protocol_bd_v_tc_0_0/multi_protocol_bd_v_tc_0_0/multi_protocol_bd_v_tc_0_0_in_context.xdc] for cell 'multi_protocol_bd_i/v_tc_0'
+Finished Parsing XDC File [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ip/multi_protocol_bd_v_tc_0_0/multi_protocol_bd_v_tc_0_0/multi_protocol_bd_v_tc_0_0_in_context.xdc] for cell 'multi_protocol_bd_i/v_tc_0'
+Parsing XDC File [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ip/multi_protocol_bd_v_axi4s_vid_out_0_0/multi_protocol_bd_v_axi4s_vid_out_0_0/multi_protocol_bd_v_axi4s_vid_out_0_0_in_context.xdc] for cell 'multi_protocol_bd_i/v_axi4s_vid_out_0'
+Finished Parsing XDC File [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ip/multi_protocol_bd_v_axi4s_vid_out_0_0/multi_protocol_bd_v_axi4s_vid_out_0_0/multi_protocol_bd_v_axi4s_vid_out_0_0_in_context.xdc] for cell 'multi_protocol_bd_i/v_axi4s_vid_out_0'
+Parsing XDC File [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ip/multi_protocol_bd_axi_smc_0_0/multi_protocol_bd_axi_smc_0_0/multi_protocol_bd_axi_smc_0_0_in_context.xdc] for cell 'multi_protocol_bd_i/axi_smc_0'
+Finished Parsing XDC File [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ip/multi_protocol_bd_axi_smc_0_0/multi_protocol_bd_axi_smc_0_0/multi_protocol_bd_axi_smc_0_0_in_context.xdc] for cell 'multi_protocol_bd_i/axi_smc_0'
+Parsing XDC File [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ip/multi_protocol_bd_rgb888torgb565_0_0/multi_protocol_bd_rgb888torgb565_0_0/multi_protocol_bd_rgb888torgb565_0_0_in_context.xdc] for cell 'multi_protocol_bd_i/rgb888torgb565_0'
+Finished Parsing XDC File [d:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ip/multi_protocol_bd_rgb888torgb565_0_0/multi_protocol_bd_rgb888torgb565_0_0/multi_protocol_bd_rgb888torgb565_0_0_in_context.xdc] for cell 'multi_protocol_bd_i/rgb888torgb565_0'
+Parsing XDC File [D:/Vivado/Project/Multi_protocol/fpga/constraints/ac820_rgbtft.xdc]
+Finished Parsing XDC File [D:/Vivado/Project/Multi_protocol/fpga/constraints/ac820_rgbtft.xdc]
+INFO: [Project 1-236] Implementation specific constraints were found while reading constraint file [D:/Vivado/Project/Multi_protocol/fpga/constraints/ac820_rgbtft.xdc]. These constraints will be ignored for synthesis but will be used in implementation. Impacted constraints are listed in the file [.Xil/multi_protocol_bd_wrapper_propImpl.xdc].
+Resolution: To avoid this warning, move constraints listed in [.Xil/multi_protocol_bd_wrapper_propImpl.xdc] to another XDC file and exclude this new file from synthesis with the used_in_synthesis property (File Properties dialog in GUI) and re-run elaboration/synthesis.
+Parsing XDC File [D:/Vivado/Project/Multi_protocol/fpga/constraints/top.xdc]
+Finished Parsing XDC File [D:/Vivado/Project/Multi_protocol/fpga/constraints/top.xdc]
+INFO: [Project 1-236] Implementation specific constraints were found while reading constraint file [D:/Vivado/Project/Multi_protocol/fpga/constraints/top.xdc]. These constraints will be ignored for synthesis but will be used in implementation. Impacted constraints are listed in the file [.Xil/multi_protocol_bd_wrapper_propImpl.xdc].
+Resolution: To avoid this warning, move constraints listed in [.Xil/multi_protocol_bd_wrapper_propImpl.xdc] to another XDC file and exclude this new file from synthesis with the used_in_synthesis property (File Properties dialog in GUI) and re-run elaboration/synthesis.
+Parsing XDC File [D:/Vivado/Project/Multi_protocol/Multi_protocol.runs/synth_1/dont_touch.xdc]
+Finished Parsing XDC File [D:/Vivado/Project/Multi_protocol/Multi_protocol.runs/synth_1/dont_touch.xdc]
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 818.395 ; gain = 0.000
+Completed Processing XDC Constraints
+
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 818.395 ; gain = 0.000
+INFO: [Project 1-111] Unisim Transformation Summary:
+  A total of 1 instances were transformed.
+  IOBUF => IOBUF (IBUF, OBUFT): 1 instances
+
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 818.395 ; gain = 0.000
+Constraint Validation Runtime : Time (s): cpu = 00:00:00 ; elapsed = 00:00:00.006 . Memory (MB): peak = 818.395 ; gain = 0.000
+---------------------------------------------------------------------------------
+Finished Constraint Validation : Time (s): cpu = 00:00:05 ; elapsed = 00:00:08 . Memory (MB): peak = 818.395 ; gain = 476.312
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Loading Part and Timing Information
+---------------------------------------------------------------------------------
+Loading part: xc7z020clg484-2
+---------------------------------------------------------------------------------
+Finished Loading Part and Timing Information : Time (s): cpu = 00:00:05 ; elapsed = 00:00:08 . Memory (MB): peak = 818.395 ; gain = 476.312
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Applying 'set_property' XDC Constraints
+---------------------------------------------------------------------------------
+Applied set_property DONT_TOUCH = true for multi_protocol_bd_i. (constraint file  auto generated constraint, line ).
+Applied set_property DONT_TOUCH = true for multi_protocol_bd_i/processing_system7_0. (constraint file  auto generated constraint, line ).
+Applied set_property DONT_TOUCH = true for multi_protocol_bd_i/axi_interconnect_0/xbar. (constraint file  auto generated constraint, line ).
+Applied set_property DONT_TOUCH = true for multi_protocol_bd_i/axi_interconnect_0. (constraint file  auto generated constraint, line ).
+Applied set_property DONT_TOUCH = true for multi_protocol_bd_i/axi_protocol_converter_0. (constraint file  auto generated constraint, line ).
+Applied set_property DONT_TOUCH = true for multi_protocol_bd_i/proc_sys_reset_0. (constraint file  auto generated constraint, line ).
+Applied set_property DONT_TOUCH = true for multi_protocol_bd_i/multi_protocol_core_0. (constraint file  auto generated constraint, line ).
+Applied set_property DONT_TOUCH = true for multi_protocol_bd_i/xlconstant_evt_valid. (constraint file  auto generated constraint, line ).
+Applied set_property DONT_TOUCH = true for multi_protocol_bd_i/xlconstant_evt_trigger. (constraint file  auto generated constraint, line ).
+Applied set_property DONT_TOUCH = true for multi_protocol_bd_i/xlconstant_evt_data. (constraint file  auto generated constraint, line ).
+Applied set_property DONT_TOUCH = true for multi_protocol_bd_i/xlconstant_evt_dropped. (constraint file  auto generated constraint, line ).
+Applied set_property DONT_TOUCH = true for multi_protocol_bd_i/axi_vdma_0. (constraint file  auto generated constraint, line ).
+Applied set_property DONT_TOUCH = true for multi_protocol_bd_i/v_tc_0. (constraint file  auto generated constraint, line ).
+Applied set_property DONT_TOUCH = true for multi_protocol_bd_i/v_axi4s_vid_out_0. (constraint file  auto generated constraint, line ).
+Applied set_property DONT_TOUCH = true for multi_protocol_bd_i/axi_smc_0. (constraint file  auto generated constraint, line ).
+Applied set_property DONT_TOUCH = true for multi_protocol_bd_i/rgb888torgb565_0. (constraint file  auto generated constraint, line ).
+Applied set_property DONT_TOUCH = true for multi_protocol_bd_i/xlconstant_lcd_bl. (constraint file  auto generated constraint, line ).
+---------------------------------------------------------------------------------
+Finished applying 'set_property' XDC Constraints : Time (s): cpu = 00:00:05 ; elapsed = 00:00:09 . Memory (MB): peak = 818.395 ; gain = 476.312
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished RTL Optimization Phase 2 : Time (s): cpu = 00:00:05 ; elapsed = 00:00:09 . Memory (MB): peak = 818.395 ; gain = 476.312
+---------------------------------------------------------------------------------
+
+Report RTL Partitions: 
++-+--------------+------------+----------+
+| |RTL Partition |Replication |Instances |
++-+--------------+------------+----------+
++-+--------------+------------+----------+
+---------------------------------------------------------------------------------
+Start RTL Component Statistics 
+---------------------------------------------------------------------------------
+Detailed RTL Component Info : 
+---------------------------------------------------------------------------------
+Finished RTL Component Statistics 
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start RTL Hierarchical Component Statistics 
+---------------------------------------------------------------------------------
+Hierarchical RTL Component report 
+---------------------------------------------------------------------------------
+Finished RTL Hierarchical Component Statistics
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Part Resource Summary
+---------------------------------------------------------------------------------
+Part Resources:
+DSPs: 220 (col length:60)
+BRAMs: 280 (col length: RAMB18 60 RAMB36 30)
+---------------------------------------------------------------------------------
+Finished Part Resource Summary
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Cross Boundary and Area Optimization
+---------------------------------------------------------------------------------
+Warning: Parallel synthesis criteria is not met 
+WARNING: [Synth 8-3331] design multi_protocol_bd_axi_interconnect_0_0 has unconnected port M00_ACLK
+WARNING: [Synth 8-3331] design multi_protocol_bd_axi_interconnect_0_0 has unconnected port M00_ARESETN
+WARNING: [Synth 8-3331] design multi_protocol_bd_axi_interconnect_0_0 has unconnected port M01_ACLK
+WARNING: [Synth 8-3331] design multi_protocol_bd_axi_interconnect_0_0 has unconnected port M01_ARESETN
+WARNING: [Synth 8-3331] design multi_protocol_bd_axi_interconnect_0_0 has unconnected port M02_ACLK
+WARNING: [Synth 8-3331] design multi_protocol_bd_axi_interconnect_0_0 has unconnected port M02_ARESETN
+WARNING: [Synth 8-3331] design multi_protocol_bd_axi_interconnect_0_0 has unconnected port S00_ACLK
+WARNING: [Synth 8-3331] design multi_protocol_bd_axi_interconnect_0_0 has unconnected port S00_ARESETN
+---------------------------------------------------------------------------------
+Finished Cross Boundary and Area Optimization : Time (s): cpu = 00:00:05 ; elapsed = 00:00:09 . Memory (MB): peak = 818.395 ; gain = 476.312
+---------------------------------------------------------------------------------
+
+Report RTL Partitions: 
++-+--------------+------------+----------+
+| |RTL Partition |Replication |Instances |
++-+--------------+------------+----------+
++-+--------------+------------+----------+
+---------------------------------------------------------------------------------
+Start Applying XDC Timing Constraints
+---------------------------------------------------------------------------------
+INFO: [Synth 8-5578] Moved timing constraint from pin 'multi_protocol_bd_i/processing_system7_0/FCLK_CLK0' to pin 'multi_protocol_bd_i/processing_system7_0/bbstub_FCLK_CLK0/O'
+INFO: [Synth 8-5578] Moved timing constraint from pin 'multi_protocol_bd_i/processing_system7_0/FCLK_CLK1' to pin 'multi_protocol_bd_i/processing_system7_0/bbstub_FCLK_CLK1/O'
+INFO: [Synth 8-5819] Moved 2 constraints on hierarchical pins to their respective driving/loading pins
+---------------------------------------------------------------------------------
+Finished Applying XDC Timing Constraints : Time (s): cpu = 00:00:09 ; elapsed = 00:00:14 . Memory (MB): peak = 849.477 ; gain = 507.395
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Timing Optimization
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Timing Optimization : Time (s): cpu = 00:00:09 ; elapsed = 00:00:14 . Memory (MB): peak = 849.699 ; gain = 507.617
+---------------------------------------------------------------------------------
+
+Report RTL Partitions: 
++-+--------------+------------+----------+
+| |RTL Partition |Replication |Instances |
++-+--------------+------------+----------+
++-+--------------+------------+----------+
+---------------------------------------------------------------------------------
+Start Technology Mapping
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Technology Mapping : Time (s): cpu = 00:00:09 ; elapsed = 00:00:14 . Memory (MB): peak = 859.680 ; gain = 517.598
+---------------------------------------------------------------------------------
+
+Report RTL Partitions: 
++-+--------------+------------+----------+
+| |RTL Partition |Replication |Instances |
++-+--------------+------------+----------+
++-+--------------+------------+----------+
+---------------------------------------------------------------------------------
+Start IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Flattening Before IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Flattening Before IO Insertion
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Final Netlist Cleanup
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Final Netlist Cleanup
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished IO Insertion : Time (s): cpu = 00:00:09 ; elapsed = 00:00:15 . Memory (MB): peak = 859.680 ; gain = 517.598
+---------------------------------------------------------------------------------
+
+Report Check Netlist: 
++------+------------------+-------+---------+-------+------------------+
+|      |Item              |Errors |Warnings |Status |Description       |
++------+------------------+-------+---------+-------+------------------+
+|1     |multi_driven_nets |      0|        0|Passed |Multi driven nets |
++------+------------------+-------+---------+-------+------------------+
+---------------------------------------------------------------------------------
+Start Renaming Generated Instances
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Instances : Time (s): cpu = 00:00:09 ; elapsed = 00:00:15 . Memory (MB): peak = 859.680 ; gain = 517.598
+---------------------------------------------------------------------------------
+
+Report RTL Partitions: 
++-+--------------+------------+----------+
+| |RTL Partition |Replication |Instances |
++-+--------------+------------+----------+
++-+--------------+------------+----------+
+---------------------------------------------------------------------------------
+Start Rebuilding User Hierarchy
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Rebuilding User Hierarchy : Time (s): cpu = 00:00:09 ; elapsed = 00:00:15 . Memory (MB): peak = 859.680 ; gain = 517.598
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Ports
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Ports : Time (s): cpu = 00:00:09 ; elapsed = 00:00:15 . Memory (MB): peak = 859.680 ; gain = 517.598
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Handling Custom Attributes
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Handling Custom Attributes : Time (s): cpu = 00:00:09 ; elapsed = 00:00:15 . Memory (MB): peak = 859.680 ; gain = 517.598
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Renaming Generated Nets
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Finished Renaming Generated Nets : Time (s): cpu = 00:00:09 ; elapsed = 00:00:15 . Memory (MB): peak = 859.680 ; gain = 517.598
+---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
+Start Writing Synthesis Report
+---------------------------------------------------------------------------------
+
+Report BlackBoxes: 
++------+---------------------------------------------+----------+
+|      |BlackBox name                                |Instances |
++------+---------------------------------------------+----------+
+|1     |multi_protocol_bd_xbar_0                     |         1|
+|2     |multi_protocol_bd_axi_protocol_converter_0_0 |         1|
+|3     |multi_protocol_bd_axi_smc_0_0                |         1|
+|4     |multi_protocol_bd_axi_vdma_0_0               |         1|
+|5     |multi_protocol_bd_multi_protocol_core_0_0    |         1|
+|6     |multi_protocol_bd_proc_sys_reset_0_0         |         1|
+|7     |multi_protocol_bd_processing_system7_0_0     |         1|
+|8     |multi_protocol_bd_rgb888torgb565_0_0         |         1|
+|9     |multi_protocol_bd_v_axi4s_vid_out_0_0        |         1|
+|10    |multi_protocol_bd_v_tc_0_0                   |         1|
++------+---------------------------------------------+----------+
+
+Report Cell Usage: 
++------+---------------------------------------------+------+
+|      |Cell                                         |Count |
++------+---------------------------------------------+------+
+|1     |multi_protocol_bd_axi_protocol_converter_0_0 |     1|
+|2     |multi_protocol_bd_axi_smc_0_0                |     1|
+|3     |multi_protocol_bd_axi_vdma_0_0               |     1|
+|4     |multi_protocol_bd_multi_protocol_core_0_0    |     1|
+|5     |multi_protocol_bd_proc_sys_reset_0_0         |     1|
+|6     |multi_protocol_bd_processing_system7_0_0     |     1|
+|7     |multi_protocol_bd_rgb888torgb565_0_0         |     1|
+|8     |multi_protocol_bd_v_axi4s_vid_out_0_0        |     1|
+|9     |multi_protocol_bd_v_tc_0_0                   |     1|
+|10    |multi_protocol_bd_xbar_0                     |     1|
+|11    |IOBUF                                        |     1|
+|12    |OBUF                                         |    23|
++------+---------------------------------------------+------+
+
+Report Instance Areas: 
++------+---------------------------+-------------------------------------------+------+
+|      |Instance                   |Module                                     |Cells |
++------+---------------------------+-------------------------------------------+------+
+|1     |top                        |                                           |  1340|
+|2     |  multi_protocol_bd_i      |multi_protocol_bd                          |  1316|
+|3     |    axi_interconnect_0     |multi_protocol_bd_axi_interconnect_0_0     |   374|
+|4     |    xlconstant_evt_data    |multi_protocol_bd_xlconstant_evt_data_0    |     0|
+|5     |    xlconstant_evt_dropped |multi_protocol_bd_xlconstant_evt_dropped_0 |     0|
+|6     |    xlconstant_evt_trigger |multi_protocol_bd_xlconstant_evt_trigger_0 |     0|
+|7     |    xlconstant_evt_valid   |multi_protocol_bd_xlconstant_evt_valid_0   |     0|
+|8     |    xlconstant_lcd_bl      |multi_protocol_bd_xlconstant_lcd_bl_0      |     0|
++------+---------------------------+-------------------------------------------+------+
+---------------------------------------------------------------------------------
+Finished Writing Synthesis Report : Time (s): cpu = 00:00:09 ; elapsed = 00:00:15 . Memory (MB): peak = 859.680 ; gain = 517.598
+---------------------------------------------------------------------------------
+Synthesis finished with 0 errors, 0 critical warnings and 8 warnings.
+Synthesis Optimization Runtime : Time (s): cpu = 00:00:05 ; elapsed = 00:00:10 . Memory (MB): peak = 859.680 ; gain = 206.750
+Synthesis Optimization Complete : Time (s): cpu = 00:00:09 ; elapsed = 00:00:15 . Memory (MB): peak = 859.680 ; gain = 517.598
+INFO: [Project 1-571] Translating synthesized netlist
+INFO: [Netlist 29-17] Analyzing 1 Unisim elements for replacement
+INFO: [Netlist 29-28] Unisim Transformation completed in 0 CPU seconds
+INFO: [Project 1-570] Preparing netlist for logic optimization
+INFO: [Opt 31-138] Pushed 0 inverter(s) to 0 load pin(s).
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 871.559 ; gain = 0.000
+INFO: [Project 1-111] Unisim Transformation Summary:
+  A total of 1 instances were transformed.
+  IOBUF => IOBUF (IBUF, OBUFT): 1 instances
+
+INFO: [Common 17-83] Releasing license: Synthesis
+75 Infos, 40 Warnings, 0 Critical Warnings and 0 Errors encountered.
+synth_design completed successfully
+synth_design: Time (s): cpu = 00:00:09 ; elapsed = 00:00:17 . Memory (MB): peak = 871.684 ; gain = 542.176
+INFO: [Common 17-600] The following parameters have non-default value.
+general.maxThreads
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 871.684 ; gain = 0.000
+WARNING: [Constraints 18-5210] No constraints selected for write.
+Resolution: This message can indicate that there are no constraints for the design, or it can indicate that the used_in flags are set such that the constraints are ignored. This later case is used when running synth_design to not write synthesis constraints to the resulting checkpoint. Instead, project constraints are read when the synthesized design is opened.
+INFO: [Common 17-1381] The checkpoint 'D:/Vivado/Project/Multi_protocol/Multi_protocol.runs/synth_1/multi_protocol_bd_wrapper.dcp' has been generated.
+INFO: [runtcl-4] Executing : report_utilization -file multi_protocol_bd_wrapper_utilization_synth.rpt -pb multi_protocol_bd_wrapper_utilization_synth.pb
+INFO: [Common 17-206] Exiting Vivado at Thu Sep 24 16:23:36 2026...

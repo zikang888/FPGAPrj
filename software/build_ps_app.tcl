@@ -43,7 +43,28 @@ createbsp -name platform_bsp -hwproject platform_hw \
 createapp -name platform_app -hwproject platform_hw \
     -proc ps7_cortexa9_0 -os standalone -lang C \
     -app {Empty Application} -bsp platform_bsp
-importsources -name platform_app -path [file join $script_dir src]
+# The SDK project uses a portable Eclipse linked folder. It points at the
+# Git-tracked software/src directory, so SDK edits and branch pulls operate on
+# the same authoritative files without copying them into the workspace.
+set app_project_file [file join $ws_dir platform_app .project]
+set project_fp [open $app_project_file r]
+set project_xml [read $project_fp]
+close $project_fp
+if {[file normalize $ws_dir] eq [file normalize $sdk_dir]} {
+    set link_location "\t\t\t<locationURI>PARENT-2-PROJECT_LOC/software/src</locationURI>"
+} else {
+    set source_dir [file normalize [file join $script_dir src]]
+    set source_dir_xml [string map {& &amp; < &lt; > &gt;} $source_dir]
+    set link_location "\t\t\t<location>$source_dir_xml</location>"
+}
+set linked_resources "\t<linkedResources>\n\t\t<link>\n\t\t\t<name>repo_src</name>\n\t\t\t<type>2</type>\n$link_location\n\t\t</link>\n\t</linkedResources>"
+if {![string match *<linkedResources>* $project_xml]} {
+    set project_xml [string map [list "</projectDescription>" \
+        "$linked_resources\n</projectDescription>"] $project_xml]
+    set project_fp [open $app_project_file w]
+    puts -nonewline $project_fp $project_xml
+    close $project_fp
+}
 after 1000
 catch {configapp -app platform_app compiler-optimization {Optimize most (-O3)}}
 
