@@ -13,10 +13,19 @@ RemoteSystemsTempFiles/
 # Rebuildable caches and simulation scratch data
 /Multi_protocol.cache/
 /Multi_protocol.empty.cache/
+/Multi_protocol.runs/
 xsim.dir/
 *.wdb
 *.vcd
 *.pb
+
+# SDK/Eclipse generated workspace state and build products. The authoritative
+# PS sources remain in software/src and the workspace can be regenerated with
+# software/build_ps_app.tcl after exporting hardware from Vivado.
+/Multi_protocol.sdk/.metadata/
+/Multi_protocol.sdk/platform_app/Debug/
+/Multi_protocol.sdk/platform_bsp/
+/Multi_protocol.sdk/platform_hw/
 
 # Temporary validation, migration, backup and duplicate-release directories
 /.sdk*/
