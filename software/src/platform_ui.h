@@ -15,7 +15,8 @@ typedef enum {
     PLATFORM_UI_ACTION_HOME,
     PLATFORM_UI_ACTION_SELF_TEST,
     PLATFORM_UI_ACTION_EVENTS,
-    PLATFORM_UI_ACTION_LED_TOGGLE
+    PLATFORM_UI_ACTION_LED_TOGGLE,
+    PLATFORM_UI_ACTION_CAPTURE_LIVE
 } PlatformUiAction;
 
 typedef struct {
@@ -32,6 +33,8 @@ typedef struct {
     u8 touch_ok;
     u8 capture_ok;
     u8 led_on;
+    /* 0: virtual demo, 1: waiting for SPI, 2: frozen real SPI snapshot. */
+    u8 capture_source;
 } PlatformUiStatus;
 
 int platform_ui_init(void);

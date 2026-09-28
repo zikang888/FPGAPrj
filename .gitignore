@@ -13,6 +13,9 @@ RemoteSystemsTempFiles/
 # Rebuildable caches and simulation scratch data
 /Multi_protocol.cache/
 /Multi_protocol.empty.cache/
+/Multi_protocol.ip_user_files/
+/Multi_protocol.sim/
+/build/
 xsim.dir/
 *.wdb
 *.vcd

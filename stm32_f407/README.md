@@ -37,13 +37,15 @@ docs/protocol-rules/protocol_rules.yaml
 - SPI 残帧、UART 错误停止位的板级扩展钩子；默认不绑定，防止误驱动。
 
 这不是完整的 CubeMX 生成工程。`hal/` 需要加入 STM32CubeMX/Keil 工程，初始化
-代码仍由 CubeMX 生成。实际排针、时钟、CS GPIO、CAN 滤波器和收发器必须在上板
+代码仍由 CubeMX 生成。实际板型、排针、时钟、CAN 滤波器和收发器必须在上板
 前复核。
 
 SPI 初次联调先调用 `MemberC_Init()`，再调用 `MemberC_RunSmokeTests()`；后者先
 读取实物 JEDEC ID，再连续读 10 次核对一致性。读到全 `00`/全 `FF` 会报校验失败。
 首次读值仍须人工对照实物 Flash 型号，不应把“重复一致”当作芯片型号认证。
-`SPI_FLASH_CS_*` 宏必须由实际板级 GPIO 配置生成。
+当前接入示例针对已焊装板载 W25Q128 的天空星 F407VGT6 高配版，使用 PA4
+GPIO 软件片选。CubeMX 中必须把 PA4 配成默认高电平的推挽输出；其他板型或未焊装
+Flash 的版本不能直接照搬。
 
 ## 电脑端测试
 
@@ -57,13 +59,16 @@ ctest --test-dir stm32_f407/build --output-on-failure
 
 ## 与当前 FPGA 候选连接
 
-SPI 第一闭环固定为 STM32 主机、W25Q128 从机、FPGA 被动监听：
+SPI 第一闭环固定为 STM32 主机、**板载** W25Q128 从机、FPGA 被动监听；
+不要再并联同 CS 的第二颗外置 Flash：
 
 | 信号 | STM32F407 | AC820 P7 | FPGA |
 |---|---|---|---|
-| CS_N | 由板级工程选择 GPIO | P7-2 | U11，输入 |
+| CS_N | PA4，软件 GPIO 输出 | P7-2 | U11，输入 |
 | SCLK | PA5 | P7-1 | U12，输入 |
 | MOSI | PA7 | P7-3 | U10，输入 |
 | MISO | PA6 | P7-4 | U9，输入 |
 
 三方共地，使用 3.3 V 逻辑。FPGA 不驱动这四根线。
+P7 的物理编号和排针朝向仍需对照实物丝印复核。引脚依据见
+[立创官方 SPI-FLASH 教程](https://wiki.lckfb.com/zh-hans/tkx/tkx-stm32f407vxt6/beginner/spi.html)。

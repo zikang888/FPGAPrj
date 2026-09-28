@@ -49,6 +49,7 @@ reg spi_cs_d;
 reg [2:0] bit_count;
 reg [7:0] mosi_shift;
 reg [7:0] miso_shift;
+reg first_byte;
 
 wire cs_falling = spi_cs_d && !spi_cs_sync;
 wire cs_rising  = !spi_cs_d && spi_cs_sync;
@@ -89,6 +90,7 @@ always @(posedge clk) begin
         bit_count <= 3'd0;
         mosi_shift <= 8'd0;
         miso_shift <= 8'd0;
+        first_byte <= 1'b0;
         evt_valid <= 1'b0;
         evt_trigger <= 1'b0;
         evt_data <= 128'd0;
@@ -119,6 +121,7 @@ always @(posedge clk) begin
             bit_count <= 3'd0;
             mosi_shift <= 8'd0;
             miso_shift <= 8'd0;
+            first_byte <= 1'b1;
             transaction_id <= transaction_id + 24'd1;
             if (!evt_valid || evt_ready) begin
                 evt_valid <= 1'b1;
@@ -150,9 +153,12 @@ always @(posedge clk) begin
             mosi_shift <= {mosi_shift[6:0], spi_mosi_sync};
             miso_shift <= {miso_shift[6:0], spi_miso_sync};
             if (bit_count == 3'd7) begin
+                first_byte <= 1'b0;
                 if (!evt_valid || evt_ready) begin
                     evt_valid <= 1'b1;
-                    evt_trigger <= 1'b0;
+                    // Trigger only on the command byte, never on payload 9F.
+                    evt_trigger <= first_byte &&
+                        {mosi_shift[6:0], spi_mosi_sync} == 8'h9F;
                     evt_data <= make_event(
                         timestamp,
                         EVENT_DATA,

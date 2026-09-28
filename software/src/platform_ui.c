@@ -500,8 +500,6 @@ static void render_self_test_page(const PlatformUiStatus *status,
 static void draw_events_chrome(const PlatformUiStatus *status,
                                const CaptureDemoSnapshot *snapshot)
 {
-    u32 last_index;
-
     draw_header("PROTOCOL DECODE", status, snapshot);
     fill(14U, 50U, 786U, 84U, C_PANEL);
     outline(14U, 50U, 786U, 84U, C_BORDER);
@@ -516,14 +514,12 @@ static void draw_events_chrome(const PlatformUiStatus *status,
           C_TRIGGER, C_PANEL);
     text(460U, 60U, "DROP", C_MUTED, C_PANEL);
     dec32(504U, 60U, status->dropped_count, C_GREEN, C_PANEL);
-    text(586U, 60U, "VIEW", C_MUTED, C_PANEL);
-    last_index = snapshot != 0 && snapshot->shown != 0U ?
-                 snapshot->first_index + snapshot->shown - 1U : 0U;
-    dec32(630U, 60U, snapshot != 0 ? snapshot->first_index : 0U,
-          C_CYAN, C_PANEL);
-    text(662U, 60U, "-", C_MUTED, C_PANEL);
-    dec32(678U, 60U, last_index, C_CYAN, C_PANEL);
-    text(718U, 60U, "SWIPE", C_MUTED, C_PANEL);
+    fill(580U, 53U, 781U, 81U, C_BUTTON);
+    outline(580U, 53U, 781U, 81U, C_CYAN);
+    text(616U, 60U,
+         status->capture_source == 1U ? "WAIT SPI" :
+         (status->capture_source == 2U ? "SHOW DEMO" : "ARM SPI"),
+         C_CYAN, C_BUTTON);
 
     fill(14U, 92U, 786U, 120U, C_HEADER);
     text(28U, 99U, "MARK", C_MUTED, C_HEADER);
@@ -740,6 +736,9 @@ PlatformUiAction platform_ui_poll_action(void)
                            g_requested_snapshot.snapshot_id) ? 1U : 0U;
     if (dragging_events != 0U) return PLATFORM_UI_ACTION_NONE;
 
+    if (g_requested_page == PLATFORM_UI_PAGE_EVENTS &&
+        y >= 50U && y <= 84U && x >= 580U && x <= 786U)
+        return PLATFORM_UI_ACTION_CAPTURE_LIVE;
     if (y < 414U || y > 479U) return PLATFORM_UI_ACTION_NONE;
     if (x >= 12U && x <= 188U) return PLATFORM_UI_ACTION_HOME;
     if (x >= 196U && x <= 384U) return PLATFORM_UI_ACTION_SELF_TEST;

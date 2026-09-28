@@ -1,26 +1,30 @@
 # STM32F407 to Zynq SPI first-link contract
 
-This is a handoff for member B's first transmit-only test, not a claim that
-STM32 firmware or physical interoperability is complete. The FPGA is a
-passive observer of the STM32-to-external-W25Q128 bus.
+This is a handoff for the first SPI test, not a claim that STM32 firmware or
+physical interoperability is complete. For a verified SkyStar STM32F407VGT6
+high-end board, use its populated onboard W25Q128. The FPGA is a passive
+observer of that bus. Other board variants require a separate pin review.
 
-## Connect the three devices
+## Connect the two boards
 
-Use 3.3 V logic and connect STM32, flash module and Zynq grounds together
-before signal wiring. Power the flash module according to its board rating;
-do not use an FPGA signal pin as a power supply. Connect the FPGA in parallel,
-not between the STM32 and the flash:
+Power the two boards separately. Use 3.3 V logic, connect STM32 and Zynq
+grounds before signal wiring, and do not connect the two 3V3 power rails.
+The populated Flash is already on the STM32 board; connect the FPGA in
+parallel, not between the STM32 and Flash:
 
-| Bus net | STM32F407 SPI1 | External W25Q128 | AC820 P7 / Zynq |
+| Bus net | STM32F407 SPI1 / onboard W25Q128 | SkyStar baseboard P1 (if fitted) | AC820 P7 / Zynq |
 |---|---|---|---|
-| SCLK | PA5 | CLK | P7-1 / U12 |
-| CS_N | B-selected GPIO | CS_N | P7-2 / U11 |
-| MOSI | PA7 | DI | P7-3 / U10 |
-| MISO | PA6 | DO | P7-4 / U9 |
+| SCLK | PA5 / CLK | P1-8 | P7-1 / U12 |
+| CS_N | PA4 GPIO / CS_N | P1-5 | P7-2 / U11 |
+| MOSI | PA7 / DI | P1-10 | P7-3 / U10 |
+| MISO | PA6 / DO | P1-7 | P7-4 / U9 |
+| GND | GND | P1-39 | GND |
 
-Member B must identify the actual CS GPIO and check whether the STM32 board's
-own flash shares it. Do not select two flash chips at once. Keep the external
-flash WP and HOLD inactive (high) according to its module wiring. All four
+Verify the exact STM32 board and populated Flash before wiring. Do not add an
+external Flash in parallel on the same CS: two slaves can drive MISO together.
+If the core board is installed on the SkyStar baseboard, check PA4/PA5/PA6/PA7
+conflicts with its relay, display SPI clock, buzzer, and Ethernet-related
+circuits before enabling the test. All four
 Zynq pins are inputs; no signal should be driven from the FPGA into the bus.
 Confirm the P7 physical pin numbers against the board silkscreen before
 powering on: the resource table and XDC establish U12/U11/U10/U9, while
@@ -38,18 +42,24 @@ the pin-number interpretation must match the actual connector orientation.
    Compare the first observed three-byte ID with the actual mounted part;
    ten matching reads do not prove the correct chip was selected.
 3. Repeat the transaction at a slow interval (at least 2 us CS-high gap for
-   the initial smoke test). Then try `00`, `FF`, `55`, `AA` patterns if the
-   external device/test source can provide known MISO bytes.
+   the initial smoke test). The `00`, `FF`, `55`, `AA` pattern test requires a
+   separate controlled test source; do not send arbitrary writes to Flash.
+
+PA4 must be a GPIO output with software CS, initially high; PA5/PA6/PA7 use
+SPI1. The board mapping follows the [official SPI-Flash tutorial](https://wiki.lckfb.com/zh-hans/tkx/tkx-stm32f407vxt6/beginner/spi.html)
+and [official SkyStar pinout](https://wiki.lckfb.com/zh-hans/web-tool/fdb-pinout/introduce.html).
 
 Expected FPGA event sequence for one four-byte transaction is START,
 four DATA events, END, all with the same transaction ID. Each DATA event
-stores MISO in `flags[15:8]` and MOSI in `flags[7:0]`. Normal transactions
-do not trigger a snapshot. A deliberately interrupted partial byte produces
+stores MISO in `flags[15:8]` and MOSI in `flags[7:0]`. A `9F` command in the
+first MOSI byte triggers the normal JEDEC snapshot. A deliberately interrupted partial byte produces
 FRAME_ERROR (`0x3F`) and can trigger capture; do that only after the basic
 byte stream works.
 
-The current PS application displays a cached virtual self-test snapshot,
-not an automatically refreshed live SPI stream. A later PS capture-control
-step is required to arm, read and show external SPI events. Until that is
-implemented, validate the RTL path with the existing simulation and inspect
-capture registers over JTAG; do not mistake virtual EVENTS rows for B's data.
+The PS source now has a separate live capture path: on EVENTS tap `ARM SPI`,
+then start/reset STM32. The page says `WAIT SPI` until the `9F` command and
+16 subsequent events freeze a snapshot; it then shows real SPI events and
+offers `SHOW DEMO` to return to the cached virtual snapshot. The currently
+running older JTAG candidate does **not** include this change. Use only a
+newly built matched BIT/HDF/ELF for the live test, and do not mistake the
+virtual EVENTS rows for STM32 data.

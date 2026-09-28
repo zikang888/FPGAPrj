@@ -82,6 +82,38 @@ int capture_demo_read_window(CaptureDemoSnapshot *snapshot, u32 first_index)
     return XST_SUCCESS;
 }
 
+int capture_live_arm(void)
+{
+    Xil_Out32(REG_CAPTURE_CTRL, CAPTURE_CTRL_ACK);
+    Xil_Out32(REG_CAPTURE_CTRL, CAPTURE_CTRL_ARM);
+    return ((Xil_In32(REG_CAPTURE_STATUS) & CAPTURE_STATUS_ACTIVE) != 0U) ?
+           XST_SUCCESS : XST_FAILURE;
+}
+
+int capture_live_poll(CaptureDemoSnapshot *snapshot)
+{
+    u32 status;
+    u32 first;
+    if (snapshot == 0) return -1;
+    status = Xil_In32(REG_CAPTURE_STATUS);
+    if ((status & CAPTURE_STATUS_READY) == 0U) {
+        return (status & CAPTURE_STATUS_ACTIVE) != 0U ? 0 : -1;
+    }
+    snapshot->snapshot_id = Xil_In32(REG_SNAPSHOT_ID);
+    snapshot->count = Xil_In32(REG_SNAPSHOT_COUNT);
+    snapshot->trigger_index = Xil_In32(REG_TRIGGER_INDEX);
+    snapshot->dropped_count = Xil_In32(REG_DROPPED_COUNT);
+    if (snapshot->count == 0U || snapshot->count > CAPTURE_MAX_EVENTS ||
+        snapshot->trigger_index >= snapshot->count) return -1;
+    first = snapshot->trigger_index >= 3U ?
+            snapshot->trigger_index - 3U : 0U;
+    if (first + CAPTURE_DISPLAY_EVENTS > snapshot->count) {
+        first = snapshot->count > CAPTURE_DISPLAY_EVENTS ?
+                snapshot->count - CAPTURE_DISPLAY_EVENTS : 0U;
+    }
+    return capture_demo_read_window(snapshot, first) == XST_SUCCESS ? 1 : -1;
+}
+
 int capture_demo_run(CaptureDemoSnapshot *snapshot)
 {
     u32 status;

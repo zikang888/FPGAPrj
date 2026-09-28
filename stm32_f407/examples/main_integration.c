@@ -19,14 +19,17 @@ void MemberC_Init(void)
 
     g_port_context.spi = &hspi1;
     g_port_context.debug_uart = &huart1;
-    g_port_context.spi_cs_port = SPI_FLASH_CS_GPIO_Port;
-    g_port_context.spi_cs_pin = SPI_FLASH_CS_Pin;
+    /* SkyStar F407VGT6 high-end board: onboard W25Q128 CS is PA4.
+     * CubeMX must configure PA4 as a push-pull GPIO output, initially high.
+     * Do not use this example unchanged on a different board revision. */
+    g_port_context.spi_cs_port = GPIOA;
+    g_port_context.spi_cs_pin = GPIO_PIN_4;
 #if defined(TEST_SYNC_GPIO_Port) && defined(TEST_SYNC_Pin)
     g_port_context.sync_port = TEST_SYNC_GPIO_Port;
     g_port_context.sync_pin = TEST_SYNC_Pin;
 #endif
 
-    HAL_GPIO_WritePin(SPI_FLASH_CS_GPIO_Port, SPI_FLASH_CS_Pin, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);
 #if defined(TEST_SYNC_GPIO_Port) && defined(TEST_SYNC_Pin)
     HAL_GPIO_WritePin(TEST_SYNC_GPIO_Port, TEST_SYNC_Pin, GPIO_PIN_RESET);
 #endif
