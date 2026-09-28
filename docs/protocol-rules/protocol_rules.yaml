@@ -1,0 +1,148 @@
+schema_version: 1
+rules_version: "1.0.0-draft-repo-abi"
+owner: "成员C"
+approval_status: "draft_member_c_owned"
+change_policy:
+  sole_approver: "成员C"
+  implementers_must_not_override: true
+  required_evidence:
+    - rules_version
+    - rules_sha256
+    - firmware_revision
+    - fpga_revision
+    - bit_hdf_elf_hashes
+
+event_abi:
+  width_bits: 128
+  word_order: "word0=[31:0], word3=[127:96]"
+  fields:
+    timestamp: "[127:64]"
+    protocol_id: "[63:60]"
+    channel_id: "[59:56]"
+    direction: "[55:54]"
+    event_type: "[53:48]"
+    flags_data: "[47:32]"
+    data_length: "[31:24]"
+    transaction_id: "[23:0]"
+  protocol_ids:
+    virtual: 0
+    uart: 1
+    spi: 2
+    i2c: 3
+    can: 4
+  event_types:
+    start: 0
+    data: 1
+    end: 2
+    error: 63
+    reserved_extension_range: "0x03..0x3E"
+  handshake:
+    transfer_condition: "evt_valid && evt_ready"
+    hold_when_blocked:
+      - evt_data
+      - evt_trigger
+
+protocols:
+  spi:
+    enabled: true
+    role_under_test: "stm32_master_w25q128_slave_fpga_passive_monitor"
+    mode: 0
+    bit_order: "msb_first"
+    initial_sclk_hz: 1000000
+    transaction_boundary: "CS falling edge to CS rising edge"
+    data_event:
+      flags_data_15_8: "MISO"
+      flags_data_7_0: "MOSI"
+      data_length: 2
+    errors:
+      incomplete_byte: "CS rises when sampled_bit_count is not 0 modulo 8"
+      truncated_event: "capture ends before transaction END is recorded"
+    triggers:
+      - name: "jedec_id_command"
+        match_mosi: "0x9F"
+      - name: "incomplete_byte"
+        match_error: "incomplete_byte"
+    cases:
+      - case_id: 1001
+        name: "w25q128_jedec_id"
+        tx_hex: "9F000000"
+        expected_rx_payload: "must_match_actual_mounted_part"
+        reference_example_hex: "EF4018"
+        must_verify_actual_device: true
+        smoke_iterations: 10
+        acceptance_iterations: 1000
+      - case_id: 1002
+        name: "fixed_patterns"
+        tx_hex: "00FF55AA"
+      - case_id: 1091
+        name: "cs_incomplete_byte"
+        fault: "emit_1_to_7_valid_bits_then_release_cs"
+        acceptance_iterations: 100
+
+  uart:
+    enabled: true
+    baudrate: 115200
+    data_bits: 8
+    parity: "none"
+    stop_bits: 1
+    transaction_boundary: "test case length or configured idle gap"
+    errors:
+      framing_error: "sampled stop bit is low"
+      timeout: "expected response not received before case timeout"
+    cases:
+      - case_id: 2001
+        name: "eight_byte_loopback"
+        payload_rule: "incrementing bytes"
+        smoke_iterations: 10
+        acceptance_iterations: 1000
+
+  i2c:
+    enabled: true
+    bitrate_hz: 100000
+    address_mode: "7bit"
+    eeprom_address_7bit: "0x50"
+    transaction_boundary: "START or repeated START through STOP"
+    events_required:
+      - start
+      - repeated_start
+      - address
+      - read_write
+      - data
+      - ack_nack
+      - stop
+    errors:
+      nack: "SDA remains high during ACK clock"
+      illegal_transition: "SDA changes while SCL high outside START/STOP"
+    cases:
+      - case_id: 3001
+        name: "at24c256_write_read"
+        memory_address: "0x0100"
+        length: 16
+        acceptance_iterations: 1000
+      - case_id: 3091
+        name: "missing_address_nack"
+        address_7bit: "0x51"
+        expected: "nack"
+
+  can:
+    enabled: false
+    enable_gate: "member_c_approves_after_transceiver_emio_termination_check"
+    bitrate_hz: 500000
+    frame_format: "standard_11bit"
+    timestamp_classification: "PS software timestamp until PL RXD timestamp exists"
+    cases:
+      - case_id: 4001
+        name: "standard_frame_echo"
+        standard_id: "0x321"
+        dlc: 8
+        payload_rule: "incrementing bytes"
+        smoke_iterations: 10
+        acceptance_iterations: 1000
+
+acceptance:
+  event_missing: 0
+  event_duplicate: 0
+  known_corpus_parse_errors: 0
+  continuous_run_hours: 2
+  fpga_wns_requirement: ">0"
+  drc_errors: 0
