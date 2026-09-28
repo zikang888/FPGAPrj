@@ -53,9 +53,9 @@ module multi_protocol_core (
 );
 
 localparam [31:0] SYS_ID_VALUE       = 32'h4D50_5254; // "MPRT"
-localparam [31:0] VERSION_VALUE      = 32'h0001_0002; // event format v1, platform 2
-localparam [31:0] BUILD_ID_VALUE     = 32'h2026_0923;
-localparam [31:0] CAPABILITIES_VALUE = 32'h0000_0003; // bit0: snapshot, bit1: external event ingress
+localparam [31:0] VERSION_VALUE      = 32'h0001_0003; // event format v1, platform 3
+localparam [31:0] BUILD_ID_VALUE     = 32'h2026_0926;
+localparam [31:0] CAPABILITIES_VALUE = 32'h0000_0007; // bit0: snapshot, bit1: external ingress, bit2: SPI monitor
 
 localparam [15:0] REG_SYS_ID       = 16'h0000;
 localparam [15:0] REG_VERSION      = 16'h0004;

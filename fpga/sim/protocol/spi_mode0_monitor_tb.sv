@@ -20,8 +20,9 @@ wire [31:0] dropped_event_count;
 reg [127:0] captured_event [0:255];
 reg captured_trigger [0:255];
 reg [127:0] held_event;
-reg [7:0] expected_mosi;
-reg [7:0] expected_miso;
+reg [7:0] random_mosi [0:99];
+reg [7:0] random_miso [0:99];
+reg [7:0] random_lfsr;
 integer event_count = 0;
 integer failures = 0;
 integer bit_index;
@@ -211,18 +212,26 @@ initial begin
     check_event(15, 6'h00, 16'h0000, 8'd0, 24'd4, 1'b0);
     check_event(16, 6'h3F, 16'h0004, 8'd0, 24'd4, 1'b1);
 
-    // Deterministic 100-byte stress transaction.
+    // Fixed-seed pseudo-random stress transaction is reproducible.
+    random_lfsr = 8'hA5;
     spi_begin();
     for (random_index = 0; random_index < 100; random_index = random_index + 1) begin
-        spi_byte(random_index[7:0], ~random_index[7:0]);
+        random_mosi[random_index] = random_lfsr;
+        random_lfsr = {random_lfsr[6:0],
+                       random_lfsr[7] ^ random_lfsr[5] ^
+                       random_lfsr[4] ^ random_lfsr[3]};
+        random_miso[random_index] = random_lfsr ^ 8'h3C;
+        random_lfsr = {random_lfsr[6:0],
+                       random_lfsr[7] ^ random_lfsr[5] ^
+                       random_lfsr[4] ^ random_lfsr[3]};
+        spi_byte(random_mosi[random_index], random_miso[random_index]);
     end
     spi_end();
     check_event(17, 6'h00, 16'h0000, 8'd0, 24'd5, 1'b0);
     for (random_index = 0; random_index < 100; random_index = random_index + 1) begin
-        expected_mosi = random_index[7:0];
-        expected_miso = ~expected_mosi;
         check_event(18 + random_index, 6'h01,
-                    {expected_miso, expected_mosi}, 8'd2, 24'd5, 1'b0);
+                    {random_miso[random_index], random_mosi[random_index]},
+                    8'd2, 24'd5, 1'b0);
     end
     check_event(118, 6'h02, 16'h0000, 8'd0, 24'd5, 1'b0);
 

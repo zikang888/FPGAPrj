@@ -54,7 +54,7 @@ bit order = MSB first
 1. ready/valid 反压期间事件保持稳定。
 2. `00/FF/55/AA` 全双工黄金字节。
 3. `0x9F + JEDEC ID` 事务。
-4. 100 字节确定性压力事务。
+4. 固定种子、可复现的 100 字节伪随机压力事务。
 5. 异步相位偏移和 SCLK 中途停顿。
 6. CS 下降沿 START、字节 DATA、CS 上升沿 END。
 7. transaction ID 跨事务递增。

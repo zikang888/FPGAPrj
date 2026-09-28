@@ -5,9 +5,9 @@ Base address: `0x4000_0000`, aperture: 64 KiB.
 | Offset | Name | Access | Reset/value |
 |---:|---|---|---:|
 | `0x0000` | SYS_ID | RO | `0x4D505254` |
-| `0x0004` | VERSION | RO | `0x00010002` |
-| `0x0008` | BUILD_ID | RO | `0x20260923` |
-| `0x000C` | CAPABILITIES | RO | bit0=`event snapshot`, bit1=`external ready/valid ingress` |
+| `0x0004` | VERSION | RO | `0x00010003` |
+| `0x0008` | BUILD_ID | RO | `0x20260926` |
+| `0x000C` | CAPABILITIES | RO | bit0=`event snapshot`, bit1=`external ready/valid ingress`, bit2=`SPI Mode-0 monitor` |
 | `0x0010` | SYS_CTRL | RW | `0` |
 | `0x0014` | SYS_STATUS | RO | bit0=`ready` |
 | `0x0018` | IO_MODE | RW | `0` (`OBSERVE`) |
@@ -55,6 +55,16 @@ Protocol numbers are frozen as:
 | `3` | I2C |
 | `4` | CAN |
 
+Direction values: `0` unknown, `1` controller to peripheral, `2` peripheral
+to controller, `3` bidirectional/full duplex. Common event types are `0x00`
+transaction start, `0x01` data, `0x02` transaction end, and `0x3F` frame or
+protocol error. Values `0x03..0x3E` are reserved for reviewed extensions.
+
+For SPI data, `flags[15:8]` holds MISO and `flags[7:0]` holds MOSI;
+payload length is `2`, direction is `3`, and all events in one CS-low
+transaction share a transaction ID. On an incomplete byte, event type is
+`0x3F` and `flags[2:0]` is the number of sampled bits.
+
 Protocol listeners use ready/valid transfer semantics. An event is accepted only
 when `evt_valid && evt_ready` is true. A producer asserting `evt_valid` while
 `evt_ready` is low must keep `evt_data` and `evt_trigger` stable. Arbitration or
@@ -64,7 +74,10 @@ The core exposes one generic external producer port:
 `ext_evt_valid/ext_evt_ready/ext_evt_data[127:0]/ext_evt_trigger`, plus
 `ext_evt_dropped_count[31:0]` for producer-side loss observability. It and the
 AXI virtual self-test source feed the same round-robin arbiter and the same
-snapshot buffer. In the current board design the external port is tied low;
-this keeps the released LCD/AXI image buildable until protocol pins are frozen.
+snapshot buffer. In this integration build the external port is connected to
+the passive SPI Mode-0 monitor. The current C board mapping is P7-38/35/36/33
+(CS/SCLK/MOSI/MISO, FPGA AA8/AB10/AB9/AA7). A's new mapping is
+P7-2/1/3/4 (FPGA U11/U12/U10/U9); the physical STM32 wiring decision is
+pending. Check the selected XDC and actual wiring before programming.
 
 All writes honor AXI `WSTRB`. Undefined addresses read as zero and ignore writes.

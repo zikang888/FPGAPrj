@@ -146,12 +146,12 @@ initial begin
     end
 
     axi_read(16'h0004, value);
-    if (value !== 32'h0001_0002) begin
+    if (value !== 32'h0001_0003) begin
         $fatal(1, "FAIL: VERSION = %h", value);
     end
 
     axi_read(16'h000C, value);
-    if (value !== 32'h0000_0003) begin
+    if (value !== 32'h0000_0007) begin
         $fatal(1, "FAIL: CAPABILITIES = %h", value);
     end
 

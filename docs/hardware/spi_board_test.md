@@ -5,6 +5,12 @@
 The Zynq PL pins are passive 3.3 V inputs. Connect a common ground before
 connecting any signal. Do not connect a 5 V SPI source directly.
 
+This table is the current NumberC wiring, retained for the isolated A+C
+integration build. NumberA's 2026-09-28 update instead assigns
+CS/SCLK/MOSI/MISO to FPGA U11/U12/U10/U9 (AC820 P7-2/1/3/4).
+Do not move wires or program a new bitstream until the team's actual
+STM32-to-P7 wiring is confirmed against the selected `top.xdc`.
+
 | STM32F407 signal | Zynq signal | Zynq package pin | Direction at Zynq |
 |---|---|---|---|
 | GND | GND | board ground | reference |
