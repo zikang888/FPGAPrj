@@ -44,3 +44,6 @@ xsim.dir/
 Thumbs.db
 *.swp
 *~
+
+# Host-side tests for the STM32F407 protocol node
+/stm32_f407/build/
