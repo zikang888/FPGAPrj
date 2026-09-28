@@ -46,14 +46,18 @@ completed for the new candidate.
 ## Tomorrow's cold-start sequence
 
 1. Confirm F407VGT6 high-end core board and populated onboard W25Q128. No
-   SkyStar baseboard or second Flash. Verify physical P1 pin-1 orientation.
+   SkyStar baseboard or second Flash. On the supplied back-side photo with
+   USB at the bottom, identify the right header's `A03|A04`, `A05|A06`,
+   `A07|C04` rows by the printed labels, not just a P1 number.
 2. Generate the minimal STM32CubeMX project: SPI1 PA5/PA6/PA7, Mode 0,
    8-bit MSB-first master at about 1 MHz; PA4 push-pull GPIO/software CS,
    initially high; USART1 PA9/PA10 115200 for independent JSONL. Add
    `stm32_f407/common` and `hal` sources/headers and the USER CODE example.
    Call `MemberC_Init()` after GPIO/SPI/UART initialization, then run
    `MemberC_RunSmokeTests()` on a controlled start/reset.
-3. With boards unpowered, join GND first: F407 P1-39 to AC820 GND. Then
+3. With boards unpowered, join GND first: use a hole printed `GND` (the
+   inner/right hole beside `3V3` on either bottom row of the photo's left
+   header) to AC820 GND. Then
    PA4/P1-5 to P7-2 CS_N (U11), PA5/P1-8 to P7-1 SCLK (U12), PA7/P1-10 to
    P7-3 MOSI (U10), PA6/P1-7 to P7-4 MISO (U9). Power the boards separately;
    **do not connect 3V3 rails**. Recheck P7 connector orientation.

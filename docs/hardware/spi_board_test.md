@@ -16,13 +16,32 @@ This table follows NumberA's 2026-09-28 P7 plan and the integration branch's
 current `top.xdc`. The earlier C-only candidate uses P7-38/35/36/33 instead.
 Do not mix its BIT with the wiring below.
 
-| STM32F407 core-board signal | SkyStar baseboard P1 (if fitted) | Zynq signal | Zynq package pin |
+| STM32F407 core-board signal | P1 header number | Zynq signal | Zynq package pin |
 |---|---|---|---|
-| GND | P1-39 | GND | board ground |
+| GND | Use a `GND`-labelled hole; see back-view note below | GND | board ground |
 | Flash CS / PA4 GPIO output | P1-5 | SPI_CS_N / P7-2 | U11 input |
 | SPI1 SCK / PA5 | P1-8 | SPI_SCLK / P7-1 | U12 input |
 | SPI1 MOSI / PA7 | P1-10 | SPI_MOSI / P7-3 | U10 input |
 | SPI1 MISO / PA6 (Flash DO) | P1-7 | SPI_MISO / P7-4 | U9 input |
+
+The user's photo is a **back-side view with the USB connector at the
+bottom**. On its right-hand two-column header, count rows downward from the
+top `REF | A02` row. Connect by the printed GPIO name first:
+
+| Printed row | Inner/left hole | Outer/right hole | Use |
+|---|---|---|---|
+| Third, `A03 | A04` | A03 | **A04 (PA4)** | CS_N |
+| Fourth, `A05 | A06` | **A05 (PA5)** | **A06 (PA6)** | SCLK / MISO |
+| Fifth, `A07 | C04` | **A07 (PA7)** | C04 | MOSI |
+
+For ground, use a hole printed `GND`, for example the **inner/right hole**
+of either bottom `3V3 | GND` or `5V0 | GND` row on the photo's left header.
+These left-header ground holes are not the right-header `P1-39` position; they
+are electrically suitable GND points. Do not use the adjacent 3V3/5V0 holes.
+The signal P1 numbers above follow the mating-header pin map;
+the core-board back silk gives the safer physical identification. Verify the
+AC820 P7 orientation separately because the F407 back view cannot establish
+which physical end of P7 is pin 1.
 
 The FPGA is a high-impedance listener connected in parallel with the STM32
 master and its onboard W25Q128; it never drives MISO. Do not parallel a
