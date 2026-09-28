@@ -28,6 +28,12 @@ wrapper and BD script connect the same SPI monitor and can build without
 changing physical port names. A's older PS application was not substituted
 for C's current touch UI and pixel-scrolling application.
 
+The existing tracked Vivado generated tree is inherited from the C recovery
+point and is not the integration candidate. Use the matched files under
+`candidates/numberA_0928_numberC_p7_legacy/`, or regenerate locally with
+`fpga/build/build_bitstream.tcl` and `software/build_ps_app.tcl` before
+programming. Do not pair an old generated BIT with a new ELF by accident.
+
 ## Verification gates
 
 1. Vivado 2018.3 runs all five RTL testbenches, including SPI-to-snapshot.
