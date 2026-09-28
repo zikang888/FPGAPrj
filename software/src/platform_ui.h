@@ -15,9 +15,7 @@ typedef enum {
     PLATFORM_UI_ACTION_HOME,
     PLATFORM_UI_ACTION_SELF_TEST,
     PLATFORM_UI_ACTION_EVENTS,
-    PLATFORM_UI_ACTION_LED_TOGGLE,
-    PLATFORM_UI_ACTION_EVENTS_PREVIOUS,
-    PLATFORM_UI_ACTION_EVENTS_NEXT
+    PLATFORM_UI_ACTION_LED_TOGGLE
 } PlatformUiAction;
 
 typedef struct {
@@ -37,6 +35,8 @@ typedef struct {
 } PlatformUiStatus;
 
 int platform_ui_init(void);
+void platform_ui_set_event_cache(const CaptureDemoCache *cache);
+void platform_ui_tick(void);
 void platform_ui_render_page(PlatformUiPage page,
                              const PlatformUiStatus *status,
                              const CaptureDemoSnapshot *snapshot);

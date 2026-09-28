@@ -1,4 +1,5 @@
 #include "platform_ui.h"
+#include "pixel_scroll.h"
 
 #include "font.h"
 #include "touch.h"
@@ -8,6 +9,7 @@
 #include "xvtc.h"
 #include "sleep.h"
 #include "string.h"
+#include "xtime_l.h"
 
 #define FB_ADDR      (XPAR_PS7_DDR_0_S_AXI_BASEADDR + 0x01000000U)
 #define FB_W         800U
@@ -31,6 +33,10 @@
 #define C_GRID       0x183547U
 #define C_TRIGGER    0x2D7DFFU
 #define C_HEADER     0x0B2233U
+#define EVENTS_Y0    122U
+#define EVENTS_Y1    407U
+#define EVENT_ROW_PX 35U
+#define FRAME_SETTLE_US 34000U
 
 static XAxiVdma g_vdma;
 static XVtc g_vtc;
@@ -39,8 +45,19 @@ static u8 *g_fb = (u8 *)FB_ADDR_1;
 static u8 g_display_frame;
 static u8 g_draw_frame = 1U;
 static PlatformUiPage g_rendered_page = PLATFORM_UI_PAGE_HOME;
-static CaptureDemoSnapshot g_last_event_snapshot;
-static u8 g_last_event_snapshot_valid;
+static PlatformUiPage g_requested_page = PLATFORM_UI_PAGE_HOME;
+static PlatformUiStatus g_requested_status;
+static CaptureDemoSnapshot g_requested_snapshot;
+static u8 g_requested_snapshot_valid;
+static const CaptureDemoCache *g_event_cache;
+static u32 g_scroll_px;
+static u32 g_scroll_snapshot_id;
+static u8 g_render_pending;
+static u8 g_render_full;
+static u8 g_frame_pending;
+static XTime g_frame_switched_at;
+static u16 g_dirty_y0;
+static u16 g_dirty_y1;
 static u8 g_clip_enabled;
 static u16 g_clip_x0;
 static u16 g_clip_y0;
@@ -158,15 +175,36 @@ static void outline(u16 x0, u16 y0, u16 x1, u16 y1, u32 color)
     vline(x1, y0, y1, color);
 }
 
-static void present_frame(void)
+static void present_frame_region(u16 y0, u16 y1)
 {
-    Xil_DCacheFlushRange(g_frame_addr[g_draw_frame], FB_SIZE);
+    u32 offset = (u32)y0 * FB_STRIDE;
+    u32 length = ((u32)y1 - (u32)y0 + 1U) * FB_STRIDE;
+    Xil_DCacheFlushRange(g_frame_addr[g_draw_frame] + offset, length);
     (void)XAxiVdma_StartParking(&g_vdma, (int)g_draw_frame, XAXIVDMA_READ);
     g_display_frame = g_draw_frame;
     g_draw_frame ^= 1U;
     g_fb = (u8 *)g_frame_addr[g_draw_frame];
-    usleep(34000U);
-    memcpy(g_fb, (const void *)g_frame_addr[g_display_frame], FB_SIZE);
+    g_dirty_y0 = y0;
+    g_dirty_y1 = y1;
+    XTime_GetTime(&g_frame_switched_at);
+    g_frame_pending = 1U;
+}
+
+static u8 finish_frame_if_ready(void)
+{
+    XTime now;
+    u32 offset;
+    u32 length;
+    if (g_frame_pending == 0U) return 1U;
+    XTime_GetTime(&now);
+    if (now - g_frame_switched_at <
+        (XTime)FRAME_SETTLE_US * (COUNTS_PER_SECOND / 1000000U)) return 0U;
+    offset = (u32)g_dirty_y0 * FB_STRIDE;
+    length = ((u32)g_dirty_y1 - (u32)g_dirty_y0 + 1U) * FB_STRIDE;
+    memcpy(g_fb + offset,
+           (const u8 *)g_frame_addr[g_display_frame] + offset, length);
+    g_frame_pending = 0U;
+    return 1U;
 }
 
 static int video_init(void)
@@ -257,8 +295,9 @@ int platform_ui_init(void)
     int status = video_init();
     if (status != XST_SUCCESS) return status;
     fill(0U, 0U, FB_W - 1U, FB_H - 1U, C_BG);
-    present_frame();
+    present_frame_region(0U, FB_H - 1U);
     usleep(100000U);
+    (void)finish_frame_if_ready();
     return XST_SUCCESS;
 }
 
@@ -496,10 +535,9 @@ static void draw_events_chrome(const PlatformUiStatus *status,
     text(550U, 99U, "TIME LO", C_MUTED, C_HEADER);
 }
 
-static void draw_event_row_at(const CaptureDemoSnapshot *snapshot,
-                              u32 row, int y_position)
+static void draw_event_row_at(const u32 *words, u32 event_index,
+                              u32 trigger_index, int y_position)
 {
-    u32 event_index;
     u32 word0;
     u32 word1;
     u32 protocol;
@@ -508,23 +546,22 @@ static void draw_event_row_at(const CaptureDemoSnapshot *snapshot,
     u32 row_bg;
     u16 y;
 
-    if (snapshot == 0 || row >= snapshot->shown ||
-        y_position > 407 || y_position + 32 < 122) return;
+    if (words == 0 || y_position > 407 ||
+        y_position + 32 < 122) return;
 
-    event_index = snapshot->first_index + row;
-    word0 = snapshot->event_word[row][0];
-    word1 = snapshot->event_word[row][1];
+    word0 = words[0];
+    word1 = words[1];
     protocol = (word1 >> 28) & 0xFU;
     event_type = (word1 >> 16) & 0x3FU;
     flags = word1 & 0xFFFFU;
     y = (u16)y_position;
-    row_bg = event_index == snapshot->trigger_index ? C_ACTIVE :
+    row_bg = event_index == trigger_index ? C_ACTIVE :
              ((event_index & 1U) != 0U ? C_BG : C_PANEL);
     fill(14U, y, 786U, (u16)(y + 32U), row_bg);
     hline(14U, 786U, (u16)(y + 32U), C_GRID);
     text(28U, (u16)(y + 8U),
-         event_index == snapshot->trigger_index ? ">TRG" : " EVT",
-         event_index == snapshot->trigger_index ? C_TRIGGER : C_MUTED,
+         event_index == trigger_index ? ">TRG" : " EVT",
+         event_index == trigger_index ? C_TRIGGER : C_MUTED,
          row_bg);
     dec32(100U, (u16)(y + 8U), event_index, C_TEXT, row_bg);
     text(164U, (u16)(y + 8U), protocol_name(protocol),
@@ -533,14 +570,52 @@ static void draw_event_row_at(const CaptureDemoSnapshot *snapshot,
     hex32(294U, (u16)(y + 8U), flags, C_TEXT, row_bg);
     hex32(406U, (u16)(y + 8U), word0 & 0x00FFFFFFU,
           C_TEXT, row_bg);
-    hex32(542U, (u16)(y + 8U), snapshot->event_word[row][2],
+    hex32(542U, (u16)(y + 8U), words[2],
           C_MUTED, row_bg);
+}
+
+static u32 max_scroll_px(u32 count)
+{
+    return pixel_scroll_max(count, EVENT_ROW_PX,
+                            EVENTS_Y1 - EVENTS_Y0 + 1U);
+}
+
+static void draw_events_region(const CaptureDemoSnapshot *snapshot)
+{
+    u32 index;
+    int y;
+    fill(14U, EVENTS_Y0, 786U, EVENTS_Y1, C_PANEL);
+    if (snapshot == 0 || g_event_cache == 0 ||
+        g_event_cache->valid == 0U ||
+        g_event_cache->snapshot_id != snapshot->snapshot_id) return;
+    index = g_scroll_px / EVENT_ROW_PX;
+    y = (int)EVENTS_Y0 - (int)(g_scroll_px % EVENT_ROW_PX);
+    set_clip(14U, EVENTS_Y0, 786U, EVENTS_Y1);
+    for (; index < g_event_cache->count && y <= (int)EVENTS_Y1;
+         ++index, y += (int)EVENT_ROW_PX) {
+        draw_event_row_at(g_event_cache->event_word[index], index,
+                          snapshot->trigger_index, y);
+    }
+    clear_clip();
 }
 
 static void render_events_page(const PlatformUiStatus *status,
                                const CaptureDemoSnapshot *snapshot)
 {
     u32 row;
+    CaptureDemoSnapshot view;
+
+    if (snapshot != 0 && g_event_cache != 0 &&
+        g_event_cache->valid != 0U &&
+        g_event_cache->snapshot_id == snapshot->snapshot_id) {
+        view = *snapshot;
+        view.first_index = g_scroll_px / EVENT_ROW_PX;
+        view.shown = (u8)((snapshot->count - view.first_index) > 9U ?
+                          9U : (snapshot->count - view.first_index));
+        draw_events_chrome(status, &view);
+        draw_events_region(snapshot);
+        return;
+    }
 
     draw_events_chrome(status, snapshot);
 
@@ -552,74 +627,42 @@ static void render_events_page(const PlatformUiStatus *status,
     }
 
     for (row = 0U; row < snapshot->shown; ++row) {
-        draw_event_row_at(snapshot, row, (int)(122U + row * 35U));
+        draw_event_row_at(snapshot->event_word[row],
+                          snapshot->first_index + row,
+                          snapshot->trigger_index,
+                          (int)(EVENTS_Y0 + row * EVENT_ROW_PX));
     }
 }
 
-static void animate_events_scroll(const PlatformUiStatus *status,
-                                  const CaptureDemoSnapshot *previous,
-                                  const CaptureDemoSnapshot *current)
+void platform_ui_set_event_cache(const CaptureDemoCache *cache)
 {
-    const u32 animation_frames = 12U;
-    u32 frame;
-    u32 row;
-    u32 previous_last;
-    u32 event_index;
-    u32 distance;
-    u32 travel;
-    u32 eased_numerator;
-    u32 eased_denominator;
-    u32 moved;
-    u8 forward;
-    int offset;
-    int y;
+    g_event_cache = cache;
+}
 
-    if (previous == 0 || current == 0 ||
-        previous->first_index == current->first_index) return;
+void platform_ui_tick(void)
+{
+    const CaptureDemoSnapshot *snapshot =
+        g_requested_snapshot_valid != 0U ? &g_requested_snapshot : 0;
+    if (finish_frame_if_ready() == 0U || g_render_pending == 0U) return;
 
-    forward = current->first_index > previous->first_index ? 1U : 0U;
-    distance = forward != 0U ?
-               current->first_index - previous->first_index :
-               previous->first_index - current->first_index;
-    if (distance > CAPTURE_DISPLAY_EVENTS) distance = CAPTURE_DISPLAY_EVENTS;
-    travel = distance * 35U;
-    previous_last = previous->first_index + previous->shown - 1U;
-    eased_denominator = animation_frames * animation_frames * animation_frames;
-
-    for (frame = 1U; frame <= animation_frames; ++frame) {
-        /* Integer smoothstep: 3t^2 - 2t^3.  The final frame lands exactly. */
-        eased_numerator = frame * frame *
-                            (3U * animation_frames - 2U * frame);
-        moved = (travel * eased_numerator) / eased_denominator;
-        offset = (int)moved;
-        if (forward != 0U) offset = -offset;
-
+    if (g_render_full != 0U || g_requested_page != g_rendered_page) {
         fill(0U, 0U, FB_W - 1U, FB_H - 1U, C_BG);
-        draw_events_chrome(status, current);
-        fill(14U, 122U, 786U, 407U, C_PANEL);
-        set_clip(14U, 122U, 786U, 407U);
-
-        for (row = 0U; row < previous->shown; ++row) {
-            y = 122 + (int)(row * 35U) + offset;
-            draw_event_row_at(previous, row, y);
+        if (g_requested_page == PLATFORM_UI_PAGE_SELF_TEST) {
+            render_self_test_page(&g_requested_status, snapshot);
+        } else if (g_requested_page == PLATFORM_UI_PAGE_EVENTS) {
+            render_events_page(&g_requested_status, snapshot);
+        } else {
+            render_home_page(&g_requested_status, snapshot);
         }
-
-        for (row = 0U; row < current->shown; ++row) {
-            event_index = current->first_index + row;
-            if ((forward != 0U && event_index <= previous_last) ||
-                (forward == 0U && event_index >= previous->first_index)) {
-                continue;
-            }
-            y = 122 +
-                ((int)event_index - (int)previous->first_index) * 35 +
-                offset;
-            draw_event_row_at(current, row, y);
-        }
-
-        clear_clip();
-        draw_navigation(PLATFORM_UI_PAGE_EVENTS, status);
-        present_frame();
+        draw_navigation(g_requested_page, &g_requested_status);
+        present_frame_region(0U, FB_H - 1U);
+    } else if (g_requested_page == PLATFORM_UI_PAGE_EVENTS) {
+        draw_events_region(snapshot);
+        present_frame_region(EVENTS_Y0, EVENTS_Y1);
     }
+    g_rendered_page = g_requested_page;
+    g_render_pending = 0U;
+    g_render_full = 0U;
 }
 
 void platform_ui_render_page(PlatformUiPage page,
@@ -627,71 +670,75 @@ void platform_ui_render_page(PlatformUiPage page,
                              const CaptureDemoSnapshot *snapshot)
 {
     if (status == 0) return;
-    g_rendered_page = page;
     if (page == PLATFORM_UI_PAGE_EVENTS && snapshot != 0 &&
-        g_last_event_snapshot_valid != 0U &&
-        g_last_event_snapshot.snapshot_id == snapshot->snapshot_id &&
-        g_last_event_snapshot.first_index != snapshot->first_index) {
-        animate_events_scroll(status, &g_last_event_snapshot, snapshot);
-        g_last_event_snapshot = *snapshot;
-        return;
+        g_scroll_snapshot_id != snapshot->snapshot_id) {
+        g_scroll_snapshot_id = snapshot->snapshot_id;
+        g_scroll_px = snapshot->first_index * EVENT_ROW_PX;
+        if (g_scroll_px > max_scroll_px(snapshot->count)) {
+            g_scroll_px = max_scroll_px(snapshot->count);
+        }
     }
-    fill(0U, 0U, FB_W - 1U, FB_H - 1U, C_BG);
-    if (page == PLATFORM_UI_PAGE_SELF_TEST) {
-        render_self_test_page(status, snapshot);
-    } else if (page == PLATFORM_UI_PAGE_EVENTS) {
-        render_events_page(status, snapshot);
-    } else {
-        render_home_page(status, snapshot);
-    }
-    draw_navigation(page, status);
-    present_frame();
-    if (page == PLATFORM_UI_PAGE_EVENTS && snapshot != 0) {
-        g_last_event_snapshot = *snapshot;
-        g_last_event_snapshot_valid = 1U;
-    }
+    g_requested_page = page;
+    g_requested_status = *status;
+    g_requested_snapshot_valid = snapshot != 0 ? 1U : 0U;
+    if (snapshot != 0) g_requested_snapshot = *snapshot;
+    g_render_pending = 1U;
+    g_render_full = 1U;
+    platform_ui_tick();
 }
 
 PlatformUiAction platform_ui_poll_action(void)
 {
     static u8 tracking;
-    static u16 start_x;
-    static u16 start_y;
-    static u16 last_x;
+    static u8 dragging_events;
+    static u8 drag_moved;
     static u16 last_y;
     u16 x;
     u16 y;
-    int delta_y;
+    u32 next_scroll;
+    u32 maximum;
 
     gt911_scan(&TouchInfo);
     if (TouchInfo.Touch_Num == 0U) {
         if (tracking == 0U) return PLATFORM_UI_ACTION_NONE;
         tracking = 0U;
-        if (g_rendered_page != PLATFORM_UI_PAGE_EVENTS ||
-            start_y < 88U || start_y > 410U) {
-            return PLATFORM_UI_ACTION_NONE;
+        if (dragging_events != 0U && drag_moved != 0U) {
+            /* Refresh VIEW metadata after the last pixel-aligned drag frame. */
+            g_render_pending = 1U;
+            g_render_full = 1U;
         }
-        delta_y = (int)last_y - (int)start_y;
-        if (delta_y <= -36) return PLATFORM_UI_ACTION_EVENTS_NEXT;
-        if (delta_y >= 36) return PLATFORM_UI_ACTION_EVENTS_PREVIOUS;
+        dragging_events = 0U;
+        drag_moved = 0U;
         return PLATFORM_UI_ACTION_NONE;
     }
 
     x = (u16)(((u32)TouchInfo.Tp_X[0] * FB_W) / GT911_RAW_WIDTH);
     y = (u16)(((u32)TouchInfo.Tp_Y[0] * FB_H) / GT911_RAW_HEIGHT);
     if (tracking != 0U) {
-        last_x = x;
+        if (dragging_events != 0U) {
+            maximum = max_scroll_px(g_requested_snapshot.count);
+            next_scroll = pixel_scroll_drag(g_scroll_px, (int)last_y,
+                                            (int)y, maximum);
+            if (next_scroll != g_scroll_px) {
+                g_scroll_px = next_scroll;
+                drag_moved = 1U;
+                g_render_pending = 1U;
+            }
+        }
         last_y = y;
         return PLATFORM_UI_ACTION_NONE;
     }
 
     tracking = 1U;
-    start_x = x;
-    start_y = y;
-    last_x = x;
     last_y = y;
-    (void)start_x;
-    (void)last_x;
+    drag_moved = 0U;
+    dragging_events = (g_requested_page == PLATFORM_UI_PAGE_EVENTS &&
+                       y >= EVENTS_Y0 && y <= EVENTS_Y1 &&
+                       g_requested_snapshot_valid != 0U &&
+                       g_event_cache != 0 && g_event_cache->valid != 0U &&
+                       g_event_cache->snapshot_id ==
+                           g_requested_snapshot.snapshot_id) ? 1U : 0U;
+    if (dragging_events != 0U) return PLATFORM_UI_ACTION_NONE;
 
     if (y < 414U || y > 479U) return PLATFORM_UI_ACTION_NONE;
     if (x >= 12U && x <= 188U) return PLATFORM_UI_ACTION_HOME;

@@ -12,6 +12,10 @@ LCD and touch pins are inherited from `ac820_rgbtft.xdc` and the validated PS7 c
 | TP_INT | MIO0 | PS MIO | GT911 interrupt/address select |
 | GT911 I2C | MIO50/51 | PS MIO | PS I2C0 |
 | UART1 | MIO48/49 | PS MIO | debug console |
+| spi_cs_n | AA8 | LVCMOS33 | passive input, pull-up |
+| spi_sclk | AB10 | LVCMOS33 | passive input, pull-down |
+| spi_mosi | AB9 | LVCMOS33 | passive input, pull-down |
+| spi_miso | AA7 | LVCMOS33 | passive input, pull-down |
 
 ## Reserved for later protocol phases
 
@@ -19,10 +23,6 @@ LCD and touch pins are inherited from `ac820_rgbtft.xdc` and the validated PS7 c
 |---|---|---|
 | uart_rx | W5 | LVCMOS33 |
 | uart_tx | AA9 | LVCMOS33 |
-| spi_cs_n | AA8 | LVCMOS33 |
-| spi_sclk | AB10 | LVCMOS33 |
-| spi_mosi | AB9 | LVCMOS33 |
-| spi_miso | AA7 | LVCMOS33 |
 | i2c_scl | AA6 | LVCMOS33 |
 | i2c_sda | V8 | LVCMOS33 |
 | can_tx | W8 | LVCMOS33 |

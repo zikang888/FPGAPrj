@@ -4,6 +4,7 @@
 #include "xil_types.h"
 
 #define CAPTURE_DISPLAY_EVENTS 8U
+#define CAPTURE_MAX_EVENTS 256U
 
 typedef struct {
     u32 snapshot_id;
@@ -16,7 +17,16 @@ typedef struct {
     u8 shown;
 } CaptureDemoSnapshot;
 
+typedef struct {
+    u32 snapshot_id;
+    u32 count;
+    u32 event_word[CAPTURE_MAX_EVENTS][4];
+    u8 valid;
+} CaptureDemoCache;
+
 int capture_demo_run(CaptureDemoSnapshot *snapshot);
 int capture_demo_read_window(CaptureDemoSnapshot *snapshot, u32 first_index);
+int capture_demo_cache_snapshot(CaptureDemoCache *cache,
+                                const CaptureDemoSnapshot *snapshot);
 
 #endif

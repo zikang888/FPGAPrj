@@ -27,6 +27,34 @@ static u32 snapshot_word(u32 event_index, u32 word_index)
     return Xil_In32(SNAPSHOT_BASE + event_index * 16U + word_index * 4U);
 }
 
+int capture_demo_cache_snapshot(CaptureDemoCache *cache,
+                                const CaptureDemoSnapshot *snapshot)
+{
+    u32 event_index;
+    u32 word_index;
+    if (cache == 0 || snapshot == 0 || snapshot->count == 0U ||
+        snapshot->count > CAPTURE_MAX_EVENTS) return XST_FAILURE;
+    cache->valid = 0U;
+    if ((Xil_In32(REG_CAPTURE_STATUS) & CAPTURE_STATUS_READY) == 0U ||
+        Xil_In32(REG_SNAPSHOT_ID) != snapshot->snapshot_id) {
+        return XST_FAILURE;
+    }
+    for (event_index = 0U; event_index < snapshot->count; ++event_index) {
+        for (word_index = 0U; word_index < 4U; ++word_index) {
+            cache->event_word[event_index][word_index] =
+                snapshot_word(event_index, word_index);
+        }
+    }
+    if (Xil_In32(REG_SNAPSHOT_ID) != snapshot->snapshot_id ||
+        (Xil_In32(REG_CAPTURE_STATUS) & CAPTURE_STATUS_READY) == 0U) {
+        return XST_FAILURE;
+    }
+    cache->snapshot_id = snapshot->snapshot_id;
+    cache->count = snapshot->count;
+    cache->valid = 1U;
+    return XST_SUCCESS;
+}
+
 int capture_demo_read_window(CaptureDemoSnapshot *snapshot, u32 first_index)
 {
     u32 index;

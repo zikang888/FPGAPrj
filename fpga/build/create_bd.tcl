@@ -17,6 +17,14 @@ if {![file exists $xpr]} {
 open_project $xpr
 package require msgcat
 
+# Existing .xpr snapshots do not discover newly added sources automatically.
+# Keep the source-driven build reproducible for both old and fresh projects.
+set spi_bd_adapter [file join $source_dir fpga rtl top spi_mode0_monitor_bd.v]
+if {[get_files -quiet $spi_bd_adapter] eq ""} {
+    add_files -norecurse $spi_bd_adapter
+    update_compile_order -fileset sources_1
+}
+
 set_msg_config -id {Netlist 29-160} \
     -string {multi_protocol_bd_processing_system7_0_0.xdc} \
     -suppress
@@ -104,14 +112,7 @@ set_property -dict [list \
 ] $gp0_pc
 set ps_reset [create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset:5.0 proc_sys_reset_0]
 set core [create_bd_cell -type module -reference multi_protocol_core multi_protocol_core_0]
-set evt_valid_const [create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 xlconstant_evt_valid]
-set_property -dict [list CONFIG.CONST_WIDTH {1} CONFIG.CONST_VAL {0}] $evt_valid_const
-set evt_trigger_const [create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 xlconstant_evt_trigger]
-set_property -dict [list CONFIG.CONST_WIDTH {1} CONFIG.CONST_VAL {0}] $evt_trigger_const
-set evt_data_const [create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 xlconstant_evt_data]
-set_property -dict [list CONFIG.CONST_WIDTH {128} CONFIG.CONST_VAL {0}] $evt_data_const
-set evt_dropped_const [create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 xlconstant_evt_dropped]
-set_property -dict [list CONFIG.CONST_WIDTH {32} CONFIG.CONST_VAL {0}] $evt_dropped_const
+set spi_monitor [create_bd_cell -type module -reference spi_mode0_monitor_bd spi_mode0_monitor_0]
 
 set vdma [create_bd_cell -type ip -vlnv xilinx.com:ip:axi_vdma:6.3 axi_vdma_0]
 set_property -dict [list \
@@ -148,10 +149,12 @@ set_property -dict [list CONFIG.CONST_WIDTH {1} CONFIG.CONST_VAL {1}] $lcd_bl_co
 connect_bd_intf_net [get_bd_intf_pins processing_system7_0/M_AXI_GP0] [get_bd_intf_pins axi_protocol_converter_0/S_AXI]
 connect_bd_intf_net [get_bd_intf_pins axi_protocol_converter_0/M_AXI] [get_bd_intf_pins axi_interconnect_0/S00_AXI]
 connect_bd_intf_net [get_bd_intf_pins axi_interconnect_0/M00_AXI] [get_bd_intf_pins multi_protocol_core_0/S_AXI]
-connect_bd_net [get_bd_pins xlconstant_evt_valid/dout] [get_bd_pins multi_protocol_core_0/ext_evt_valid]
-connect_bd_net [get_bd_pins xlconstant_evt_trigger/dout] [get_bd_pins multi_protocol_core_0/ext_evt_trigger]
-connect_bd_net [get_bd_pins xlconstant_evt_data/dout] [get_bd_pins multi_protocol_core_0/ext_evt_data]
-connect_bd_net [get_bd_pins xlconstant_evt_dropped/dout] [get_bd_pins multi_protocol_core_0/ext_evt_dropped_count]
+connect_bd_net [get_bd_pins spi_mode0_monitor_0/evt_valid] [get_bd_pins multi_protocol_core_0/ext_evt_valid]
+connect_bd_net [get_bd_pins multi_protocol_core_0/ext_evt_ready] [get_bd_pins spi_mode0_monitor_0/evt_ready]
+connect_bd_net [get_bd_pins spi_mode0_monitor_0/evt_trigger] [get_bd_pins multi_protocol_core_0/ext_evt_trigger]
+connect_bd_net [get_bd_pins spi_mode0_monitor_0/evt_data] [get_bd_pins multi_protocol_core_0/ext_evt_data]
+connect_bd_net [get_bd_pins spi_mode0_monitor_0/dropped_event_count] [get_bd_pins multi_protocol_core_0/ext_evt_dropped_count]
+connect_bd_net [get_bd_pins multi_protocol_core_0/event_timestamp] [get_bd_pins spi_mode0_monitor_0/timestamp]
 connect_bd_intf_net [get_bd_intf_pins axi_interconnect_0/M01_AXI] [get_bd_intf_pins axi_vdma_0/S_AXI_LITE]
 connect_bd_intf_net [get_bd_intf_pins axi_interconnect_0/M02_AXI] [get_bd_intf_pins v_tc_0/ctrl]
 connect_bd_intf_net [get_bd_intf_pins axi_vdma_0/M_AXI_MM2S] [get_bd_intf_pins axi_smc_0/S00_AXI]
@@ -162,6 +165,7 @@ connect_bd_net [get_bd_pins v_tc_0/gen_clken] [get_bd_pins v_axi4s_vid_out_0/vtg
 
 foreach pin [list \
     multi_protocol_core_0/s_axi_aclk \
+    spi_mode0_monitor_0/clk \
     axi_vdma_0/s_axi_lite_aclk \
     axi_vdma_0/m_axi_mm2s_aclk \
     axi_vdma_0/m_axis_mm2s_aclk \
@@ -184,6 +188,7 @@ foreach pin [list \
 connect_bd_net [get_bd_pins processing_system7_0/FCLK_RESET0_N] [get_bd_pins proc_sys_reset_0/ext_reset_in]
 foreach pin [list \
     multi_protocol_core_0/s_axi_aresetn \
+    spi_mode0_monitor_0/rst_n \
     axi_vdma_0/axi_resetn \
     axi_smc_0/aresetn \
     v_tc_0/s_axi_aresetn \
@@ -206,6 +211,10 @@ set lcd_vs [create_bd_port -dir O LCD_VS]
 set lcd_de [create_bd_port -dir O LCD_DE]
 set lcd_bl [create_bd_port -dir O LCD_BL]
 set lcd_pclk [create_bd_port -dir O -type clk LCD_PCLK]
+set spi_cs_n [create_bd_port -dir I SPI_CS_N]
+set spi_sclk [create_bd_port -dir I SPI_SCLK]
+set spi_mosi [create_bd_port -dir I SPI_MOSI]
+set spi_miso [create_bd_port -dir I SPI_MISO]
 connect_bd_net $lcd_data [get_bd_pins rgb888torgb565_0/rgb565_data]
 connect_bd_net $lcd_hs [get_bd_pins v_axi4s_vid_out_0/vid_hsync]
 connect_bd_net $lcd_vs [get_bd_pins v_axi4s_vid_out_0/vid_vsync]
@@ -213,6 +222,10 @@ connect_bd_net $lcd_de [get_bd_pins v_axi4s_vid_out_0/vid_active_video]
 connect_bd_net $lcd_bl [get_bd_pins xlconstant_lcd_bl/dout]
 connect_bd_net $lcd_pclk [get_bd_pins processing_system7_0/FCLK_CLK1]
 connect_bd_net [get_bd_pins v_axi4s_vid_out_0/vid_data] [get_bd_pins rgb888torgb565_0/rgb888_data]
+connect_bd_net $spi_cs_n [get_bd_pins spi_mode0_monitor_0/spi_cs_n]
+connect_bd_net $spi_sclk [get_bd_pins spi_mode0_monitor_0/spi_sclk]
+connect_bd_net $spi_mosi [get_bd_pins spi_mode0_monitor_0/spi_mosi]
+connect_bd_net $spi_miso [get_bd_pins spi_mode0_monitor_0/spi_miso]
 
 make_bd_pins_external [get_bd_pins multi_protocol_core_0/led_heartbeat]
 make_bd_pins_external [get_bd_pins multi_protocol_core_0/led_ps_active]

@@ -47,6 +47,7 @@ module multi_protocol_core (
     input  wire [127:0] ext_evt_data,
     input  wire         ext_evt_trigger,
     input  wire [31:0]  ext_evt_dropped_count,
+    output wire [63:0]  event_timestamp,
     output wire         led_heartbeat,
     output wire         led_ps_active
 );
@@ -167,6 +168,7 @@ assign inactive_event_drop = capture_event_accept && !capture_active;
 
 assign led_heartbeat = heartbeat_state;
 assign led_ps_active = led_ctrl_reg[0];
+assign event_timestamp = timestamp_counter;
 
 function [31:0] apply_wstrb;
     input [31:0] previous;

@@ -2,9 +2,10 @@
 
 ## 状态
 
-第一阶段 RTL、自检仿真和内部快照链路仿真均通过。`multi_protocol_core`
-已提供正式通用外部事件入口，当前板级 BD 将该入口绑低；尚未分配真实 SPI
-管脚，也尚未完成实板 SPI 联调。
+第一阶段 RTL、自检仿真和内部快照链路仿真均通过。板级 BD 已实例化
+`spi_mode0_monitor`，并把 AA8、AB10、AB9、AA7 四个物理输入接入
+`multi_protocol_core` 的正式通用外部事件入口。实板 SPI 联调仍需按
+`docs/hardware/spi_board_test.md` 完成。
 
 ## 时钟假设
 
@@ -60,15 +61,13 @@ bit order = MSB first
 8. 4 bit 残帧生成 `FRAME_ERROR` 并触发。
 9. 消费者跨事务持续反压时，无法缓存的事件进入丢弃计数。
 
-## 后续板级接入条件
+## 板级数据路径
 
-把监听器接到板级 BD 前必须得到：
-
-1. FPGA 与单片机之间的 SCLK、CS_N、MOSI、MISO 实际管脚。
-2. 单片机使用的 SPI 模式、最大 SCLK 和 bit order。
-3. 是否需要只监听，还是还要做故障注入/主动应答。
-4. 用于故障触发的帧格式、命令字或匹配规则。
-
-接入时将监听器的 ready/valid 输出连接到 `multi_protocol_core` 的
+监听器的 ready/valid 输出已经连接到 `multi_protocol_core` 的
 `ext_evt_*` 入口。虚拟事件源继续作为自检入口，两者经过唯一的
-`event_arbiter_2` 后进入同一 `event_snapshot_buffer`；不增加第二套缓存或显示路径。
+`event_arbiter_2` 后进入同一 `event_snapshot_buffer`；没有增加第二套缓存或显示路径。
+`multi_protocol_core` 导出的 64 位 PL 时间戳同时供 SPI 监听器使用，保证真实事件
+和虚拟事件处于同一时间基准。
+
+当前实现是只读监听，不会驱动或干扰 STM32 与目标从设备之间的 SPI 总线。
+主动应答、故障注入和协议字段匹配属于后续独立功能，不能复用这四个输入端口直接实现。
