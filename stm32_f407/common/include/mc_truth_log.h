@@ -19,6 +19,9 @@ typedef struct {
     const char *direction;
     const uint8_t *data;
     size_t data_length;
+    /* Optional transmitted bytes. SPI records keep data as actual RX. */
+    const uint8_t *tx_data;
+    size_t tx_length;
     int result;
     const char *detail;
 } mc_log_record_t;

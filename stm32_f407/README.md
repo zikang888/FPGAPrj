@@ -32,13 +32,18 @@ docs/protocol-rules/protocol_rules.yaml
 - UART 双向回环。
 - AT24C256 写入、ACK polling、读回比较。
 - CAN 标准帧回环。
-- JSONL 真值日志与本地事务号。
+- JSONL 真值日志与本地事务号；SPI 记录同时包含实际 RX `data` 和 TX `tx`。
 - 可选同步脉冲接口。
 - SPI 残帧、UART 错误停止位的板级扩展钩子；默认不绑定，防止误驱动。
 
 这不是完整的 CubeMX 生成工程。`hal/` 需要加入 STM32CubeMX/Keil 工程，初始化
 代码仍由 CubeMX 生成。实际排针、时钟、CS GPIO、CAN 滤波器和收发器必须在上板
 前复核。
+
+SPI 初次联调先调用 `MemberC_Init()`，再调用 `MemberC_RunSmokeTests()`；后者先
+读取实物 JEDEC ID，再连续读 10 次核对一致性。读到全 `00`/全 `FF` 会报校验失败。
+首次读值仍须人工对照实物 Flash 型号，不应把“重复一致”当作芯片型号认证。
+`SPI_FLASH_CS_*` 宏必须由实际板级 GPIO 配置生成。
 
 ## 电脑端测试
 

@@ -199,7 +199,7 @@ PA7/SPI1_MOSI ─┬─ W25Q128 DI
                └─ FPGA_SPI_MOSI（输入）
 PA6/SPI1_MISO ─┬─ W25Q128 DO
                └─ FPGA_SPI_MISO（输入）
-PA4/FLASH_CS  ─┬─ W25Q128 CS
+已核实 GPIO/FLASH_CS ─┬─ W25Q128 CS
                └─ FPGA_SPI_CS（输入）
 GND ───────────── 三方共地
 ```

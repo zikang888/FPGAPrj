@@ -1,4 +1,5 @@
 #include "mc_protocol_runner.h"
+#include "mc_truth_log.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -13,6 +14,10 @@
 typedef struct {
     uint32_t tick;
     int spi_selected;
+    int spi_deselect_count;
+    int spi_fail;
+    int log_fail;
+    uint8_t jedec_id[3];
     uint8_t uart_data[16];
     size_t uart_length;
     uint8_t eeprom[512];
@@ -31,6 +36,9 @@ static uint32_t fake_now(void *opaque)
 static int fake_log(void *opaque, const char *text, size_t length)
 {
     fake_t *fake = (fake_t *)opaque;
+    if (fake->log_fail) {
+        return MC_ERR_IO;
+    }
     if (fake->log_length + length >= sizeof(fake->log)) {
         return MC_ERR_IO;
     }
@@ -42,7 +50,9 @@ static int fake_log(void *opaque, const char *text, size_t length)
 
 static int fake_spi_select(void *opaque, int selected)
 {
-    ((fake_t *)opaque)->spi_selected = selected;
+    fake_t *fake = (fake_t *)opaque;
+    fake->spi_selected = selected;
+    if (!selected) fake->spi_deselect_count++;
     return MC_OK;
 }
 
@@ -57,11 +67,10 @@ static int fake_spi_transfer(void *opaque,
     if (!fake->spi_selected || tx == NULL || rx == NULL || length == 0U) {
         return MC_ERR_IO;
     }
+    if (fake->spi_fail) return MC_ERR_TIMEOUT;
     memset(rx, 0, length);
     if (length == 4U && tx[0] == 0x9FU && tx[1] == 0U && tx[2] == 0U && tx[3] == 0U) {
-        rx[1] = 0xEFU;
-        rx[2] = 0x40U;
-        rx[3] = 0x18U;
+        memcpy(&rx[1], fake->jedec_id, 3U);
     }
     return MC_OK;
 }
@@ -191,13 +200,58 @@ int main(void)
     mc_runner_t runner;
     mc_run_summary_t summary;
     const uint8_t actual_jedec_id[3] = {0xEFU, 0x40U, 0x18U};
+    uint8_t observed_id[3] = {0U, 0U, 0U};
 
     memset(&fake, 0, sizeof(fake));
+    memcpy(fake.jedec_id, actual_jedec_id, 3U);
     platform = make_platform(&fake);
     mc_runner_init(&runner, &platform);
 
+    CHECK(mc_probe_spi_jedec(&runner, 1001U, observed_id) == MC_OK);
+    CHECK(memcmp(observed_id, actual_jedec_id, 3U) == 0);
+    CHECK(fake.spi_selected == 0 && fake.spi_deselect_count == 1);
+    CHECK(strstr(fake.log, "\"tx\":\"9F000000\"") != NULL);
+    CHECK(strstr(fake.log, "\"data\":\"00EF4018\"") != NULL);
+
+    memset(fake.jedec_id, 0xFF, 3U);
+    CHECK(mc_probe_spi_jedec(&runner, 1001U, observed_id) == MC_ERR_VERIFY);
+    CHECK(memcmp(observed_id, actual_jedec_id, 3U) == 0);
+    CHECK(fake.spi_selected == 0);
+    memset(fake.jedec_id, 0x00, 3U);
+    CHECK(mc_probe_spi_jedec(&runner, 1001U, observed_id) == MC_ERR_VERIFY);
+    CHECK(memcmp(observed_id, actual_jedec_id, 3U) == 0);
+    memcpy(fake.jedec_id, actual_jedec_id, 3U);
+
+    fake.spi_fail = 1;
+    CHECK(mc_probe_spi_jedec(&runner, 1001U, observed_id) == MC_ERR_TIMEOUT);
+    CHECK(fake.spi_selected == 0);
+    fake.spi_fail = 0;
+
+    fake.log_fail = 1;
+    CHECK(mc_probe_spi_jedec(&runner, 1001U, observed_id) == MC_ERR_IO);
+    CHECK(mc_run_spi_jedec(&runner, 1001U, 1U, actual_jedec_id,
+                           &summary) == MC_ERR_IO);
+    CHECK(summary.failed == 1U && summary.first_error == MC_ERR_IO);
+    fake.log_fail = 0;
+
+    {
+        mc_log_record_t invalid_record;
+        memset(&invalid_record, 0, sizeof(invalid_record));
+        invalid_record.protocol = "SPI";
+        invalid_record.operation = "TEST";
+        invalid_record.direction = "TXRX";
+        invalid_record.detail = "test";
+        invalid_record.data_length = 1U;
+        CHECK(mc_truth_log_write(&platform, &invalid_record) == MC_ERR_ARGUMENT);
+    }
+
     CHECK(mc_run_spi_jedec(&runner, 1001U, 3U, actual_jedec_id, &summary) == MC_OK);
     CHECK(summary.passed == 3U && summary.failed == 0U);
+    fake.jedec_id[2] ^= 0x01U;
+    CHECK(mc_run_spi_jedec(&runner, 1001U, 1U, actual_jedec_id,
+                           &summary) == MC_ERR_VERIFY);
+    CHECK(summary.failed == 1U && summary.first_error == MC_ERR_VERIFY);
+    memcpy(fake.jedec_id, actual_jedec_id, 3U);
     CHECK(mc_run_spi_patterns(&runner, 1002U, 2U, &summary) == MC_OK);
     CHECK(mc_run_uart_loopback(&runner, 2001U, 2U, &summary) == MC_OK);
     CHECK(mc_run_i2c_eeprom(&runner, 3001U, 0x50U, 0x0100U, 2U, &summary) == MC_OK);

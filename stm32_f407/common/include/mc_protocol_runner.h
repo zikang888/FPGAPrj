@@ -26,6 +26,11 @@ typedef struct {
 
 void mc_runner_init(mc_runner_t *runner, const mc_platform_t *platform);
 
+/* First-link discovery: returns the mounted part's ID; rejects all-00/FF bus reads. */
+int mc_probe_spi_jedec(mc_runner_t *runner,
+                       uint32_t case_id,
+                       uint8_t id_out[3]);
+
 int mc_run_spi_jedec(mc_runner_t *runner,
                      uint32_t case_id,
                      uint32_t iterations,

@@ -22,15 +22,21 @@ Member B must identify the actual CS GPIO and check whether the STM32 board's
 own flash shares it. Do not select two flash chips at once. Keep the external
 flash WP and HOLD inactive (high) according to its module wiring. All four
 Zynq pins are inputs; no signal should be driven from the FPGA into the bus.
+Confirm the P7 physical pin numbers against the board silkscreen before
+powering on: the resource table and XDC establish U12/U11/U10/U9, while
+the pin-number interpretation must match the actual connector orientation.
 
 ## Minimal firmware behavior
 
 1. Configure SPI1 master, Mode 0 (CPOL=0, CPHA=0), 8-bit, MSB first. Begin
    at 1 MHz; the current FPGA listener is specified only through 25 MHz.
-2. Keep CS high at idle. Pull it low once, transfer `9F 00 00 00`, then
-   return it high. Save/log all four MOSI and MISO bytes as B's golden record.
-   The JEDEC ID is read from the three response bytes after the command;
-   compare with the actual mounted part rather than a hard-coded example.
+2. Keep CS high at idle. Call `MemberC_Init()` after CubeMX peripheral
+   initialization, then `MemberC_RunSmokeTests()` once. It pulls CS low,
+   transfers `9F 00 00 00`, returns CS high, probes the mounted part, and
+   compares ten subsequent readings with that first nontrivial ID. JSONL
+   records contain `tx` (MOSI) and `data` (actual MISO) with the same `txn`.
+   Compare the first observed three-byte ID with the actual mounted part;
+   ten matching reads do not prove the correct chip was selected.
 3. Repeat the transaction at a slow interval (at least 2 us CS-high gap for
    the initial smoke test). Then try `00`, `FF`, `55`, `AA` patterns if the
    external device/test source can provide known MISO bytes.

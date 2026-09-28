@@ -24,18 +24,39 @@ static int append_text(char *buffer, size_t capacity, size_t *used, const char *
     return MC_OK;
 }
 
+static int append_hex(char *buffer, size_t capacity, size_t *used,
+                      const uint8_t *data, size_t length)
+{
+    static const char digits[] = "0123456789ABCDEF";
+    size_t index;
+
+    if (length != 0U && data == NULL) {
+        return MC_ERR_ARGUMENT;
+    }
+    if (*used >= capacity || length > (capacity - *used - 1U) / 2U) {
+        return MC_ERR_IO;
+    }
+    for (index = 0U; index < length; ++index) {
+        buffer[(*used)++] = digits[data[index] >> 4];
+        buffer[(*used)++] = digits[data[index] & 0x0FU];
+    }
+    buffer[*used] = '\0';
+    return MC_OK;
+}
+
 int mc_truth_log_write(const mc_platform_t *platform, const mc_log_record_t *record)
 {
     char line[MC_LOG_BUFFER_SIZE];
     char fragment[96];
     size_t used = 0U;
-    size_t index;
     uint32_t now_ms = 0U;
     int count;
 
     if (platform == NULL || record == NULL || platform->write_log == NULL ||
         record->protocol == NULL || record->operation == NULL ||
-        record->direction == NULL || record->detail == NULL) {
+        record->direction == NULL || record->detail == NULL ||
+        (record->data_length != 0U && record->data == NULL) ||
+        (record->tx_length != 0U && record->tx_data == NULL)) {
         return MC_ERR_ARGUMENT;
     }
 
@@ -59,9 +80,14 @@ int mc_truth_log_write(const mc_platform_t *platform, const mc_log_record_t *rec
     }
     used = (size_t)count;
 
-    for (index = 0U; index < record->data_length; ++index) {
-        count = snprintf(fragment, sizeof(fragment), "%02X", record->data[index]);
-        if (count != 2 || append_text(line, sizeof(line), &used, fragment) != MC_OK) {
+    if (append_hex(line, sizeof(line), &used, record->data,
+                   record->data_length) != MC_OK) {
+        return MC_ERR_IO;
+    }
+    if (record->tx_data != NULL) {
+        if (append_text(line, sizeof(line), &used, "\",\"tx\":\"") != MC_OK ||
+            append_hex(line, sizeof(line), &used, record->tx_data,
+                       record->tx_length) != MC_OK) {
             return MC_ERR_IO;
         }
     }
