@@ -47,14 +47,15 @@ module multi_protocol_core (
     input  wire [127:0] ext_evt_data,
     input  wire         ext_evt_trigger,
     input  wire [31:0]  ext_evt_dropped_count,
+    output wire [63:0]  event_timestamp,
     output wire         led_heartbeat,
     output wire         led_ps_active
 );
 
 localparam [31:0] SYS_ID_VALUE       = 32'h4D50_5254; // "MPRT"
-localparam [31:0] VERSION_VALUE      = 32'h0001_0002; // event format v1, platform 2
-localparam [31:0] BUILD_ID_VALUE     = 32'h2026_0923;
-localparam [31:0] CAPABILITIES_VALUE = 32'h0000_0003; // bit0: snapshot, bit1: external event ingress
+localparam [31:0] VERSION_VALUE      = 32'h0001_0003; // event format v1, platform 3
+localparam [31:0] BUILD_ID_VALUE     = 32'h2026_0926;
+localparam [31:0] CAPABILITIES_VALUE = 32'h0000_0007; // bit0: snapshot, bit1: external ingress, bit2: SPI monitor
 
 localparam [15:0] REG_SYS_ID       = 16'h0000;
 localparam [15:0] REG_VERSION      = 16'h0004;
@@ -167,6 +168,7 @@ assign inactive_event_drop = capture_event_accept && !capture_active;
 
 assign led_heartbeat = heartbeat_state;
 assign led_ps_active = led_ctrl_reg[0];
+assign event_timestamp = timestamp_counter;
 
 function [31:0] apply_wstrb;
     input [31:0] previous;

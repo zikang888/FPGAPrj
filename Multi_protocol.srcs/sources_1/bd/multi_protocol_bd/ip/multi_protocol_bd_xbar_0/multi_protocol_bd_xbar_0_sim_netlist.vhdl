@@ -3,8 +3,8 @@
 -- Tool Version: Vivado v.2018.3 (win64) Build 2405991 Thu Dec  6 23:38:27 MST 2018
 -- Date        : Thu Sep 24 16:19:39 2026
 -- Host        : LAPTOP-MK9F4NL5 running 64-bit major release  (build 9200)
--- Command     : write_vhdl -force -mode funcsim
---               D:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ip/multi_protocol_bd_xbar_0/multi_protocol_bd_xbar_0_sim_netlist.vhdl
+-- Command     : write_vhdl -force -mode funcsim -rename_top multi_protocol_bd_xbar_0 -prefix
+--               multi_protocol_bd_xbar_0_ multi_protocol_bd_xbar_0_sim_netlist.vhdl
 -- Design      : multi_protocol_bd_xbar_0
 -- Purpose     : This VHDL netlist is a functional simulation representation of the design and should not be modified or
 --               synthesized. This netlist cannot be used for SDF annotated simulation.
@@ -67,8 +67,6 @@ entity multi_protocol_bd_xbar_0_axi_crossbar_v2_1_19_addr_arbiter_sasd is
     mi_bvalid : in STD_LOGIC_VECTOR ( 0 to 0 );
     mi_wready : in STD_LOGIC_VECTOR ( 0 to 0 )
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_xbar_0_axi_crossbar_v2_1_19_addr_arbiter_sasd : entity is "axi_crossbar_v2_1_19_addr_arbiter_sasd";
 end multi_protocol_bd_xbar_0_axi_crossbar_v2_1_19_addr_arbiter_sasd;
 
 architecture STRUCTURE of multi_protocol_bd_xbar_0_axi_crossbar_v2_1_19_addr_arbiter_sasd is
@@ -1414,8 +1412,6 @@ entity multi_protocol_bd_xbar_0_axi_crossbar_v2_1_19_decerr_slave is
     \gen_axilite.s_axi_bvalid_i_reg_1\ : in STD_LOGIC;
     aa_rready : in STD_LOGIC
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_xbar_0_axi_crossbar_v2_1_19_decerr_slave : entity is "axi_crossbar_v2_1_19_decerr_slave";
 end multi_protocol_bd_xbar_0_axi_crossbar_v2_1_19_decerr_slave;
 
 architecture STRUCTURE of multi_protocol_bd_xbar_0_axi_crossbar_v2_1_19_decerr_slave is
@@ -1608,8 +1604,6 @@ entity multi_protocol_bd_xbar_0_axi_crossbar_v2_1_19_splitter is
     aresetn_d : in STD_LOGIC;
     aclk : in STD_LOGIC
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_xbar_0_axi_crossbar_v2_1_19_splitter : entity is "axi_crossbar_v2_1_19_splitter";
 end multi_protocol_bd_xbar_0_axi_crossbar_v2_1_19_splitter;
 
 architecture STRUCTURE of multi_protocol_bd_xbar_0_axi_crossbar_v2_1_19_splitter is
@@ -1819,8 +1813,6 @@ entity multi_protocol_bd_xbar_0_axi_register_slice_v2_1_18_axic_register_slice i
     SR : in STD_LOGIC_VECTOR ( 0 to 0 );
     E : in STD_LOGIC_VECTOR ( 0 to 0 )
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_xbar_0_axi_register_slice_v2_1_18_axic_register_slice : entity is "axi_register_slice_v2_1_18_axic_register_slice";
 end multi_protocol_bd_xbar_0_axi_register_slice_v2_1_18_axic_register_slice;
 
 architecture STRUCTURE of multi_protocol_bd_xbar_0_axi_register_slice_v2_1_18_axic_register_slice is
@@ -3401,8 +3393,6 @@ entity multi_protocol_bd_xbar_0_axi_crossbar_v2_1_19_crossbar_sasd is
     s_axi_araddr : in STD_LOGIC_VECTOR ( 31 downto 0 );
     s_axi_awaddr : in STD_LOGIC_VECTOR ( 31 downto 0 )
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_xbar_0_axi_crossbar_v2_1_19_crossbar_sasd : entity is "axi_crossbar_v2_1_19_crossbar_sasd";
 end multi_protocol_bd_xbar_0_axi_crossbar_v2_1_19_crossbar_sasd;
 
 architecture STRUCTURE of multi_protocol_bd_xbar_0_axi_crossbar_v2_1_19_crossbar_sasd is
@@ -3869,8 +3859,6 @@ entity multi_protocol_bd_xbar_0_axi_crossbar_v2_1_19_axi_crossbar is
   attribute C_S_AXI_WRITE_ACCEPTANCE of multi_protocol_bd_xbar_0_axi_crossbar_v2_1_19_axi_crossbar : entity is 1;
   attribute DowngradeIPIdentifiedWarnings : string;
   attribute DowngradeIPIdentifiedWarnings of multi_protocol_bd_xbar_0_axi_crossbar_v2_1_19_axi_crossbar : entity is "yes";
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_xbar_0_axi_crossbar_v2_1_19_axi_crossbar : entity is "axi_crossbar_v2_1_19_axi_crossbar";
   attribute P_ADDR_DECODE : integer;
   attribute P_ADDR_DECODE of multi_protocol_bd_xbar_0_axi_crossbar_v2_1_19_axi_crossbar : entity is 1;
   attribute P_AXI3 : integer;

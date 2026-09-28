@@ -3,8 +3,8 @@
 // Tool Version: Vivado v.2018.3 (win64) Build 2405991 Thu Dec  6 23:38:27 MST 2018
 // Date        : Thu Sep 24 16:19:32 2026
 // Host        : LAPTOP-MK9F4NL5 running 64-bit major release  (build 9200)
-// Command     : write_verilog -force -mode synth_stub
-//               D:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ip/multi_protocol_bd_v_axi4s_vid_out_0_0/multi_protocol_bd_v_axi4s_vid_out_0_0_stub.v
+// Command     : write_verilog -force -mode synth_stub -rename_top multi_protocol_bd_v_axi4s_vid_out_0_0 -prefix
+//               multi_protocol_bd_v_axi4s_vid_out_0_0_ multi_protocol_bd_v_axi4s_vid_out_0_0_stub.v
 // Design      : multi_protocol_bd_v_axi4s_vid_out_0_0
 // Purpose     : Stub declaration of top-level module interface
 // Device      : xc7z020clg484-2

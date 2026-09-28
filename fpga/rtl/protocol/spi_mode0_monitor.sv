@@ -35,16 +35,16 @@ localparam [5:0] EVENT_DATA        = 6'h01;
 localparam [5:0] EVENT_END         = 6'h02;
 localparam [5:0] EVENT_FRAME_ERROR = 6'h3F;
 
-reg spi_sclk_meta;
-reg spi_sclk_sync;
+(* ASYNC_REG = "TRUE" *) reg spi_sclk_meta;
+(* ASYNC_REG = "TRUE" *) reg spi_sclk_sync;
 reg spi_sclk_d;
-reg spi_cs_meta;
-reg spi_cs_sync;
+(* ASYNC_REG = "TRUE" *) reg spi_cs_meta;
+(* ASYNC_REG = "TRUE" *) reg spi_cs_sync;
 reg spi_cs_d;
-reg spi_mosi_meta;
-reg spi_mosi_sync;
-reg spi_miso_meta;
-reg spi_miso_sync;
+(* ASYNC_REG = "TRUE" *) reg spi_mosi_meta;
+(* ASYNC_REG = "TRUE" *) reg spi_mosi_sync;
+(* ASYNC_REG = "TRUE" *) reg spi_miso_meta;
+(* ASYNC_REG = "TRUE" *) reg spi_miso_sync;
 
 reg [2:0] bit_count;
 reg [7:0] mosi_shift;

@@ -1,7 +1,7 @@
 //Copyright 1986-2018 Xilinx, Inc. All Rights Reserved.
 //--------------------------------------------------------------------------------
 //Tool Version: Vivado v.2018.3 (win64) Build 2405991 Thu Dec  6 23:38:27 MST 2018
-//Date        : Thu Sep 24 16:18:08 2026
+//Date        : Sat Sep 26 16:49:05 2026
 //Host        : LAPTOP-MK9F4NL5 running 64-bit major release  (build 9200)
 //Command     : generate_target multi_protocol_bd.bd
 //Design      : multi_protocol_bd
@@ -398,7 +398,7 @@ module m02_couplers_imp_O50K07
   assign m02_couplers_to_m02_couplers_WVALID = S_AXI_wvalid;
 endmodule
 
-(* CORE_GENERATION_INFO = "multi_protocol_bd,IP_Integrator,{x_ipVendor=xilinx.com,x_ipLibrary=BlockDiagram,x_ipName=multi_protocol_bd,x_ipVersion=1.00.a,x_ipLanguage=VERILOG,numBlks=20,numReposBlks=15,numNonXlnxBlks=0,numHierBlks=5,maxHierDepth=0,numSysgenBlks=0,numHlsBlks=0,numHdlrefBlks=2,numPkgbdBlks=0,bdsource=USER,synth_mode=OOC_per_IP}" *) (* HW_HANDOFF = "multi_protocol_bd.hwdef" *) 
+(* CORE_GENERATION_INFO = "multi_protocol_bd,IP_Integrator,{x_ipVendor=xilinx.com,x_ipLibrary=BlockDiagram,x_ipName=multi_protocol_bd,x_ipVersion=1.00.a,x_ipLanguage=VERILOG,numBlks=17,numReposBlks=12,numNonXlnxBlks=0,numHierBlks=5,maxHierDepth=0,numSysgenBlks=0,numHlsBlks=0,numHdlrefBlks=3,numPkgbdBlks=0,bdsource=USER,synth_mode=OOC_per_IP}" *) (* HW_HANDOFF = "multi_protocol_bd.hwdef" *) 
 module multi_protocol_bd
    (LCD_BL,
     LCD_DATA,
@@ -408,6 +408,10 @@ module multi_protocol_bd
     LCD_VS,
     led_heartbeat,
     led_ps_active,
+    spi_cs_n,
+    spi_miso,
+    spi_mosi,
+    spi_sclk,
     touch_int_tri_i,
     touch_int_tri_o,
     touch_int_tri_t);
@@ -419,6 +423,10 @@ module multi_protocol_bd
   output LCD_VS;
   output led_heartbeat;
   output led_ps_active;
+  input spi_cs_n;
+  input spi_miso;
+  input spi_mosi;
+  input spi_sclk;
   (* X_INTERFACE_INFO = "xilinx.com:interface:gpio:1.0 touch_int TRI_I" *) input [0:0]touch_int_tri_i;
   (* X_INTERFACE_INFO = "xilinx.com:interface:gpio:1.0 touch_int TRI_O" *) output [0:0]touch_int_tri_o;
   (* X_INTERFACE_INFO = "xilinx.com:interface:gpio:1.0 touch_int TRI_T" *) output [0:0]touch_int_tri_t;
@@ -525,6 +533,8 @@ module multi_protocol_bd
   wire axi_vdma_0_M_AXI_MM2S_RREADY;
   wire [1:0]axi_vdma_0_M_AXI_MM2S_RRESP;
   wire axi_vdma_0_M_AXI_MM2S_RVALID;
+  wire [63:0]multi_protocol_core_0_event_timestamp;
+  wire multi_protocol_core_0_ext_evt_ready;
   wire multi_protocol_core_0_led_heartbeat;
   wire multi_protocol_core_0_led_ps_active;
   wire [0:0]proc_sys_reset_0_peripheral_aresetn;
@@ -573,6 +583,14 @@ module multi_protocol_bd
   wire [3:0]processing_system7_0_M_AXI_GP0_WSTRB;
   wire processing_system7_0_M_AXI_GP0_WVALID;
   wire [15:0]rgb888torgb565_0_rgb565_data;
+  wire spi_cs_n_1;
+  wire spi_miso_1;
+  wire [31:0]spi_mode0_monitor_0_dropped_event_count;
+  wire [127:0]spi_mode0_monitor_0_evt_data;
+  wire spi_mode0_monitor_0_evt_trigger;
+  wire spi_mode0_monitor_0_evt_valid;
+  wire spi_mosi_1;
+  wire spi_sclk_1;
   wire v_axi4s_vid_out_0_vid_active_video;
   wire [23:0]v_axi4s_vid_out_0_vid_data;
   wire v_axi4s_vid_out_0_vid_hsync;
@@ -583,10 +601,6 @@ module multi_protocol_bd
   wire v_tc_0_vtiming_out_HSYNC;
   wire v_tc_0_vtiming_out_VBLANK;
   wire v_tc_0_vtiming_out_VSYNC;
-  wire [127:0]xlconstant_evt_data_dout;
-  wire [31:0]xlconstant_evt_dropped_dout;
-  wire [0:0]xlconstant_evt_trigger_dout;
-  wire [0:0]xlconstant_evt_valid_dout;
   wire [0:0]xlconstant_lcd_bl_dout;
 
   assign LCD_BL[0] = xlconstant_lcd_bl_dout;
@@ -598,6 +612,10 @@ module multi_protocol_bd
   assign led_heartbeat = multi_protocol_core_0_led_heartbeat;
   assign led_ps_active = multi_protocol_core_0_led_ps_active;
   assign processing_system7_0_GPIO_0_TRI_I = touch_int_tri_i[0];
+  assign spi_cs_n_1 = spi_cs_n;
+  assign spi_miso_1 = spi_miso;
+  assign spi_mosi_1 = spi_mosi;
+  assign spi_sclk_1 = spi_sclk;
   assign touch_int_tri_o[0] = processing_system7_0_GPIO_0_TRI_O;
   assign touch_int_tri_t[0] = processing_system7_0_GPIO_0_TRI_T;
   multi_protocol_bd_axi_interconnect_0_0 axi_interconnect_0
@@ -846,10 +864,12 @@ module multi_protocol_bd
         .s_axi_lite_wready(axi_interconnect_0_M01_AXI_WREADY),
         .s_axi_lite_wvalid(axi_interconnect_0_M01_AXI_WVALID));
   multi_protocol_bd_multi_protocol_core_0_0 multi_protocol_core_0
-       (.ext_evt_data(xlconstant_evt_data_dout),
-        .ext_evt_dropped_count(xlconstant_evt_dropped_dout),
-        .ext_evt_trigger(xlconstant_evt_trigger_dout),
-        .ext_evt_valid(xlconstant_evt_valid_dout),
+       (.event_timestamp(multi_protocol_core_0_event_timestamp),
+        .ext_evt_data(spi_mode0_monitor_0_evt_data),
+        .ext_evt_dropped_count(spi_mode0_monitor_0_dropped_event_count),
+        .ext_evt_ready(multi_protocol_core_0_ext_evt_ready),
+        .ext_evt_trigger(spi_mode0_monitor_0_evt_trigger),
+        .ext_evt_valid(spi_mode0_monitor_0_evt_valid),
         .led_heartbeat(multi_protocol_core_0_led_heartbeat),
         .led_ps_active(multi_protocol_core_0_led_ps_active),
         .s_axi_aclk(processing_system7_0_FCLK_CLK0),
@@ -962,6 +982,19 @@ module multi_protocol_bd
   multi_protocol_bd_rgb888torgb565_0_0 rgb888torgb565_0
        (.rgb565_data(rgb888torgb565_0_rgb565_data),
         .rgb888_data(v_axi4s_vid_out_0_vid_data));
+  multi_protocol_bd_spi_mode0_monitor_0_0 spi_mode0_monitor_0
+       (.clk(processing_system7_0_FCLK_CLK0),
+        .dropped_event_count(spi_mode0_monitor_0_dropped_event_count),
+        .evt_data(spi_mode0_monitor_0_evt_data),
+        .evt_ready(multi_protocol_core_0_ext_evt_ready),
+        .evt_trigger(spi_mode0_monitor_0_evt_trigger),
+        .evt_valid(spi_mode0_monitor_0_evt_valid),
+        .rst_n(proc_sys_reset_0_peripheral_aresetn),
+        .spi_cs_n(spi_cs_n_1),
+        .spi_miso(spi_miso_1),
+        .spi_mosi(spi_mosi_1),
+        .spi_sclk(spi_sclk_1),
+        .timestamp(multi_protocol_core_0_event_timestamp));
   multi_protocol_bd_v_axi4s_vid_out_0_0 v_axi4s_vid_out_0
        (.aclk(processing_system7_0_FCLK_CLK0),
         .aclken(1'b1),
@@ -1017,14 +1050,6 @@ module multi_protocol_bd
         .s_axi_wvalid(axi_interconnect_0_M02_AXI_WVALID),
         .vblank_out(v_tc_0_vtiming_out_VBLANK),
         .vsync_out(v_tc_0_vtiming_out_VSYNC));
-  multi_protocol_bd_xlconstant_evt_data_0 xlconstant_evt_data
-       (.dout(xlconstant_evt_data_dout));
-  multi_protocol_bd_xlconstant_evt_dropped_0 xlconstant_evt_dropped
-       (.dout(xlconstant_evt_dropped_dout));
-  multi_protocol_bd_xlconstant_evt_trigger_0 xlconstant_evt_trigger
-       (.dout(xlconstant_evt_trigger_dout));
-  multi_protocol_bd_xlconstant_evt_valid_0 xlconstant_evt_valid
-       (.dout(xlconstant_evt_valid_dout));
   multi_protocol_bd_xlconstant_lcd_bl_0 xlconstant_lcd_bl
        (.dout(xlconstant_lcd_bl_dout));
 endmodule

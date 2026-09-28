@@ -27,6 +27,22 @@
 
 建议切换分支、拉取或合并前先关闭 Vivado/SDK，完成后重新打开并刷新工程。
 
+## FPGA 自动回归
+
+成员 A 修改 RTL、事件接口或 Block Design 前后，都应在仓库根目录执行：
+
+```powershell
+& 'D:\Xilinx\Vivado\2018.3\bin\vivado.bat' -mode batch -source fpga/build/run_sim.tcl
+```
+
+看到 `SIMULATION_COMPLETED` 才表示五组自检全部通过。仿真会生成
+`Multi_protocol.sim` 和 `Multi_protocol.ip_user_files`，这些目录已被 Git 忽略。
+Vivado 运行仿真时可能只改写 `Multi_protocol.xpr` 中的仿真顶层和界面状态；确认
+没有主动修改工程配置后，可执行 `git restore -- Multi_protocol.xpr` 清除此类噪声。
+
+成员 A 第一周的任务、验收标准和代码阅读顺序见
+`docs/workflow/member-a-week1.md`。
+
 ## 主要路径
 
 - Vivado 工程：`Multi_protocol.xpr`

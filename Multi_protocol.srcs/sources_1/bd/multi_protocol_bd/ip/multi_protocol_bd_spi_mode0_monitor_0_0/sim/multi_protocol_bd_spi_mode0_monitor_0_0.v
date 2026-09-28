@@ -47,23 +47,63 @@
 // DO NOT MODIFY THIS FILE.
 
 
-// IP VLNV: xilinx.com:ip:xlconstant:1.1
-// IP Revision: 5
+// IP VLNV: xilinx.com:module_ref:spi_mode0_monitor_bd:1.0
+// IP Revision: 1
 
-(* X_CORE_INFO = "xlconstant_v1_1_5_xlconstant,Vivado 2018.3" *)
-(* CHECK_LICENSE_TYPE = "multi_protocol_bd_xlconstant_evt_trigger_0,xlconstant_v1_1_5_xlconstant,{}" *)
-(* CORE_GENERATION_INFO = "multi_protocol_bd_xlconstant_evt_trigger_0,xlconstant_v1_1_5_xlconstant,{x_ipProduct=Vivado 2018.3,x_ipVendor=xilinx.com,x_ipLibrary=ip,x_ipName=xlconstant,x_ipVersion=1.1,x_ipCoreRevision=5,x_ipLanguage=VERILOG,x_ipSimLanguage=MIXED,CONST_WIDTH=1,CONST_VAL=0x0}" *)
+`timescale 1ns/1ps
+
+(* IP_DEFINITION_SOURCE = "module_ref" *)
 (* DowngradeIPIdentifiedWarnings = "yes" *)
-module multi_protocol_bd_xlconstant_evt_trigger_0 (
-  dout
+module multi_protocol_bd_spi_mode0_monitor_0_0 (
+  clk,
+  rst_n,
+  timestamp,
+  spi_sclk,
+  spi_cs_n,
+  spi_mosi,
+  spi_miso,
+  evt_valid,
+  evt_ready,
+  evt_trigger,
+  evt_data,
+  monitor_active,
+  transaction_id,
+  dropped_event_count
 );
 
-output wire [0 : 0] dout;
+(* X_INTERFACE_PARAMETER = "XIL_INTERFACENAME clk, FREQ_HZ 100000000, PHASE 0.000, CLK_DOMAIN multi_protocol_bd_processing_system7_0_0_FCLK_CLK0, INSERT_VIP 0" *)
+(* X_INTERFACE_INFO = "xilinx.com:signal:clock:1.0 clk CLK" *)
+input wire clk;
+(* X_INTERFACE_PARAMETER = "XIL_INTERFACENAME rst_n, POLARITY ACTIVE_LOW, INSERT_VIP 0" *)
+(* X_INTERFACE_INFO = "xilinx.com:signal:reset:1.0 rst_n RST" *)
+input wire rst_n;
+input wire [63 : 0] timestamp;
+input wire spi_sclk;
+input wire spi_cs_n;
+input wire spi_mosi;
+input wire spi_miso;
+output wire evt_valid;
+input wire evt_ready;
+output wire evt_trigger;
+output wire [127 : 0] evt_data;
+output wire monitor_active;
+output wire [23 : 0] transaction_id;
+output wire [31 : 0] dropped_event_count;
 
-  xlconstant_v1_1_5_xlconstant #(
-    .CONST_WIDTH(1),
-    .CONST_VAL('H0)
-  ) inst (
-    .dout(dout)
+  spi_mode0_monitor_bd inst (
+    .clk(clk),
+    .rst_n(rst_n),
+    .timestamp(timestamp),
+    .spi_sclk(spi_sclk),
+    .spi_cs_n(spi_cs_n),
+    .spi_mosi(spi_mosi),
+    .spi_miso(spi_miso),
+    .evt_valid(evt_valid),
+    .evt_ready(evt_ready),
+    .evt_trigger(evt_trigger),
+    .evt_data(evt_data),
+    .monitor_active(monitor_active),
+    .transaction_id(transaction_id),
+    .dropped_event_count(dropped_event_count)
   );
 endmodule

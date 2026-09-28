@@ -2,10 +2,10 @@
 <Root MajorVersion="0" MinorVersion="36">
   <CompositeFile CompositeFileTopName="multi_protocol_bd" CanBeSetAsTop="false" CanDisplayChildGraph="true">
     <Description>Composite Fileset</Description>
-    <Generation Name="SYNTHESIS" State="GENERATED" Timestamp="1790237918"/>
-    <Generation Name="IMPLEMENTATION" State="GENERATED" Timestamp="1790237918"/>
-    <Generation Name="SIMULATION" State="GENERATED" Timestamp="1790237918"/>
-    <Generation Name="HW_HANDOFF" State="GENERATED" Timestamp="1790237918"/>
+    <Generation Name="SYNTHESIS" State="GENERATED" Timestamp="1790412565"/>
+    <Generation Name="IMPLEMENTATION" State="GENERATED" Timestamp="1790412565"/>
+    <Generation Name="SIMULATION" State="GENERATED" Timestamp="1790412565"/>
+    <Generation Name="HW_HANDOFF" State="GENERATED" Timestamp="1790412565"/>
     <FileCollection Name="SOURCES" Type="SOURCES">
       <File Name="ip\multi_protocol_bd_processing_system7_0_0\multi_protocol_bd_processing_system7_0_0.xci" Type="IP">
         <Instance HierarchyPath="processing_system7_0"/>
@@ -54,32 +54,8 @@
         <UsedIn Val="IMPLEMENTATION"/>
         <UsedIn Val="SIMULATION"/>
       </File>
-      <File Name="ip\multi_protocol_bd_xlconstant_evt_valid_0\multi_protocol_bd_xlconstant_evt_valid_0.xci" Type="IP">
-        <Instance HierarchyPath="xlconstant_evt_valid"/>
-        <Properties IsEditable="false" IsVisible="true" Timestamp="0" IsTrackable="true" IsStatusTracked="true"/>
-        <Library Name="xil_defaultlib"/>
-        <UsedIn Val="SYNTHESIS"/>
-        <UsedIn Val="IMPLEMENTATION"/>
-        <UsedIn Val="SIMULATION"/>
-      </File>
-      <File Name="ip\multi_protocol_bd_xlconstant_evt_trigger_0\multi_protocol_bd_xlconstant_evt_trigger_0.xci" Type="IP">
-        <Instance HierarchyPath="xlconstant_evt_trigger"/>
-        <Properties IsEditable="false" IsVisible="true" Timestamp="0" IsTrackable="true" IsStatusTracked="true"/>
-        <Library Name="xil_defaultlib"/>
-        <UsedIn Val="SYNTHESIS"/>
-        <UsedIn Val="IMPLEMENTATION"/>
-        <UsedIn Val="SIMULATION"/>
-      </File>
-      <File Name="ip\multi_protocol_bd_xlconstant_evt_data_0\multi_protocol_bd_xlconstant_evt_data_0.xci" Type="IP">
-        <Instance HierarchyPath="xlconstant_evt_data"/>
-        <Properties IsEditable="false" IsVisible="true" Timestamp="0" IsTrackable="true" IsStatusTracked="true"/>
-        <Library Name="xil_defaultlib"/>
-        <UsedIn Val="SYNTHESIS"/>
-        <UsedIn Val="IMPLEMENTATION"/>
-        <UsedIn Val="SIMULATION"/>
-      </File>
-      <File Name="ip\multi_protocol_bd_xlconstant_evt_dropped_0\multi_protocol_bd_xlconstant_evt_dropped_0.xci" Type="IP">
-        <Instance HierarchyPath="xlconstant_evt_dropped"/>
+      <File Name="ip\multi_protocol_bd_spi_mode0_monitor_0_0\multi_protocol_bd_spi_mode0_monitor_0_0.xci" Type="IP">
+        <Instance HierarchyPath="spi_mode0_monitor_0"/>
         <Properties IsEditable="false" IsVisible="true" Timestamp="0" IsTrackable="true" IsStatusTracked="true"/>
         <Library Name="xil_defaultlib"/>
         <UsedIn Val="SYNTHESIS"/>

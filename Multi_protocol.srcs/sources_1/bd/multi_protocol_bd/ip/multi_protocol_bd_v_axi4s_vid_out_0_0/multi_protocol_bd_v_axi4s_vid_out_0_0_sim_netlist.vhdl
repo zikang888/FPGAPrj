@@ -3,8 +3,8 @@
 -- Tool Version: Vivado v.2018.3 (win64) Build 2405991 Thu Dec  6 23:38:27 MST 2018
 -- Date        : Thu Sep 24 16:19:32 2026
 -- Host        : LAPTOP-MK9F4NL5 running 64-bit major release  (build 9200)
--- Command     : write_vhdl -force -mode funcsim
---               D:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ip/multi_protocol_bd_v_axi4s_vid_out_0_0/multi_protocol_bd_v_axi4s_vid_out_0_0_sim_netlist.vhdl
+-- Command     : write_vhdl -force -mode funcsim -rename_top multi_protocol_bd_v_axi4s_vid_out_0_0 -prefix
+--               multi_protocol_bd_v_axi4s_vid_out_0_0_ multi_protocol_bd_v_axi4s_vid_out_0_0_sim_netlist.vhdl
 -- Design      : multi_protocol_bd_v_axi4s_vid_out_0_0
 -- Purpose     : This VHDL netlist is a functional simulation representation of the design and should not be modified or
 --               synthesized. This netlist cannot be used for SDF annotated simulation.
@@ -38,8 +38,6 @@ entity multi_protocol_bd_v_axi4s_vid_out_0_0_v_axi4s_vid_out_v4_0_10_formatter i
     E : in STD_LOGIC_VECTOR ( 0 to 0 );
     D : in STD_LOGIC_VECTOR ( 23 downto 0 )
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_v_axi4s_vid_out_0_0_v_axi4s_vid_out_v4_0_10_formatter : entity is "v_axi4s_vid_out_v4_0_10_formatter";
 end multi_protocol_bd_v_axi4s_vid_out_0_0_v_axi4s_vid_out_v4_0_10_formatter;
 
 architecture STRUCTURE of multi_protocol_bd_v_axi4s_vid_out_0_0_v_axi4s_vid_out_v4_0_10_formatter is
@@ -478,8 +476,6 @@ entity multi_protocol_bd_v_axi4s_vid_out_0_0_v_axi4s_vid_out_v4_0_10_sync is
     vtg_field_id : in STD_LOGIC;
     fivid_reset_full_frame : in STD_LOGIC
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_v_axi4s_vid_out_0_0_v_axi4s_vid_out_v4_0_10_sync : entity is "v_axi4s_vid_out_v4_0_10_sync";
 end multi_protocol_bd_v_axi4s_vid_out_0_0_v_axi4s_vid_out_v4_0_10_sync;
 
 architecture STRUCTURE of multi_protocol_bd_v_axi4s_vid_out_0_0_v_axi4s_vid_out_v4_0_10_sync is
@@ -4159,8 +4155,6 @@ entity multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_cdc_gray is
   attribute DEST_SYNC_FF of multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_cdc_gray : entity is 4;
   attribute INIT_SYNC_FF : integer;
   attribute INIT_SYNC_FF of multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_cdc_gray : entity is 1;
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_cdc_gray : entity is "xpm_cdc_gray";
   attribute REG_OUTPUT : integer;
   attribute REG_OUTPUT of multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_cdc_gray : entity is 0;
   attribute SIM_ASSERT_CHK : integer;
@@ -7633,8 +7627,6 @@ entity multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_cdc_single is
   attribute DEST_SYNC_FF of multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_cdc_single : entity is 4;
   attribute INIT_SYNC_FF : integer;
   attribute INIT_SYNC_FF of multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_cdc_single : entity is 0;
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_cdc_single : entity is "xpm_cdc_single";
   attribute SIM_ASSERT_CHK : integer;
   attribute SIM_ASSERT_CHK of multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_cdc_single : entity is 0;
   attribute SRC_INPUT_REG : integer;
@@ -7806,8 +7798,6 @@ entity multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_cdc_sync_rst is
   attribute INIT of multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_cdc_sync_rst : entity is "0";
   attribute INIT_SYNC_FF : integer;
   attribute INIT_SYNC_FF of multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_cdc_sync_rst : entity is 1;
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_cdc_sync_rst : entity is "xpm_cdc_sync_rst";
   attribute SIM_ASSERT_CHK : integer;
   attribute SIM_ASSERT_CHK of multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_cdc_sync_rst : entity is 0;
   attribute VERSION : integer;
@@ -8001,8 +7991,6 @@ entity multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_counter_updn is
     \count_value_i_reg[0]_1\ : in STD_LOGIC;
     rd_clk : in STD_LOGIC
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_counter_updn : entity is "xpm_counter_updn";
 end multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_counter_updn;
 
 architecture STRUCTURE of multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_counter_updn is
@@ -10192,8 +10180,6 @@ entity multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_fifo_reg_bit is
     wr_en : in STD_LOGIC;
     Q : in STD_LOGIC_VECTOR ( 0 to 0 )
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_fifo_reg_bit : entity is "xpm_fifo_reg_bit";
 end multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_fifo_reg_bit;
 
 architecture STRUCTURE of multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_fifo_reg_bit is
@@ -10266,8 +10252,6 @@ entity multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_fifo_reg_vec is
     D : in STD_LOGIC_VECTOR ( 9 downto 0 );
     wr_clk : in STD_LOGIC
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_fifo_reg_vec : entity is "xpm_fifo_reg_vec";
 end multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_fifo_reg_vec;
 
 architecture STRUCTURE of multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_fifo_reg_vec is
@@ -11351,8 +11335,6 @@ entity multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_memory_base is
   attribute MESSAGE_CONTROL of multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_memory_base : entity is 0;
   attribute NUM_CHAR_LOC : integer;
   attribute NUM_CHAR_LOC of multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_memory_base : entity is 0;
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_memory_base : entity is "xpm_memory_base";
   attribute P_ECC_MODE : string;
   attribute P_ECC_MODE of multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_memory_base : entity is "no_ecc";
   attribute P_ENABLE_BYTE_WRITE_A : integer;
@@ -11761,8 +11743,6 @@ entity multi_protocol_bd_v_axi4s_vid_out_0_0_v_axi4s_vid_out_v4_0_10_cdc_single 
     src_in : in STD_LOGIC;
     aclk : in STD_LOGIC
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_v_axi4s_vid_out_0_0_v_axi4s_vid_out_v4_0_10_cdc_single : entity is "v_axi4s_vid_out_v4_0_10_cdc_single";
 end multi_protocol_bd_v_axi4s_vid_out_0_0_v_axi4s_vid_out_v4_0_10_cdc_single;
 
 architecture STRUCTURE of multi_protocol_bd_v_axi4s_vid_out_0_0_v_axi4s_vid_out_v4_0_10_cdc_single is
@@ -11850,8 +11830,6 @@ entity multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_fifo_rst is
     \guf.underflow_i_reg\ : in STD_LOGIC;
     rd_en : in STD_LOGIC
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_fifo_rst : entity is "xpm_fifo_rst";
 end multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_fifo_rst;
 
 architecture STRUCTURE of multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_fifo_rst is
@@ -12360,8 +12338,6 @@ entity multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_fifo_base is
   attribute FULL_RESET_VALUE of multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_fifo_base : entity is 1;
   attribute FULL_RST_VAL : string;
   attribute FULL_RST_VAL of multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_fifo_base : entity is "1'b1";
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_fifo_base : entity is "xpm_fifo_base";
   attribute PE_THRESH_ADJ : integer;
   attribute PE_THRESH_ADJ of multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_fifo_base : entity is 8;
   attribute PE_THRESH_MAX : integer;
@@ -13731,8 +13707,6 @@ entity multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_fifo_async is
   attribute FIFO_WRITE_DEPTH of multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_fifo_async : entity is 1024;
   attribute FULL_RESET_VALUE : integer;
   attribute FULL_RESET_VALUE of multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_fifo_async : entity is 1;
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_fifo_async : entity is "xpm_fifo_async";
   attribute PROG_EMPTY_THRESH : integer;
   attribute PROG_EMPTY_THRESH of multi_protocol_bd_v_axi4s_vid_out_0_0_xpm_fifo_async : entity is 10;
   attribute PROG_FULL_THRESH : integer;
@@ -13949,8 +13923,6 @@ entity multi_protocol_bd_v_axi4s_vid_out_0_0_v_axi4s_vid_out_v4_0_10_fifo_async 
     fifo_eol_dly : in STD_LOGIC;
     aresetn : in STD_LOGIC
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_v_axi4s_vid_out_0_0_v_axi4s_vid_out_v4_0_10_fifo_async : entity is "v_axi4s_vid_out_v4_0_10_fifo_async";
 end multi_protocol_bd_v_axi4s_vid_out_0_0_v_axi4s_vid_out_v4_0_10_fifo_async;
 
 architecture STRUCTURE of multi_protocol_bd_v_axi4s_vid_out_0_0_v_axi4s_vid_out_v4_0_10_fifo_async is
@@ -14157,8 +14129,6 @@ entity multi_protocol_bd_v_axi4s_vid_out_0_0_v_axi4s_vid_out_v4_0_10_coupler is
     s_axis_video_tvalid : in STD_LOGIC;
     aclken : in STD_LOGIC
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_v_axi4s_vid_out_0_0_v_axi4s_vid_out_v4_0_10_coupler : entity is "v_axi4s_vid_out_v4_0_10_coupler";
 end multi_protocol_bd_v_axi4s_vid_out_0_0_v_axi4s_vid_out_v4_0_10_coupler;
 
 architecture STRUCTURE of multi_protocol_bd_v_axi4s_vid_out_0_0_v_axi4s_vid_out_v4_0_10_coupler is
@@ -14287,8 +14257,6 @@ entity multi_protocol_bd_v_axi4s_vid_out_0_0_v_axi4s_vid_out_v4_0_10 is
   attribute C_VTG_MASTER_SLAVE of multi_protocol_bd_v_axi4s_vid_out_0_0_v_axi4s_vid_out_v4_0_10 : entity is 0;
   attribute DowngradeIPIdentifiedWarnings : string;
   attribute DowngradeIPIdentifiedWarnings of multi_protocol_bd_v_axi4s_vid_out_0_0_v_axi4s_vid_out_v4_0_10 : entity is "yes";
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_v_axi4s_vid_out_0_0_v_axi4s_vid_out_v4_0_10 : entity is "v_axi4s_vid_out_v4_0_10";
 end multi_protocol_bd_v_axi4s_vid_out_0_0_v_axi4s_vid_out_v4_0_10;
 
 architecture STRUCTURE of multi_protocol_bd_v_axi4s_vid_out_0_0_v_axi4s_vid_out_v4_0_10 is

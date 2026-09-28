@@ -79,6 +79,7 @@ module multi_protocol_bd_multi_protocol_core_0_0 (
   ext_evt_data,
   ext_evt_trigger,
   ext_evt_dropped_count,
+  event_timestamp,
   led_heartbeat,
   led_ps_active
 );
@@ -130,6 +131,7 @@ output wire ext_evt_ready;
 input wire [127 : 0] ext_evt_data;
 input wire ext_evt_trigger;
 input wire [31 : 0] ext_evt_dropped_count;
+output wire [63 : 0] event_timestamp;
 output wire led_heartbeat;
 output wire led_ps_active;
 
@@ -158,6 +160,7 @@ output wire led_ps_active;
     .ext_evt_data(ext_evt_data),
     .ext_evt_trigger(ext_evt_trigger),
     .ext_evt_dropped_count(ext_evt_dropped_count),
+    .event_timestamp(event_timestamp),
     .led_heartbeat(led_heartbeat),
     .led_ps_active(led_ps_active)
   );

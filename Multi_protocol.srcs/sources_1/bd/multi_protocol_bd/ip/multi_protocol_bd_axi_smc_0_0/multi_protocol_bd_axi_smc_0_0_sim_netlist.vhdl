@@ -1,10 +1,10 @@
 -- Copyright 1986-2018 Xilinx, Inc. All Rights Reserved.
 -- --------------------------------------------------------------------------------
 -- Tool Version: Vivado v.2018.3 (win64) Build 2405991 Thu Dec  6 23:38:27 MST 2018
--- Date        : Thu Sep 24 16:20:51 2026
+-- Date        : Thu Sep 24 16:20:49 2026
 -- Host        : LAPTOP-MK9F4NL5 running 64-bit major release  (build 9200)
--- Command     : write_vhdl -force -mode funcsim
---               D:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ip/multi_protocol_bd_axi_smc_0_0/multi_protocol_bd_axi_smc_0_0_sim_netlist.vhdl
+-- Command     : write_vhdl -force -mode funcsim -rename_top multi_protocol_bd_axi_smc_0_0 -prefix
+--               multi_protocol_bd_axi_smc_0_0_ multi_protocol_bd_axi_smc_0_0_sim_netlist.vhdl
 -- Design      : multi_protocol_bd_axi_smc_0_0
 -- Purpose     : This VHDL netlist is a functional simulation representation of the design and should not be modified or
 --               synthesized. This netlist cannot be used for SDF annotated simulation.
@@ -20,8 +20,6 @@ entity multi_protocol_bd_axi_smc_0_0_cdc_sync is
     aresetn : in STD_LOGIC;
     aclk : in STD_LOGIC
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_cdc_sync : entity is "cdc_sync";
 end multi_protocol_bd_axi_smc_0_0_cdc_sync;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_cdc_sync is
@@ -109,8 +107,6 @@ entity multi_protocol_bd_axi_smc_0_0_upcnt_n is
     seq_cnt_en : in STD_LOGIC;
     aclk : in STD_LOGIC
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_upcnt_n : entity is "upcnt_n";
 end multi_protocol_bd_axi_smc_0_0_upcnt_n;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_upcnt_n is
@@ -326,8 +322,6 @@ entity multi_protocol_bd_axi_smc_0_0_xpm_memory_base is
   attribute MESSAGE_CONTROL of multi_protocol_bd_axi_smc_0_0_xpm_memory_base : entity is 0;
   attribute NUM_CHAR_LOC : integer;
   attribute NUM_CHAR_LOC of multi_protocol_bd_axi_smc_0_0_xpm_memory_base : entity is 0;
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_xpm_memory_base : entity is "xpm_memory_base";
   attribute P_ECC_MODE : string;
   attribute P_ECC_MODE of multi_protocol_bd_axi_smc_0_0_xpm_memory_base : entity is "no_ecc";
   attribute P_ENABLE_BYTE_WRITE_A : integer;
@@ -11151,8 +11145,6 @@ entity multi_protocol_bd_axi_smc_0_0_sc_mmu_v1_0_7_decerr_slave is
     Q : in STD_LOGIC_VECTOR ( 7 downto 0 );
     \gen_axi.gen_read.s_axi_rlast_i0\ : in STD_LOGIC
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_sc_mmu_v1_0_7_decerr_slave : entity is "sc_mmu_v1_0_7_decerr_slave";
 end multi_protocol_bd_axi_smc_0_0_sc_mmu_v1_0_7_decerr_slave;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_sc_mmu_v1_0_7_decerr_slave is
@@ -11579,8 +11571,6 @@ entity multi_protocol_bd_axi_smc_0_0_sc_node_v1_0_10_arb_alg_rr is
     areset_r : in STD_LOGIC;
     s_sc_send : in STD_LOGIC_VECTOR ( 0 to 0 )
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_sc_node_v1_0_10_arb_alg_rr : entity is "sc_node_v1_0_10_arb_alg_rr";
 end multi_protocol_bd_axi_smc_0_0_sc_node_v1_0_10_arb_alg_rr;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_sc_node_v1_0_10_arb_alg_rr is
@@ -12189,8 +12179,6 @@ entity multi_protocol_bd_axi_smc_0_0_sc_si_converter_v1_0_7_top is
   attribute C_WRITE_ACCEPTANCE of multi_protocol_bd_axi_smc_0_0_sc_si_converter_v1_0_7_top : entity is 32;
   attribute C_WRITE_WATERMARK : integer;
   attribute C_WRITE_WATERMARK of multi_protocol_bd_axi_smc_0_0_sc_si_converter_v1_0_7_top : entity is 0;
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_sc_si_converter_v1_0_7_top : entity is "sc_si_converter_v1_0_7_top";
   attribute P_EXOK : string;
   attribute P_EXOK of multi_protocol_bd_axi_smc_0_0_sc_si_converter_v1_0_7_top : entity is "2'b01";
   attribute P_FULLY_PIPELINED : integer;
@@ -17692,8 +17680,6 @@ entity multi_protocol_bd_axi_smc_0_0_sc_util_v1_0_4_axi_reg_stall is
     m_axi_arready : in STD_LOGIC;
     mr_axi_arready : in STD_LOGIC
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_sc_util_v1_0_4_axi_reg_stall : entity is "sc_util_v1_0_4_axi_reg_stall";
 end multi_protocol_bd_axi_smc_0_0_sc_util_v1_0_4_axi_reg_stall;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_sc_util_v1_0_4_axi_reg_stall is
@@ -30830,8 +30816,6 @@ entity multi_protocol_bd_axi_smc_0_0_sc_util_v1_0_4_counter is
     s_sc_send : in STD_LOGIC_VECTOR ( 0 to 0 );
     \count_r_reg[0]_0\ : in STD_LOGIC
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_sc_util_v1_0_4_counter : entity is "sc_util_v1_0_4_counter";
 end multi_protocol_bd_axi_smc_0_0_sc_util_v1_0_4_counter;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_sc_util_v1_0_4_counter is
@@ -36663,8 +36647,6 @@ entity multi_protocol_bd_axi_smc_0_0_sc_util_v1_0_4_pipeline is
     s_sc_aclk : in STD_LOGIC;
     s_sc_send : in STD_LOGIC_VECTOR ( 0 to 0 )
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_sc_util_v1_0_4_pipeline : entity is "sc_util_v1_0_4_pipeline";
 end multi_protocol_bd_axi_smc_0_0_sc_util_v1_0_4_pipeline;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_sc_util_v1_0_4_pipeline is
@@ -39572,8 +39554,6 @@ entity multi_protocol_bd_axi_smc_0_0_sc_util_v1_0_4_srl_rtl is
     \gen_pipelined.mesg_reg_reg[0]_2\ : in STD_LOGIC;
     \gen_rsplitter.r_suppress\ : in STD_LOGIC
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_sc_util_v1_0_4_srl_rtl : entity is "sc_util_v1_0_4_srl_rtl";
 end multi_protocol_bd_axi_smc_0_0_sc_util_v1_0_4_srl_rtl;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_sc_util_v1_0_4_srl_rtl is
@@ -40414,8 +40394,6 @@ entity multi_protocol_bd_axi_smc_0_0_bd_7b74_s00sic_0 is
     S_SC_AR_payld : out STD_LOGIC_VECTOR ( 3 downto 0 );
     \gen_rd_b.doutb_reg_reg[91]\ : in STD_LOGIC_VECTOR ( 7 downto 0 )
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_bd_7b74_s00sic_0 : entity is "bd_7b74_s00sic_0";
 end multi_protocol_bd_axi_smc_0_0_bd_7b74_s00sic_0;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_bd_7b74_s00sic_0 is
@@ -40650,8 +40628,6 @@ entity multi_protocol_bd_axi_smc_0_0_lpf is
     aclk : in STD_LOGIC;
     aresetn : in STD_LOGIC
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_lpf : entity is "lpf";
 end multi_protocol_bd_axi_smc_0_0_lpf;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_lpf is
@@ -40728,8 +40704,6 @@ entity multi_protocol_bd_axi_smc_0_0_sequence_psr is
     lpf_int : in STD_LOGIC;
     aclk : in STD_LOGIC
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_sequence_psr : entity is "sequence_psr";
 end multi_protocol_bd_axi_smc_0_0_sequence_psr;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_sequence_psr is
@@ -41000,8 +40974,6 @@ entity multi_protocol_bd_axi_smc_0_0_xpm_memory_sdpram is
   attribute MEMORY_SIZE of multi_protocol_bd_axi_smc_0_0_xpm_memory_sdpram : entity is 32;
   attribute MESSAGE_CONTROL : integer;
   attribute MESSAGE_CONTROL of multi_protocol_bd_axi_smc_0_0_xpm_memory_sdpram : entity is 0;
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_xpm_memory_sdpram : entity is "xpm_memory_sdpram";
   attribute P_CLOCKING_MODE : integer;
   attribute P_CLOCKING_MODE of multi_protocol_bd_axi_smc_0_0_xpm_memory_sdpram : entity is 0;
   attribute P_ECC_MODE : integer;
@@ -42948,8 +42920,6 @@ entity multi_protocol_bd_axi_smc_0_0_sc_mmu_v1_0_7_top is
   attribute C_WRITE_ACCEPTANCE of multi_protocol_bd_axi_smc_0_0_sc_mmu_v1_0_7_top : entity is 32;
   attribute DowngradeIPIdentifiedWarnings : string;
   attribute DowngradeIPIdentifiedWarnings of multi_protocol_bd_axi_smc_0_0_sc_mmu_v1_0_7_top : entity is "yes";
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_sc_mmu_v1_0_7_top : entity is "sc_mmu_v1_0_7_top";
   attribute P_AXI3 : integer;
   attribute P_AXI3 of multi_protocol_bd_axi_smc_0_0_sc_mmu_v1_0_7_top : entity is 1;
   attribute P_AXI4 : integer;
@@ -46523,8 +46493,6 @@ entity multi_protocol_bd_axi_smc_0_0_sc_node_v1_0_10_ingress is
     s_sc_handshake : in STD_LOGIC_VECTOR ( 0 to 0 );
     s_sc_aclk : in STD_LOGIC
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_sc_node_v1_0_10_ingress : entity is "sc_node_v1_0_10_ingress";
 end multi_protocol_bd_axi_smc_0_0_sc_node_v1_0_10_ingress;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_sc_node_v1_0_10_ingress is
@@ -46576,8 +46544,6 @@ entity multi_protocol_bd_axi_smc_0_0_sc_node_v1_0_10_si_handler is
     s_sc_send : in STD_LOGIC_VECTOR ( 0 to 0 );
     s_sc_req : in STD_LOGIC_VECTOR ( 0 to 0 )
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_sc_node_v1_0_10_si_handler : entity is "sc_node_v1_0_10_si_handler";
 end multi_protocol_bd_axi_smc_0_0_sc_node_v1_0_10_si_handler;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_sc_node_v1_0_10_si_handler is
@@ -46751,8 +46717,6 @@ entity multi_protocol_bd_axi_smc_0_0_sc_switchboard_v1_0_6_top is
   attribute LP_MUX_IMPL of multi_protocol_bd_axi_smc_0_0_sc_switchboard_v1_0_6_top : entity is "32'b00000000000000000000000000000000";
   attribute LP_M_SC_SEL_MI_PIPELINE_DEPTH : string;
   attribute LP_M_SC_SEL_MI_PIPELINE_DEPTH of multi_protocol_bd_axi_smc_0_0_sc_switchboard_v1_0_6_top : entity is "32'b00000000000000000000000000000000";
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_sc_switchboard_v1_0_6_top : entity is "sc_switchboard_v1_0_6_top";
 end multi_protocol_bd_axi_smc_0_0_sc_switchboard_v1_0_6_top;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_sc_switchboard_v1_0_6_top is
@@ -46955,8 +46919,6 @@ entity multi_protocol_bd_axi_smc_0_0_sc_util_v1_0_4_axic_reg_srl_fifo is
     \gen_axi3.first_r_beat_n_reg\ : in STD_LOGIC;
     \gen_axi3.first_r_beat_n_reg_0\ : in STD_LOGIC
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_sc_util_v1_0_4_axic_reg_srl_fifo : entity is "sc_util_v1_0_4_axic_reg_srl_fifo";
 end multi_protocol_bd_axi_smc_0_0_sc_util_v1_0_4_axic_reg_srl_fifo;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_sc_util_v1_0_4_axic_reg_srl_fifo is
@@ -48050,8 +48012,6 @@ entity multi_protocol_bd_axi_smc_0_0_bd_7b74_arsw_0 is
     aclk : in STD_LOGIC;
     S00_SC_AR_payld : in STD_LOGIC_VECTOR ( 136 downto 0 )
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_bd_7b74_arsw_0 : entity is "bd_7b74_arsw_0";
 end multi_protocol_bd_axi_smc_0_0_bd_7b74_arsw_0;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_bd_7b74_arsw_0 is
@@ -48115,8 +48075,6 @@ entity multi_protocol_bd_axi_smc_0_0_bd_7b74_rsw_0 is
     aclk : in STD_LOGIC;
     S00_SC_R_payld : in STD_LOGIC_VECTOR ( 82 downto 0 )
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_bd_7b74_rsw_0 : entity is "bd_7b74_rsw_0";
 end multi_protocol_bd_axi_smc_0_0_bd_7b74_rsw_0;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_bd_7b74_rsw_0 is
@@ -48200,8 +48158,6 @@ entity multi_protocol_bd_axi_smc_0_0_bd_7b74_s00mmu_0 is
     M_SC_R_payld : in STD_LOGIC_VECTOR ( 66 downto 0 );
     M_SC_R_send : in STD_LOGIC_VECTOR ( 0 to 0 )
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_bd_7b74_s00mmu_0 : entity is "bd_7b74_s00mmu_0";
 end multi_protocol_bd_axi_smc_0_0_bd_7b74_s00mmu_0;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_bd_7b74_s00mmu_0 is
@@ -48447,8 +48403,6 @@ entity multi_protocol_bd_axi_smc_0_0_proc_sys_reset is
     aclk : in STD_LOGIC;
     aresetn : in STD_LOGIC
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_proc_sys_reset : entity is "proc_sys_reset";
 end multi_protocol_bd_axi_smc_0_0_proc_sys_reset;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_proc_sys_reset is
@@ -48524,8 +48478,6 @@ entity multi_protocol_bd_axi_smc_0_0_sc_exit_v1_0_8_axi3_conv is
     s_read_cmd_vacancy : in STD_LOGIC;
     \gen_axi3.first_r_beat_n_reg_0\ : in STD_LOGIC
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_sc_exit_v1_0_8_axi3_conv : entity is "sc_exit_v1_0_8_axi3_conv";
 end multi_protocol_bd_axi_smc_0_0_sc_exit_v1_0_8_axi3_conv;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_sc_exit_v1_0_8_axi3_conv is
@@ -49976,8 +49928,6 @@ entity multi_protocol_bd_axi_smc_0_0_sc_exit_v1_0_8_exit is
     \gen_rsplitter.r_suppress\ : in STD_LOGIC;
     \gen_rd_b.doutb_reg_reg[1]\ : in STD_LOGIC
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_sc_exit_v1_0_8_exit : entity is "sc_exit_v1_0_8_exit";
 end multi_protocol_bd_axi_smc_0_0_sc_exit_v1_0_8_exit;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_sc_exit_v1_0_8_exit is
@@ -50034,8 +49984,6 @@ entity multi_protocol_bd_axi_smc_0_0_sc_util_v1_0_4_xpm_memory_fifo is
     m_sc_recv : in STD_LOGIC_VECTOR ( 0 to 0 );
     \gen_normal_area.fifo_node_payld_empty\ : in STD_LOGIC
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_sc_util_v1_0_4_xpm_memory_fifo : entity is "sc_util_v1_0_4_xpm_memory_fifo";
 end multi_protocol_bd_axi_smc_0_0_sc_util_v1_0_4_xpm_memory_fifo;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_sc_util_v1_0_4_xpm_memory_fifo is
@@ -52459,8 +52407,6 @@ entity multi_protocol_bd_axi_smc_0_0_bd_7b74_psr_aclk_0 is
     aclk : in STD_LOGIC;
     aresetn : in STD_LOGIC
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_bd_7b74_psr_aclk_0 : entity is "bd_7b74_psr_aclk_0";
 end multi_protocol_bd_axi_smc_0_0_bd_7b74_psr_aclk_0;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_bd_7b74_psr_aclk_0 is
@@ -52502,8 +52448,6 @@ entity multi_protocol_bd_axi_smc_0_0_s00_entry_pipeline_imp_1J9D9BP is
     M_SC_R_payld : in STD_LOGIC_VECTOR ( 66 downto 0 );
     M_SC_R_send : in STD_LOGIC_VECTOR ( 0 to 0 )
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_s00_entry_pipeline_imp_1J9D9BP : entity is "s00_entry_pipeline_imp_1J9D9BP";
 end multi_protocol_bd_axi_smc_0_0_s00_entry_pipeline_imp_1J9D9BP;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_s00_entry_pipeline_imp_1J9D9BP is
@@ -52559,8 +52503,6 @@ entity multi_protocol_bd_axi_smc_0_0_switchboards_imp_1FFYDTN is
     S00_SC_AR_payld : in STD_LOGIC_VECTOR ( 136 downto 0 );
     S00_SC_R_payld : in STD_LOGIC_VECTOR ( 82 downto 0 )
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_switchboards_imp_1FFYDTN : entity is "switchboards_imp_1FFYDTN";
 end multi_protocol_bd_axi_smc_0_0_switchboards_imp_1FFYDTN;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_switchboards_imp_1FFYDTN is
@@ -52620,8 +52562,6 @@ entity multi_protocol_bd_axi_smc_0_0_sc_exit_v1_0_8_splitter is
     mr_axi_arready : in STD_LOGIC;
     s_read_cmd_vacancy : in STD_LOGIC
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_sc_exit_v1_0_8_splitter : entity is "sc_exit_v1_0_8_splitter";
 end multi_protocol_bd_axi_smc_0_0_sc_exit_v1_0_8_splitter;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_sc_exit_v1_0_8_splitter is
@@ -52693,8 +52633,6 @@ entity multi_protocol_bd_axi_smc_0_0_sc_node_v1_0_10_fifo is
     m_sc_recv : in STD_LOGIC_VECTOR ( 0 to 0 );
     \gen_normal_area.fifo_node_payld_empty\ : in STD_LOGIC
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_sc_node_v1_0_10_fifo : entity is "sc_node_v1_0_10_fifo";
 end multi_protocol_bd_axi_smc_0_0_sc_node_v1_0_10_fifo;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_sc_node_v1_0_10_fifo is
@@ -52975,8 +52913,6 @@ entity multi_protocol_bd_axi_smc_0_0_clk_map_imp_1GCQCOD is
     aclk : in STD_LOGIC;
     aresetn : in STD_LOGIC
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_clk_map_imp_1GCQCOD : entity is "clk_map_imp_1GCQCOD";
 end multi_protocol_bd_axi_smc_0_0_clk_map_imp_1GCQCOD;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_clk_map_imp_1GCQCOD is
@@ -53141,8 +53077,6 @@ entity multi_protocol_bd_axi_smc_0_0_sc_exit_v1_0_8_top is
   attribute C_WRITE_ACCEPTANCE of multi_protocol_bd_axi_smc_0_0_sc_exit_v1_0_8_top : entity is 32;
   attribute DowngradeIPIdentifiedWarnings : string;
   attribute DowngradeIPIdentifiedWarnings of multi_protocol_bd_axi_smc_0_0_sc_exit_v1_0_8_top : entity is "yes";
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_sc_exit_v1_0_8_top : entity is "sc_exit_v1_0_8_top";
   attribute P_BYPASS : integer;
   attribute P_BYPASS of multi_protocol_bd_axi_smc_0_0_sc_exit_v1_0_8_top : entity is 0;
   attribute P_FULLY_PIPELINED : integer;
@@ -55724,8 +55658,6 @@ entity multi_protocol_bd_axi_smc_0_0_sc_node_v1_0_10_mi_handler is
     \gen_rd.fifo_empty_r_reg\ : in STD_LOGIC;
     m_sc_recv : in STD_LOGIC_VECTOR ( 0 to 0 )
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_sc_node_v1_0_10_mi_handler : entity is "sc_node_v1_0_10_mi_handler";
 end multi_protocol_bd_axi_smc_0_0_sc_node_v1_0_10_mi_handler;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_sc_node_v1_0_10_mi_handler is
@@ -56080,8 +56012,6 @@ entity multi_protocol_bd_axi_smc_0_0_bd_7b74_m00e_0 is
     M00_AXI_rlast : in STD_LOGIC;
     M00_AXI_rvalid : in STD_LOGIC
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_bd_7b74_m00e_0 : entity is "bd_7b74_m00e_0";
 end multi_protocol_bd_axi_smc_0_0_bd_7b74_m00e_0;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_bd_7b74_m00e_0 is
@@ -56421,8 +56351,6 @@ entity multi_protocol_bd_axi_smc_0_0_sc_node_v1_0_10_top is
   attribute LP_S_STATIC_DWIDTH of multi_protocol_bd_axi_smc_0_0_sc_node_v1_0_10_top : entity is 1;
   attribute LP_ZERO_ROUTE_WIDTH : integer;
   attribute LP_ZERO_ROUTE_WIDTH of multi_protocol_bd_axi_smc_0_0_sc_node_v1_0_10_top : entity is 1;
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_sc_node_v1_0_10_top : entity is "sc_node_v1_0_10_top";
   attribute P_NUM_OUTSTANDING : integer;
   attribute P_NUM_OUTSTANDING of multi_protocol_bd_axi_smc_0_0_sc_node_v1_0_10_top : entity is 16;
 end multi_protocol_bd_axi_smc_0_0_sc_node_v1_0_10_top;
@@ -57390,8 +57318,6 @@ entity multi_protocol_bd_axi_smc_0_0_bd_7b74_m00arn_0 is
     M00_SC_AR_payld : in STD_LOGIC_VECTOR ( 136 downto 0 );
     M_SC_AR_recv : in STD_LOGIC_VECTOR ( 0 to 0 )
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_bd_7b74_m00arn_0 : entity is "bd_7b74_m00arn_0";
 end multi_protocol_bd_axi_smc_0_0_bd_7b74_m00arn_0;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_bd_7b74_m00arn_0 is
@@ -57567,8 +57493,6 @@ entity multi_protocol_bd_axi_smc_0_0_bd_7b74_m00rn_0 is
     S_SC_R_payld : in STD_LOGIC_VECTOR ( 82 downto 0 );
     \gen_AB_reg_slice.state_reg[1]\ : in STD_LOGIC_VECTOR ( 0 to 0 )
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_bd_7b74_m00rn_0 : entity is "bd_7b74_m00rn_0";
 end multi_protocol_bd_axi_smc_0_0_bd_7b74_m00rn_0;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_bd_7b74_m00rn_0 is
@@ -57737,8 +57661,6 @@ entity multi_protocol_bd_axi_smc_0_0_bd_7b74_sarn_0 is
     S_SC_AR_payld : in STD_LOGIC_VECTOR ( 58 downto 0 );
     M_SC_AR_recv : in STD_LOGIC_VECTOR ( 0 to 0 )
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_bd_7b74_sarn_0 : entity is "bd_7b74_sarn_0";
 end multi_protocol_bd_axi_smc_0_0_bd_7b74_sarn_0;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_bd_7b74_sarn_0 is
@@ -57905,8 +57827,6 @@ entity multi_protocol_bd_axi_smc_0_0_bd_7b74_srn_0 is
     M00_SC_R_payld : in STD_LOGIC_VECTOR ( 82 downto 0 );
     M_SC_R_recv : in STD_LOGIC_VECTOR ( 0 to 0 )
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_bd_7b74_srn_0 : entity is "bd_7b74_srn_0";
 end multi_protocol_bd_axi_smc_0_0_bd_7b74_srn_0;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_bd_7b74_srn_0 is
@@ -58083,8 +58003,6 @@ entity multi_protocol_bd_axi_smc_0_0_m00_exit_pipeline_imp_IV9DVA is
     M00_AXI_rlast : in STD_LOGIC;
     M00_AXI_rvalid : in STD_LOGIC
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_m00_exit_pipeline_imp_IV9DVA : entity is "m00_exit_pipeline_imp_IV9DVA";
 end multi_protocol_bd_axi_smc_0_0_m00_exit_pipeline_imp_IV9DVA;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_m00_exit_pipeline_imp_IV9DVA is
@@ -58138,8 +58056,6 @@ entity multi_protocol_bd_axi_smc_0_0_m00_nodes_imp_5LVGWQ is
     S_SC_R_payld : in STD_LOGIC_VECTOR ( 82 downto 0 );
     \gen_AB_reg_slice.state_reg[1]\ : in STD_LOGIC_VECTOR ( 0 to 0 )
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_m00_nodes_imp_5LVGWQ : entity is "m00_nodes_imp_5LVGWQ";
 end multi_protocol_bd_axi_smc_0_0_m00_nodes_imp_5LVGWQ;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_m00_nodes_imp_5LVGWQ is
@@ -58193,8 +58109,6 @@ entity multi_protocol_bd_axi_smc_0_0_s00_nodes_imp_1MF94Z3 is
     M00_SC_R_payld : in STD_LOGIC_VECTOR ( 82 downto 0 );
     M_SC_R_recv : in STD_LOGIC_VECTOR ( 0 to 0 )
   );
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_s00_nodes_imp_1MF94Z3 : entity is "s00_nodes_imp_1MF94Z3";
 end multi_protocol_bd_axi_smc_0_0_s00_nodes_imp_1MF94Z3;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_s00_nodes_imp_1MF94Z3 is
@@ -58312,8 +58226,6 @@ entity multi_protocol_bd_axi_smc_0_0_bd_7b74 is
   );
   attribute HW_HANDOFF : string;
   attribute HW_HANDOFF of multi_protocol_bd_axi_smc_0_0_bd_7b74 : entity is "multi_protocol_bd_axi_smc_0_0.hwdef";
-  attribute ORIG_REF_NAME : string;
-  attribute ORIG_REF_NAME of multi_protocol_bd_axi_smc_0_0_bd_7b74 : entity is "bd_7b74";
 end multi_protocol_bd_axi_smc_0_0_bd_7b74;
 
 architecture STRUCTURE of multi_protocol_bd_axi_smc_0_0_bd_7b74 is

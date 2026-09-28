@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
-<EDKSYSTEM EDWVERSION="1.2" TIMESTAMP="Thu Sep 24 16:18:38 2026" VIVADOVERSION="2018.3">
+<EDKSYSTEM EDWVERSION="1.2" TIMESTAMP="Sat Sep 26 16:49:25 2026" VIVADOVERSION="2018.3">
 
   <SYSTEMINFO ARCH="zynq" DEVICE="7z020" NAME="multi_protocol_bd" PACKAGE="clg484" SPEEDGRADE="-2"/>
 
@@ -32,6 +32,26 @@
     <PORT CLKFREQUENCY="32727272" DIR="O" NAME="LCD_PCLK" SIGIS="clk" SIGNAME="processing_system7_0_FCLK_CLK1">
       <CONNECTIONS>
         <CONNECTION INSTANCE="processing_system7_0" PORT="FCLK_CLK1"/>
+      </CONNECTIONS>
+    </PORT>
+    <PORT DIR="I" NAME="spi_sclk" SIGIS="undef" SIGNAME="External_Ports_spi_sclk">
+      <CONNECTIONS>
+        <CONNECTION INSTANCE="spi_mode0_monitor_0" PORT="spi_sclk"/>
+      </CONNECTIONS>
+    </PORT>
+    <PORT DIR="I" NAME="spi_cs_n" SIGIS="undef" SIGNAME="External_Ports_spi_cs_n">
+      <CONNECTIONS>
+        <CONNECTION INSTANCE="spi_mode0_monitor_0" PORT="spi_cs_n"/>
+      </CONNECTIONS>
+    </PORT>
+    <PORT DIR="I" NAME="spi_mosi" SIGIS="undef" SIGNAME="External_Ports_spi_mosi">
+      <CONNECTIONS>
+        <CONNECTION INSTANCE="spi_mode0_monitor_0" PORT="spi_mosi"/>
+      </CONNECTIONS>
+    </PORT>
+    <PORT DIR="I" NAME="spi_miso" SIGIS="undef" SIGNAME="External_Ports_spi_miso">
+      <CONNECTIONS>
+        <CONNECTION INSTANCE="spi_mode0_monitor_0" PORT="spi_miso"/>
       </CONNECTIONS>
     </PORT>
     <PORT DIR="O" NAME="led_heartbeat" SIGIS="undef" SIGNAME="multi_protocol_core_0_led_heartbeat">
@@ -627,89 +647,6 @@
             <CONNECTION INSTANCE="multi_protocol_core_0" PORT="s_axi_rready"/>
           </CONNECTIONS>
         </PORT>
-        <PORT DIR="O" LEFT="31" NAME="M01_AXI_awaddr" RIGHT="0" SIGIS="undef" SIGNAME="axi_interconnect_0_M01_AXI_awaddr">
-          <CONNECTIONS>
-            <CONNECTION INSTANCE="axi_vdma_0" PORT="s_axi_lite_awaddr"/>
-          </CONNECTIONS>
-        </PORT>
-        <PORT DIR="O" NAME="M01_AXI_awprot" SIGIS="undef"/>
-        <PORT DIR="O" NAME="M01_AXI_awvalid" SIGIS="undef" SIGNAME="axi_interconnect_0_M01_AXI_awvalid">
-          <CONNECTIONS>
-            <CONNECTION INSTANCE="axi_vdma_0" PORT="s_axi_lite_awvalid"/>
-          </CONNECTIONS>
-        </PORT>
-        <PORT DIR="I" NAME="M01_AXI_awready" SIGIS="undef" SIGNAME="axi_interconnect_0_M01_AXI_awready">
-          <CONNECTIONS>
-            <CONNECTION INSTANCE="axi_vdma_0" PORT="s_axi_lite_awready"/>
-          </CONNECTIONS>
-        </PORT>
-        <PORT DIR="O" LEFT="31" NAME="M01_AXI_wdata" RIGHT="0" SIGIS="undef" SIGNAME="axi_interconnect_0_M01_AXI_wdata">
-          <CONNECTIONS>
-            <CONNECTION INSTANCE="axi_vdma_0" PORT="s_axi_lite_wdata"/>
-          </CONNECTIONS>
-        </PORT>
-        <PORT DIR="O" NAME="M01_AXI_wstrb" SIGIS="undef"/>
-        <PORT DIR="O" NAME="M01_AXI_wvalid" SIGIS="undef" SIGNAME="axi_interconnect_0_M01_AXI_wvalid">
-          <CONNECTIONS>
-            <CONNECTION INSTANCE="axi_vdma_0" PORT="s_axi_lite_wvalid"/>
-          </CONNECTIONS>
-        </PORT>
-        <PORT DIR="I" NAME="M01_AXI_wready" SIGIS="undef" SIGNAME="axi_interconnect_0_M01_AXI_wready">
-          <CONNECTIONS>
-            <CONNECTION INSTANCE="axi_vdma_0" PORT="s_axi_lite_wready"/>
-          </CONNECTIONS>
-        </PORT>
-        <PORT DIR="I" LEFT="1" NAME="M01_AXI_bresp" RIGHT="0" SIGIS="undef" SIGNAME="axi_interconnect_0_M01_AXI_bresp">
-          <CONNECTIONS>
-            <CONNECTION INSTANCE="axi_vdma_0" PORT="s_axi_lite_bresp"/>
-          </CONNECTIONS>
-        </PORT>
-        <PORT DIR="I" NAME="M01_AXI_bvalid" SIGIS="undef" SIGNAME="axi_interconnect_0_M01_AXI_bvalid">
-          <CONNECTIONS>
-            <CONNECTION INSTANCE="axi_vdma_0" PORT="s_axi_lite_bvalid"/>
-          </CONNECTIONS>
-        </PORT>
-        <PORT DIR="O" NAME="M01_AXI_bready" SIGIS="undef" SIGNAME="axi_interconnect_0_M01_AXI_bready">
-          <CONNECTIONS>
-            <CONNECTION INSTANCE="axi_vdma_0" PORT="s_axi_lite_bready"/>
-          </CONNECTIONS>
-        </PORT>
-        <PORT DIR="O" LEFT="31" NAME="M01_AXI_araddr" RIGHT="0" SIGIS="undef" SIGNAME="axi_interconnect_0_M01_AXI_araddr">
-          <CONNECTIONS>
-            <CONNECTION INSTANCE="axi_vdma_0" PORT="s_axi_lite_araddr"/>
-          </CONNECTIONS>
-        </PORT>
-        <PORT DIR="O" NAME="M01_AXI_arprot" SIGIS="undef"/>
-        <PORT DIR="O" NAME="M01_AXI_arvalid" SIGIS="undef" SIGNAME="axi_interconnect_0_M01_AXI_arvalid">
-          <CONNECTIONS>
-            <CONNECTION INSTANCE="axi_vdma_0" PORT="s_axi_lite_arvalid"/>
-          </CONNECTIONS>
-        </PORT>
-        <PORT DIR="I" NAME="M01_AXI_arready" SIGIS="undef" SIGNAME="axi_interconnect_0_M01_AXI_arready">
-          <CONNECTIONS>
-            <CONNECTION INSTANCE="axi_vdma_0" PORT="s_axi_lite_arready"/>
-          </CONNECTIONS>
-        </PORT>
-        <PORT DIR="I" LEFT="31" NAME="M01_AXI_rdata" RIGHT="0" SIGIS="undef" SIGNAME="axi_interconnect_0_M01_AXI_rdata">
-          <CONNECTIONS>
-            <CONNECTION INSTANCE="axi_vdma_0" PORT="s_axi_lite_rdata"/>
-          </CONNECTIONS>
-        </PORT>
-        <PORT DIR="I" LEFT="1" NAME="M01_AXI_rresp" RIGHT="0" SIGIS="undef" SIGNAME="axi_interconnect_0_M01_AXI_rresp">
-          <CONNECTIONS>
-            <CONNECTION INSTANCE="axi_vdma_0" PORT="s_axi_lite_rresp"/>
-          </CONNECTIONS>
-        </PORT>
-        <PORT DIR="I" NAME="M01_AXI_rvalid" SIGIS="undef" SIGNAME="axi_interconnect_0_M01_AXI_rvalid">
-          <CONNECTIONS>
-            <CONNECTION INSTANCE="axi_vdma_0" PORT="s_axi_lite_rvalid"/>
-          </CONNECTIONS>
-        </PORT>
-        <PORT DIR="O" NAME="M01_AXI_rready" SIGIS="undef" SIGNAME="axi_interconnect_0_M01_AXI_rready">
-          <CONNECTIONS>
-            <CONNECTION INSTANCE="axi_vdma_0" PORT="s_axi_lite_rready"/>
-          </CONNECTIONS>
-        </PORT>
         <PORT DIR="O" LEFT="31" NAME="M02_AXI_awaddr" RIGHT="0" SIGIS="undef" SIGNAME="axi_interconnect_0_M02_AXI_awaddr">
           <CONNECTIONS>
             <CONNECTION INSTANCE="v_tc_0" PORT="s_axi_awaddr"/>
@@ -795,6 +732,89 @@
         <PORT DIR="O" NAME="M02_AXI_rready" SIGIS="undef" SIGNAME="axi_interconnect_0_M02_AXI_rready">
           <CONNECTIONS>
             <CONNECTION INSTANCE="v_tc_0" PORT="s_axi_rready"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="O" LEFT="31" NAME="M01_AXI_awaddr" RIGHT="0" SIGIS="undef" SIGNAME="axi_interconnect_0_M01_AXI_awaddr">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="axi_vdma_0" PORT="s_axi_lite_awaddr"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="O" NAME="M01_AXI_awprot" SIGIS="undef"/>
+        <PORT DIR="O" NAME="M01_AXI_awvalid" SIGIS="undef" SIGNAME="axi_interconnect_0_M01_AXI_awvalid">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="axi_vdma_0" PORT="s_axi_lite_awvalid"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="I" NAME="M01_AXI_awready" SIGIS="undef" SIGNAME="axi_interconnect_0_M01_AXI_awready">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="axi_vdma_0" PORT="s_axi_lite_awready"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="O" LEFT="31" NAME="M01_AXI_wdata" RIGHT="0" SIGIS="undef" SIGNAME="axi_interconnect_0_M01_AXI_wdata">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="axi_vdma_0" PORT="s_axi_lite_wdata"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="O" NAME="M01_AXI_wstrb" SIGIS="undef"/>
+        <PORT DIR="O" NAME="M01_AXI_wvalid" SIGIS="undef" SIGNAME="axi_interconnect_0_M01_AXI_wvalid">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="axi_vdma_0" PORT="s_axi_lite_wvalid"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="I" NAME="M01_AXI_wready" SIGIS="undef" SIGNAME="axi_interconnect_0_M01_AXI_wready">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="axi_vdma_0" PORT="s_axi_lite_wready"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="I" LEFT="1" NAME="M01_AXI_bresp" RIGHT="0" SIGIS="undef" SIGNAME="axi_interconnect_0_M01_AXI_bresp">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="axi_vdma_0" PORT="s_axi_lite_bresp"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="I" NAME="M01_AXI_bvalid" SIGIS="undef" SIGNAME="axi_interconnect_0_M01_AXI_bvalid">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="axi_vdma_0" PORT="s_axi_lite_bvalid"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="O" NAME="M01_AXI_bready" SIGIS="undef" SIGNAME="axi_interconnect_0_M01_AXI_bready">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="axi_vdma_0" PORT="s_axi_lite_bready"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="O" LEFT="31" NAME="M01_AXI_araddr" RIGHT="0" SIGIS="undef" SIGNAME="axi_interconnect_0_M01_AXI_araddr">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="axi_vdma_0" PORT="s_axi_lite_araddr"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="O" NAME="M01_AXI_arprot" SIGIS="undef"/>
+        <PORT DIR="O" NAME="M01_AXI_arvalid" SIGIS="undef" SIGNAME="axi_interconnect_0_M01_AXI_arvalid">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="axi_vdma_0" PORT="s_axi_lite_arvalid"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="I" NAME="M01_AXI_arready" SIGIS="undef" SIGNAME="axi_interconnect_0_M01_AXI_arready">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="axi_vdma_0" PORT="s_axi_lite_arready"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="I" LEFT="31" NAME="M01_AXI_rdata" RIGHT="0" SIGIS="undef" SIGNAME="axi_interconnect_0_M01_AXI_rdata">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="axi_vdma_0" PORT="s_axi_lite_rdata"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="I" LEFT="1" NAME="M01_AXI_rresp" RIGHT="0" SIGIS="undef" SIGNAME="axi_interconnect_0_M01_AXI_rresp">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="axi_vdma_0" PORT="s_axi_lite_rresp"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="I" NAME="M01_AXI_rvalid" SIGIS="undef" SIGNAME="axi_interconnect_0_M01_AXI_rvalid">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="axi_vdma_0" PORT="s_axi_lite_rvalid"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="O" NAME="M01_AXI_rready" SIGIS="undef" SIGNAME="axi_interconnect_0_M01_AXI_rready">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="axi_vdma_0" PORT="s_axi_lite_rready"/>
           </CONNECTIONS>
         </PORT>
       </PORTS>
@@ -3811,25 +3831,34 @@
             <CONNECTION INSTANCE="axi_interconnect_0" PORT="M00_AXI_rready"/>
           </CONNECTIONS>
         </PORT>
-        <PORT DIR="I" NAME="ext_evt_valid" SIGIS="undef" SIGNAME="xlconstant_evt_valid_dout">
+        <PORT DIR="I" NAME="ext_evt_valid" SIGIS="undef" SIGNAME="spi_mode0_monitor_0_evt_valid">
           <CONNECTIONS>
-            <CONNECTION INSTANCE="xlconstant_evt_valid" PORT="dout"/>
+            <CONNECTION INSTANCE="spi_mode0_monitor_0" PORT="evt_valid"/>
           </CONNECTIONS>
         </PORT>
-        <PORT DIR="O" NAME="ext_evt_ready" SIGIS="undef"/>
-        <PORT DIR="I" LEFT="127" NAME="ext_evt_data" RIGHT="0" SIGIS="undef" SIGNAME="xlconstant_evt_data_dout">
+        <PORT DIR="O" NAME="ext_evt_ready" SIGIS="undef" SIGNAME="multi_protocol_core_0_ext_evt_ready">
           <CONNECTIONS>
-            <CONNECTION INSTANCE="xlconstant_evt_data" PORT="dout"/>
+            <CONNECTION INSTANCE="spi_mode0_monitor_0" PORT="evt_ready"/>
           </CONNECTIONS>
         </PORT>
-        <PORT DIR="I" NAME="ext_evt_trigger" SIGIS="undef" SIGNAME="xlconstant_evt_trigger_dout">
+        <PORT DIR="I" LEFT="127" NAME="ext_evt_data" RIGHT="0" SIGIS="undef" SIGNAME="spi_mode0_monitor_0_evt_data">
           <CONNECTIONS>
-            <CONNECTION INSTANCE="xlconstant_evt_trigger" PORT="dout"/>
+            <CONNECTION INSTANCE="spi_mode0_monitor_0" PORT="evt_data"/>
           </CONNECTIONS>
         </PORT>
-        <PORT DIR="I" LEFT="31" NAME="ext_evt_dropped_count" RIGHT="0" SIGIS="undef" SIGNAME="xlconstant_evt_dropped_dout">
+        <PORT DIR="I" NAME="ext_evt_trigger" SIGIS="undef" SIGNAME="spi_mode0_monitor_0_evt_trigger">
           <CONNECTIONS>
-            <CONNECTION INSTANCE="xlconstant_evt_dropped" PORT="dout"/>
+            <CONNECTION INSTANCE="spi_mode0_monitor_0" PORT="evt_trigger"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="I" LEFT="31" NAME="ext_evt_dropped_count" RIGHT="0" SIGIS="undef" SIGNAME="spi_mode0_monitor_0_dropped_event_count">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="spi_mode0_monitor_0" PORT="dropped_event_count"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="O" LEFT="63" NAME="event_timestamp" RIGHT="0" SIGIS="undef" SIGNAME="multi_protocol_core_0_event_timestamp">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="spi_mode0_monitor_0" PORT="timestamp"/>
           </CONNECTIONS>
         </PORT>
         <PORT DIR="O" NAME="led_heartbeat" SIGIS="undef" SIGNAME="multi_protocol_core_0_led_heartbeat">
@@ -3938,6 +3967,7 @@
         <PORT DIR="O" LEFT="0" NAME="peripheral_aresetn" RIGHT="0" SIGIS="rst" SIGNAME="proc_sys_reset_0_peripheral_aresetn">
           <CONNECTIONS>
             <CONNECTION INSTANCE="multi_protocol_core_0" PORT="s_axi_aresetn"/>
+            <CONNECTION INSTANCE="spi_mode0_monitor_0" PORT="rst_n"/>
             <CONNECTION INSTANCE="axi_vdma_0" PORT="axi_resetn"/>
             <CONNECTION INSTANCE="axi_smc_0" PORT="aresetn"/>
             <CONNECTION INSTANCE="v_tc_0" PORT="s_axi_aresetn"/>
@@ -5218,6 +5248,7 @@
         <PORT CLKFREQUENCY="100000000" DIR="O" NAME="FCLK_CLK0" SIGIS="clk" SIGNAME="processing_system7_0_FCLK_CLK0">
           <CONNECTIONS>
             <CONNECTION INSTANCE="multi_protocol_core_0" PORT="s_axi_aclk"/>
+            <CONNECTION INSTANCE="spi_mode0_monitor_0" PORT="clk"/>
             <CONNECTION INSTANCE="axi_vdma_0" PORT="s_axi_lite_aclk"/>
             <CONNECTION INSTANCE="axi_vdma_0" PORT="m_axi_mm2s_aclk"/>
             <CONNECTION INSTANCE="axi_vdma_0" PORT="m_axis_mm2s_aclk"/>
@@ -5504,6 +5535,78 @@
         <PORT DIR="O" LEFT="15" NAME="rgb565_data" RIGHT="0" SIGIS="undef" SIGNAME="rgb888torgb565_0_rgb565_data">
           <CONNECTIONS>
             <CONNECTION INSTANCE="External_Ports" PORT="LCD_DATA"/>
+          </CONNECTIONS>
+        </PORT>
+      </PORTS>
+      <BUSINTERFACES/>
+    </MODULE>
+    <MODULE COREREVISION="1" FULLNAME="/spi_mode0_monitor_0" HWVERSION="1.0" INSTANCE="spi_mode0_monitor_0" IPTYPE="PERIPHERAL" IS_ENABLE="1" MODCLASS="PERIPHERAL" MODTYPE="spi_mode0_monitor_bd" VLNV="xilinx.com:module_ref:spi_mode0_monitor_bd:1.0">
+      <DOCUMENTS/>
+      <PARAMETERS>
+        <PARAMETER NAME="Component_Name" VALUE="multi_protocol_bd_spi_mode0_monitor_0_0"/>
+        <PARAMETER NAME="EDK_IPTYPE" VALUE="PERIPHERAL"/>
+      </PARAMETERS>
+      <PORTS>
+        <PORT CLKFREQUENCY="100000000" DIR="I" NAME="clk" SIGIS="clk" SIGNAME="processing_system7_0_FCLK_CLK0">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="processing_system7_0" PORT="FCLK_CLK0"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="I" NAME="rst_n" SIGIS="rst" SIGNAME="proc_sys_reset_0_peripheral_aresetn">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="proc_sys_reset_0" PORT="peripheral_aresetn"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="I" LEFT="63" NAME="timestamp" RIGHT="0" SIGIS="undef" SIGNAME="multi_protocol_core_0_event_timestamp">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="multi_protocol_core_0" PORT="event_timestamp"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="I" NAME="spi_sclk" SIGIS="undef" SIGNAME="External_Ports_spi_sclk">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="External_Ports" PORT="spi_sclk"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="I" NAME="spi_cs_n" SIGIS="undef" SIGNAME="External_Ports_spi_cs_n">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="External_Ports" PORT="spi_cs_n"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="I" NAME="spi_mosi" SIGIS="undef" SIGNAME="External_Ports_spi_mosi">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="External_Ports" PORT="spi_mosi"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="I" NAME="spi_miso" SIGIS="undef" SIGNAME="External_Ports_spi_miso">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="External_Ports" PORT="spi_miso"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="O" NAME="evt_valid" SIGIS="undef" SIGNAME="spi_mode0_monitor_0_evt_valid">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="multi_protocol_core_0" PORT="ext_evt_valid"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="I" NAME="evt_ready" SIGIS="undef" SIGNAME="multi_protocol_core_0_ext_evt_ready">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="multi_protocol_core_0" PORT="ext_evt_ready"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="O" NAME="evt_trigger" SIGIS="undef" SIGNAME="spi_mode0_monitor_0_evt_trigger">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="multi_protocol_core_0" PORT="ext_evt_trigger"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="O" LEFT="127" NAME="evt_data" RIGHT="0" SIGIS="undef" SIGNAME="spi_mode0_monitor_0_evt_data">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="multi_protocol_core_0" PORT="ext_evt_data"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="O" NAME="monitor_active" SIGIS="undef"/>
+        <PORT DIR="O" LEFT="23" NAME="transaction_id" RIGHT="0" SIGIS="undef"/>
+        <PORT DIR="O" LEFT="31" NAME="dropped_event_count" RIGHT="0" SIGIS="undef" SIGNAME="spi_mode0_monitor_0_dropped_event_count">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="multi_protocol_core_0" PORT="ext_evt_dropped_count"/>
           </CONNECTIONS>
         </PORT>
       </PORTS>
@@ -6064,74 +6167,6 @@
           </PORTMAPS>
         </BUSINTERFACE>
       </BUSINTERFACES>
-    </MODULE>
-    <MODULE COREREVISION="5" FULLNAME="/xlconstant_evt_data" HWVERSION="1.1" INSTANCE="xlconstant_evt_data" IPTYPE="PERIPHERAL" IS_ENABLE="1" MODCLASS="PERIPHERAL" MODTYPE="xlconstant" VLNV="xilinx.com:ip:xlconstant:1.1">
-      <DOCUMENTS/>
-      <PARAMETERS>
-        <PARAMETER NAME="CONST_WIDTH" VALUE="128"/>
-        <PARAMETER NAME="CONST_VAL" VALUE="0x00000000000000000000000000000000"/>
-        <PARAMETER NAME="Component_Name" VALUE="multi_protocol_bd_xlconstant_evt_data_0"/>
-        <PARAMETER NAME="EDK_IPTYPE" VALUE="PERIPHERAL"/>
-      </PARAMETERS>
-      <PORTS>
-        <PORT DIR="O" LEFT="127" NAME="dout" RIGHT="0" SIGIS="undef" SIGNAME="xlconstant_evt_data_dout">
-          <CONNECTIONS>
-            <CONNECTION INSTANCE="multi_protocol_core_0" PORT="ext_evt_data"/>
-          </CONNECTIONS>
-        </PORT>
-      </PORTS>
-      <BUSINTERFACES/>
-    </MODULE>
-    <MODULE COREREVISION="5" FULLNAME="/xlconstant_evt_dropped" HWVERSION="1.1" INSTANCE="xlconstant_evt_dropped" IPTYPE="PERIPHERAL" IS_ENABLE="1" MODCLASS="PERIPHERAL" MODTYPE="xlconstant" VLNV="xilinx.com:ip:xlconstant:1.1">
-      <DOCUMENTS/>
-      <PARAMETERS>
-        <PARAMETER NAME="CONST_WIDTH" VALUE="32"/>
-        <PARAMETER NAME="CONST_VAL" VALUE="0x00000000"/>
-        <PARAMETER NAME="Component_Name" VALUE="multi_protocol_bd_xlconstant_evt_dropped_0"/>
-        <PARAMETER NAME="EDK_IPTYPE" VALUE="PERIPHERAL"/>
-      </PARAMETERS>
-      <PORTS>
-        <PORT DIR="O" LEFT="31" NAME="dout" RIGHT="0" SIGIS="undef" SIGNAME="xlconstant_evt_dropped_dout">
-          <CONNECTIONS>
-            <CONNECTION INSTANCE="multi_protocol_core_0" PORT="ext_evt_dropped_count"/>
-          </CONNECTIONS>
-        </PORT>
-      </PORTS>
-      <BUSINTERFACES/>
-    </MODULE>
-    <MODULE COREREVISION="5" FULLNAME="/xlconstant_evt_trigger" HWVERSION="1.1" INSTANCE="xlconstant_evt_trigger" IPTYPE="PERIPHERAL" IS_ENABLE="1" MODCLASS="PERIPHERAL" MODTYPE="xlconstant" VLNV="xilinx.com:ip:xlconstant:1.1">
-      <DOCUMENTS/>
-      <PARAMETERS>
-        <PARAMETER NAME="CONST_WIDTH" VALUE="1"/>
-        <PARAMETER NAME="CONST_VAL" VALUE="0x0"/>
-        <PARAMETER NAME="Component_Name" VALUE="multi_protocol_bd_xlconstant_evt_trigger_0"/>
-        <PARAMETER NAME="EDK_IPTYPE" VALUE="PERIPHERAL"/>
-      </PARAMETERS>
-      <PORTS>
-        <PORT DIR="O" LEFT="0" NAME="dout" RIGHT="0" SIGIS="undef" SIGNAME="xlconstant_evt_trigger_dout">
-          <CONNECTIONS>
-            <CONNECTION INSTANCE="multi_protocol_core_0" PORT="ext_evt_trigger"/>
-          </CONNECTIONS>
-        </PORT>
-      </PORTS>
-      <BUSINTERFACES/>
-    </MODULE>
-    <MODULE COREREVISION="5" FULLNAME="/xlconstant_evt_valid" HWVERSION="1.1" INSTANCE="xlconstant_evt_valid" IPTYPE="PERIPHERAL" IS_ENABLE="1" MODCLASS="PERIPHERAL" MODTYPE="xlconstant" VLNV="xilinx.com:ip:xlconstant:1.1">
-      <DOCUMENTS/>
-      <PARAMETERS>
-        <PARAMETER NAME="CONST_WIDTH" VALUE="1"/>
-        <PARAMETER NAME="CONST_VAL" VALUE="0x0"/>
-        <PARAMETER NAME="Component_Name" VALUE="multi_protocol_bd_xlconstant_evt_valid_0"/>
-        <PARAMETER NAME="EDK_IPTYPE" VALUE="PERIPHERAL"/>
-      </PARAMETERS>
-      <PORTS>
-        <PORT DIR="O" LEFT="0" NAME="dout" RIGHT="0" SIGIS="undef" SIGNAME="xlconstant_evt_valid_dout">
-          <CONNECTIONS>
-            <CONNECTION INSTANCE="multi_protocol_core_0" PORT="ext_evt_valid"/>
-          </CONNECTIONS>
-        </PORT>
-      </PORTS>
-      <BUSINTERFACES/>
     </MODULE>
     <MODULE COREREVISION="5" FULLNAME="/xlconstant_lcd_bl" HWVERSION="1.1" INSTANCE="xlconstant_lcd_bl" IPTYPE="PERIPHERAL" IS_ENABLE="1" MODCLASS="PERIPHERAL" MODTYPE="xlconstant" VLNV="xilinx.com:ip:xlconstant:1.1">
       <DOCUMENTS/>

@@ -40,7 +40,7 @@ if { [string first $scripts_vivado_version $current_vivado_version] == -1 } {
 
 # The design that will be created by this Tcl script contains the following 
 # module references:
-# multi_protocol_core, rgb888torgb565
+# multi_protocol_core, rgb888torgb565, spi_mode0_monitor_bd
 
 # Please add the sources of those modules before sourcing this Tcl script.
 
@@ -173,6 +173,10 @@ proc create_root_design { parentCell } {
   set LCD_VS [ create_bd_port -dir O LCD_VS ]
   set led_heartbeat [ create_bd_port -dir O led_heartbeat ]
   set led_ps_active [ create_bd_port -dir O led_ps_active ]
+  set spi_cs_n [ create_bd_port -dir I spi_cs_n ]
+  set spi_miso [ create_bd_port -dir I spi_miso ]
+  set spi_mosi [ create_bd_port -dir I spi_mosi ]
+  set spi_sclk [ create_bd_port -dir I spi_sclk ]
 
   # Create instance: axi_interconnect_0, and set properties
   set axi_interconnect_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect:2.1 axi_interconnect_0 ]
@@ -581,6 +585,17 @@ proc create_root_design { parentCell } {
      return 1
    }
   
+  # Create instance: spi_mode0_monitor_0, and set properties
+  set block_name spi_mode0_monitor_bd
+  set block_cell_name spi_mode0_monitor_0
+  if { [catch {set spi_mode0_monitor_0 [create_bd_cell -type module -reference $block_name $block_cell_name] } errmsg] } {
+     catch {common::send_msg_id "BD_TCL-105" "ERROR" "Unable to add referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
+     return 1
+   } elseif { $spi_mode0_monitor_0 eq "" } {
+     catch {common::send_msg_id "BD_TCL-106" "ERROR" "Unable to referenced block <$block_name>. Please add the files for ${block_name}'s definition into the project."}
+     return 1
+   }
+  
   # Create instance: v_axi4s_vid_out_0, and set properties
   set v_axi4s_vid_out_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:v_axi4s_vid_out:4.0 v_axi4s_vid_out_0 ]
   set_property -dict [ list \
@@ -606,34 +621,6 @@ proc create_root_design { parentCell } {
    CONFIG.enable_detection {false} \
  ] $v_tc_0
 
-  # Create instance: xlconstant_evt_data, and set properties
-  set xlconstant_evt_data [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 xlconstant_evt_data ]
-  set_property -dict [ list \
-   CONFIG.CONST_VAL {0} \
-   CONFIG.CONST_WIDTH {128} \
- ] $xlconstant_evt_data
-
-  # Create instance: xlconstant_evt_dropped, and set properties
-  set xlconstant_evt_dropped [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 xlconstant_evt_dropped ]
-  set_property -dict [ list \
-   CONFIG.CONST_VAL {0} \
-   CONFIG.CONST_WIDTH {32} \
- ] $xlconstant_evt_dropped
-
-  # Create instance: xlconstant_evt_trigger, and set properties
-  set xlconstant_evt_trigger [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 xlconstant_evt_trigger ]
-  set_property -dict [ list \
-   CONFIG.CONST_VAL {0} \
-   CONFIG.CONST_WIDTH {1} \
- ] $xlconstant_evt_trigger
-
-  # Create instance: xlconstant_evt_valid, and set properties
-  set xlconstant_evt_valid [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 xlconstant_evt_valid ]
-  set_property -dict [ list \
-   CONFIG.CONST_VAL {0} \
-   CONFIG.CONST_WIDTH {1} \
- ] $xlconstant_evt_valid
-
   # Create instance: xlconstant_lcd_bl, and set properties
   set xlconstant_lcd_bl [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 xlconstant_lcd_bl ]
   set_property -dict [ list \
@@ -654,22 +641,28 @@ proc create_root_design { parentCell } {
   connect_bd_intf_net -intf_net v_tc_0_vtiming_out [get_bd_intf_pins v_axi4s_vid_out_0/vtiming_in] [get_bd_intf_pins v_tc_0/vtiming_out]
 
   # Create port connections
+  connect_bd_net -net multi_protocol_core_0_event_timestamp [get_bd_pins multi_protocol_core_0/event_timestamp] [get_bd_pins spi_mode0_monitor_0/timestamp]
+  connect_bd_net -net multi_protocol_core_0_ext_evt_ready [get_bd_pins multi_protocol_core_0/ext_evt_ready] [get_bd_pins spi_mode0_monitor_0/evt_ready]
   connect_bd_net -net multi_protocol_core_0_led_heartbeat [get_bd_ports led_heartbeat] [get_bd_pins multi_protocol_core_0/led_heartbeat]
   connect_bd_net -net multi_protocol_core_0_led_ps_active [get_bd_ports led_ps_active] [get_bd_pins multi_protocol_core_0/led_ps_active]
-  connect_bd_net -net proc_sys_reset_0_peripheral_aresetn [get_bd_pins axi_interconnect_0/ARESETN] [get_bd_pins axi_interconnect_0/M00_ARESETN] [get_bd_pins axi_interconnect_0/M01_ARESETN] [get_bd_pins axi_interconnect_0/M02_ARESETN] [get_bd_pins axi_interconnect_0/S00_ARESETN] [get_bd_pins axi_protocol_converter_0/aresetn] [get_bd_pins axi_smc_0/aresetn] [get_bd_pins axi_vdma_0/axi_resetn] [get_bd_pins multi_protocol_core_0/s_axi_aresetn] [get_bd_pins proc_sys_reset_0/peripheral_aresetn] [get_bd_pins v_tc_0/s_axi_aresetn]
-  connect_bd_net -net processing_system7_0_FCLK_CLK0 [get_bd_pins axi_interconnect_0/ACLK] [get_bd_pins axi_interconnect_0/M00_ACLK] [get_bd_pins axi_interconnect_0/M01_ACLK] [get_bd_pins axi_interconnect_0/M02_ACLK] [get_bd_pins axi_interconnect_0/S00_ACLK] [get_bd_pins axi_protocol_converter_0/aclk] [get_bd_pins axi_smc_0/aclk] [get_bd_pins axi_vdma_0/m_axi_mm2s_aclk] [get_bd_pins axi_vdma_0/m_axis_mm2s_aclk] [get_bd_pins axi_vdma_0/s_axi_lite_aclk] [get_bd_pins multi_protocol_core_0/s_axi_aclk] [get_bd_pins proc_sys_reset_0/slowest_sync_clk] [get_bd_pins processing_system7_0/FCLK_CLK0] [get_bd_pins processing_system7_0/M_AXI_GP0_ACLK] [get_bd_pins processing_system7_0/S_AXI_HP0_ACLK] [get_bd_pins v_axi4s_vid_out_0/aclk] [get_bd_pins v_tc_0/s_axi_aclk]
+  connect_bd_net -net proc_sys_reset_0_peripheral_aresetn [get_bd_pins axi_interconnect_0/ARESETN] [get_bd_pins axi_interconnect_0/M00_ARESETN] [get_bd_pins axi_interconnect_0/M01_ARESETN] [get_bd_pins axi_interconnect_0/M02_ARESETN] [get_bd_pins axi_interconnect_0/S00_ARESETN] [get_bd_pins axi_protocol_converter_0/aresetn] [get_bd_pins axi_smc_0/aresetn] [get_bd_pins axi_vdma_0/axi_resetn] [get_bd_pins multi_protocol_core_0/s_axi_aresetn] [get_bd_pins proc_sys_reset_0/peripheral_aresetn] [get_bd_pins spi_mode0_monitor_0/rst_n] [get_bd_pins v_tc_0/s_axi_aresetn]
+  connect_bd_net -net processing_system7_0_FCLK_CLK0 [get_bd_pins axi_interconnect_0/ACLK] [get_bd_pins axi_interconnect_0/M00_ACLK] [get_bd_pins axi_interconnect_0/M01_ACLK] [get_bd_pins axi_interconnect_0/M02_ACLK] [get_bd_pins axi_interconnect_0/S00_ACLK] [get_bd_pins axi_protocol_converter_0/aclk] [get_bd_pins axi_smc_0/aclk] [get_bd_pins axi_vdma_0/m_axi_mm2s_aclk] [get_bd_pins axi_vdma_0/m_axis_mm2s_aclk] [get_bd_pins axi_vdma_0/s_axi_lite_aclk] [get_bd_pins multi_protocol_core_0/s_axi_aclk] [get_bd_pins proc_sys_reset_0/slowest_sync_clk] [get_bd_pins processing_system7_0/FCLK_CLK0] [get_bd_pins processing_system7_0/M_AXI_GP0_ACLK] [get_bd_pins processing_system7_0/S_AXI_HP0_ACLK] [get_bd_pins spi_mode0_monitor_0/clk] [get_bd_pins v_axi4s_vid_out_0/aclk] [get_bd_pins v_tc_0/s_axi_aclk]
   connect_bd_net -net processing_system7_0_FCLK_CLK1 [get_bd_ports LCD_PCLK] [get_bd_pins processing_system7_0/FCLK_CLK1] [get_bd_pins v_axi4s_vid_out_0/vid_io_out_clk] [get_bd_pins v_tc_0/clk]
   connect_bd_net -net processing_system7_0_FCLK_RESET0_N [get_bd_pins proc_sys_reset_0/ext_reset_in] [get_bd_pins processing_system7_0/FCLK_RESET0_N]
   connect_bd_net -net rgb888torgb565_0_rgb565_data [get_bd_ports LCD_DATA] [get_bd_pins rgb888torgb565_0/rgb565_data]
+  connect_bd_net -net spi_cs_n_1 [get_bd_ports spi_cs_n] [get_bd_pins spi_mode0_monitor_0/spi_cs_n]
+  connect_bd_net -net spi_miso_1 [get_bd_ports spi_miso] [get_bd_pins spi_mode0_monitor_0/spi_miso]
+  connect_bd_net -net spi_mode0_monitor_0_dropped_event_count [get_bd_pins multi_protocol_core_0/ext_evt_dropped_count] [get_bd_pins spi_mode0_monitor_0/dropped_event_count]
+  connect_bd_net -net spi_mode0_monitor_0_evt_data [get_bd_pins multi_protocol_core_0/ext_evt_data] [get_bd_pins spi_mode0_monitor_0/evt_data]
+  connect_bd_net -net spi_mode0_monitor_0_evt_trigger [get_bd_pins multi_protocol_core_0/ext_evt_trigger] [get_bd_pins spi_mode0_monitor_0/evt_trigger]
+  connect_bd_net -net spi_mode0_monitor_0_evt_valid [get_bd_pins multi_protocol_core_0/ext_evt_valid] [get_bd_pins spi_mode0_monitor_0/evt_valid]
+  connect_bd_net -net spi_mosi_1 [get_bd_ports spi_mosi] [get_bd_pins spi_mode0_monitor_0/spi_mosi]
+  connect_bd_net -net spi_sclk_1 [get_bd_ports spi_sclk] [get_bd_pins spi_mode0_monitor_0/spi_sclk]
   connect_bd_net -net v_axi4s_vid_out_0_vid_active_video [get_bd_ports LCD_DE] [get_bd_pins v_axi4s_vid_out_0/vid_active_video]
   connect_bd_net -net v_axi4s_vid_out_0_vid_data [get_bd_pins rgb888torgb565_0/rgb888_data] [get_bd_pins v_axi4s_vid_out_0/vid_data]
   connect_bd_net -net v_axi4s_vid_out_0_vid_hsync [get_bd_ports LCD_HS] [get_bd_pins v_axi4s_vid_out_0/vid_hsync]
   connect_bd_net -net v_axi4s_vid_out_0_vid_vsync [get_bd_ports LCD_VS] [get_bd_pins v_axi4s_vid_out_0/vid_vsync]
   connect_bd_net -net v_axi4s_vid_out_0_vtg_ce [get_bd_pins v_axi4s_vid_out_0/vtg_ce] [get_bd_pins v_tc_0/gen_clken]
-  connect_bd_net -net xlconstant_evt_data_dout [get_bd_pins multi_protocol_core_0/ext_evt_data] [get_bd_pins xlconstant_evt_data/dout]
-  connect_bd_net -net xlconstant_evt_dropped_dout [get_bd_pins multi_protocol_core_0/ext_evt_dropped_count] [get_bd_pins xlconstant_evt_dropped/dout]
-  connect_bd_net -net xlconstant_evt_trigger_dout [get_bd_pins multi_protocol_core_0/ext_evt_trigger] [get_bd_pins xlconstant_evt_trigger/dout]
-  connect_bd_net -net xlconstant_evt_valid_dout [get_bd_pins multi_protocol_core_0/ext_evt_valid] [get_bd_pins xlconstant_evt_valid/dout]
   connect_bd_net -net xlconstant_lcd_bl_dout [get_bd_ports LCD_BL] [get_bd_pins xlconstant_lcd_bl/dout]
 
   # Create address segments

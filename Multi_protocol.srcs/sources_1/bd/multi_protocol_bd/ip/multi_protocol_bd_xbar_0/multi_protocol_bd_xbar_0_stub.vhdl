@@ -3,8 +3,8 @@
 -- Tool Version: Vivado v.2018.3 (win64) Build 2405991 Thu Dec  6 23:38:27 MST 2018
 -- Date        : Thu Sep 24 16:19:39 2026
 -- Host        : LAPTOP-MK9F4NL5 running 64-bit major release  (build 9200)
--- Command     : write_vhdl -force -mode synth_stub
---               D:/Vivado/Project/Multi_protocol/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ip/multi_protocol_bd_xbar_0/multi_protocol_bd_xbar_0_stub.vhdl
+-- Command     : write_vhdl -force -mode synth_stub -rename_top multi_protocol_bd_xbar_0 -prefix
+--               multi_protocol_bd_xbar_0_ multi_protocol_bd_xbar_0_stub.vhdl
 -- Design      : multi_protocol_bd_xbar_0
 -- Purpose     : Stub declaration of top-level module interface
 -- Device      : xc7z020clg484-2

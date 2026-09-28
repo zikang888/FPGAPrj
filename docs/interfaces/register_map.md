@@ -5,9 +5,9 @@ Base address: `0x4000_0000`, aperture: 64 KiB.
 | Offset | Name | Access | Reset/value |
 |---:|---|---|---:|
 | `0x0000` | SYS_ID | RO | `0x4D505254` |
-| `0x0004` | VERSION | RO | `0x00010002` |
-| `0x0008` | BUILD_ID | RO | `0x20260923` |
-| `0x000C` | CAPABILITIES | RO | bit0=`event snapshot`, bit1=`external ready/valid ingress` |
+| `0x0004` | VERSION | RO | `0x00010003` |
+| `0x0008` | BUILD_ID | RO | `0x20260926` |
+| `0x000C` | CAPABILITIES | RO | bit0=`event snapshot`, bit1=`external ready/valid ingress`, bit2=`SPI Mode-0 monitor` |
 | `0x0010` | SYS_CTRL | RW | `0` |
 | `0x0014` | SYS_STATUS | RO | bit0=`ready` |
 | `0x0018` | IO_MODE | RW | `0` (`OBSERVE`) |
@@ -55,6 +55,30 @@ Protocol numbers are frozen as:
 | `3` | I2C |
 | `4` | CAN |
 
+Direction values are frozen as:
+
+| Value | Meaning |
+|---:|---|
+| `0` | not applicable / unknown |
+| `1` | controller to peripheral |
+| `2` | peripheral to controller |
+| `3` | bidirectional / full duplex |
+
+The common event-type namespace is frozen as:
+
+| Value | Meaning |
+|---:|---|
+| `0x00` | transaction start |
+| `0x01` | protocol data unit |
+| `0x02` | transaction end |
+| `0x3F` | frame/protocol error |
+
+Values `0x03..0x3E` are reserved for reviewed protocol-specific extensions.
+For SPI data events, `flags[15:8]=MISO`, `flags[7:0]=MOSI`, payload length is
+`2`, direction is `3`, and all events between one CS falling edge and the
+matching rising edge share one transaction ID. For an incomplete SPI byte,
+`flags[2:0]` records the number of sampled bits and event type is `0x3F`.
+
 Protocol listeners use ready/valid transfer semantics. An event is accepted only
 when `evt_valid && evt_ready` is true. A producer asserting `evt_valid` while
 `evt_ready` is low must keep `evt_data` and `evt_trigger` stable. Arbitration or
@@ -64,7 +88,7 @@ The core exposes one generic external producer port:
 `ext_evt_valid/ext_evt_ready/ext_evt_data[127:0]/ext_evt_trigger`, plus
 `ext_evt_dropped_count[31:0]` for producer-side loss observability. It and the
 AXI virtual self-test source feed the same round-robin arbiter and the same
-snapshot buffer. In the current board design the external port is tied low;
-this keeps the released LCD/AXI image buildable until protocol pins are frozen.
+snapshot buffer. In platform version 3 the board design connects this external
+port to the passive SPI Mode-0 monitor on P7 pins U12/U11/U10/U9.
 
 All writes honor AXI `WSTRB`. Undefined addresses read as zero and ignore writes.

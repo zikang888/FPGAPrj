@@ -1,7 +1,7 @@
 //Copyright 1986-2018 Xilinx, Inc. All Rights Reserved.
 //--------------------------------------------------------------------------------
 //Tool Version: Vivado v.2018.3 (win64) Build 2405991 Thu Dec  6 23:38:27 MST 2018
-//Date        : Thu Sep 24 16:18:08 2026
+//Date        : Sat Sep 26 16:49:05 2026
 //Host        : LAPTOP-MK9F4NL5 running 64-bit major release  (build 9200)
 //Command     : generate_target multi_protocol_bd_wrapper.bd
 //Design      : multi_protocol_bd_wrapper
@@ -18,6 +18,10 @@ module multi_protocol_bd_wrapper
     LCD_VS,
     led_heartbeat,
     led_ps_active,
+    spi_cs_n,
+    spi_miso,
+    spi_mosi,
+    spi_sclk,
     touch_int_tri_io);
   output [0:0]LCD_BL;
   output [15:0]LCD_DATA;
@@ -27,6 +31,10 @@ module multi_protocol_bd_wrapper
   output LCD_VS;
   output led_heartbeat;
   output led_ps_active;
+  input spi_cs_n;
+  input spi_miso;
+  input spi_mosi;
+  input spi_sclk;
   inout [0:0]touch_int_tri_io;
 
   wire [0:0]LCD_BL;
@@ -37,6 +45,10 @@ module multi_protocol_bd_wrapper
   wire LCD_VS;
   wire led_heartbeat;
   wire led_ps_active;
+  wire spi_cs_n;
+  wire spi_miso;
+  wire spi_mosi;
+  wire spi_sclk;
   wire [0:0]touch_int_tri_i_0;
   wire [0:0]touch_int_tri_io_0;
   wire [0:0]touch_int_tri_o_0;
@@ -51,6 +63,10 @@ module multi_protocol_bd_wrapper
         .LCD_VS(LCD_VS),
         .led_heartbeat(led_heartbeat),
         .led_ps_active(led_ps_active),
+        .spi_cs_n(spi_cs_n),
+        .spi_miso(spi_miso),
+        .spi_mosi(spi_mosi),
+        .spi_sclk(spi_sclk),
         .touch_int_tri_i(touch_int_tri_i_0),
         .touch_int_tri_o(touch_int_tri_o_0),
         .touch_int_tri_t(touch_int_tri_t_0));
