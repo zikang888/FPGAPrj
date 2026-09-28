@@ -5,23 +5,23 @@
 The Zynq PL pins are passive 3.3 V inputs. Connect a common ground before
 connecting any signal. Do not connect a 5 V SPI source directly.
 
-This table is the current NumberC wiring, retained for the isolated A+C
-integration build. NumberA's 2026-09-28 update instead assigns
-CS/SCLK/MOSI/MISO to FPGA U11/U12/U10/U9 (AC820 P7-2/1/3/4).
-Do not move wires or program a new bitstream until the team's actual
-STM32-to-P7 wiring is confirmed against the selected `top.xdc`.
+This table follows NumberA's 2026-09-28 P7 plan and the integration branch's
+current `top.xdc`. The earlier C-only candidate uses P7-38/35/36/33 instead.
+Do not mix its BIT with the wiring below.
 
 | STM32F407 signal | Zynq signal | Zynq package pin | Direction at Zynq |
 |---|---|---|---|
 | GND | GND | board ground | reference |
-| SPI_NSS / GPIO chip select | SPI_CS_N | AA8 | input |
-| SPI_SCK | SPI_SCLK | AB10 | input |
-| SPI_MOSI | SPI_MOSI | AB9 | input |
-| SPI_MISO or loopback/test source | SPI_MISO | AA7 | input |
+| Flash CS GPIO (same net as flash CS) | SPI_CS_N / P7-2 | U11 | input |
+| SPI1 SCK / PA5 | SPI_SCLK / P7-1 | U12 | input |
+| SPI1 MOSI / PA7 | SPI_MOSI / P7-3 | U10 | input |
+| SPI1 MISO / PA6 (same net as flash DO) | SPI_MISO / P7-4 | U9 | input |
 
-The monitor does not drive MISO. For a two-board smoke test without a real SPI
-slave, configure a second STM32 GPIO or peripheral output to generate the MISO
-test waveform. Never connect two push-pull outputs together.
+The FPGA is a high-impedance listener connected in parallel with the STM32
+master and the external W25Q128 module; it never drives MISO. For a two-board
+smoke test without a real SPI slave, use a separate test output for MISO and
+never connect two push-pull outputs together. If a board-mounted flash shares
+the proposed CS GPIO, select another GPIO or isolate that flash first.
 
 ## STM32F407 generator requirements
 
@@ -31,10 +31,11 @@ test waveform. Never connect two push-pull outputs together.
 - NSS must remain low for the complete transaction and return high between
   transactions.
 - Use 3.3 V I/O and a shared ground.
-- First golden transaction: MOSI `9F`, with MISO test bytes `EF 40 18` when a
-  controlled slave/test source is available.
-- Repeat a deterministic counter transaction, for example MOSI `00` through
-  `FF`, so the captured event order can be checked.
+- First golden transaction: MOSI `9F 00 00 00`. Log the actual four MISO
+  bytes; the three response bytes after the command should match the mounted
+  flash's JEDEC ID, not an assumed value.
+- For a controlled test source (rather than the W25Q128), repeat a known byte
+  pattern so the captured event order can be checked.
 - Generate one deliberate residual frame by raising NSS after four SCLK rising
   edges. This must create event type `0x3F` and assert the snapshot trigger.
 - Leave at least 2 us between transactions during the first smoke test.

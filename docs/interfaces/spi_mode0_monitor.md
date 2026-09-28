@@ -3,7 +3,7 @@
 ## 状态
 
 第一阶段 RTL、自检仿真和内部快照链路仿真均通过。板级 BD 已实例化
-`spi_mode0_monitor`，并把 AA8、AB10、AB9、AA7 四个物理输入接入
+`spi_mode0_monitor`，当前整合版把 U11、U12、U10、U9 四个物理输入接入
 `multi_protocol_core` 的正式通用外部事件入口。实板 SPI 联调仍需按
 `docs/hardware/spi_board_test.md` 完成。
 

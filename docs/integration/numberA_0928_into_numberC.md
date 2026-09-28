@@ -14,14 +14,16 @@ SPI interoperability.
   project are deliberately retained. A's source-only ignore policy would
   remove those files if its tree replaced C wholesale.
 
-## Pending hardware decision
+## Hardware mapping decision
 
 C's XDC uses AA8/AB10/AB9/AA7 for CS/SCLK/MOSI/MISO and corresponds to
 AC820 P7-38/35/36/33. A's XDC uses U11/U12/U10/U9 and corresponds to
-P7-2/1/3/4. This test branch currently retains C's map to preserve the
-previously tested image and wiring instructions. Reconcile with B's actual
-STM32 wiring before any three-board acceptance test. Both maps use passive
-3.3 V FPGA inputs, and all devices need common ground.
+P7-2/1/3/4. Because B has not yet established a firmware/wiring baseline,
+this test branch now uses A's P7 plan for the next integration step. The
+previous C-pin BIT/HDF/ELF remains separately under
+`candidates/numberA_0928_numberC_p7_legacy/` as a rollback. Do not mix the
+two BIT files or wire by one plan while programming the other. Both maps use
+passive 3.3 V FPGA inputs, and all devices need common ground.
 
 The A wrapper relocation and port renaming were not applied: the existing C
 wrapper and BD script connect the same SPI monitor and can build without
@@ -30,7 +32,7 @@ for C's current touch UI and pixel-scrolling application.
 
 The existing tracked Vivado generated tree is inherited from the C recovery
 point and is not the integration candidate. Use the matched files under
-`candidates/numberA_0928_numberC_p7_legacy/`, or regenerate locally with
+`candidates/numberA_0928_numberC_p7_A/`, or regenerate locally with
 `fpga/build/build_bitstream.tcl` and `software/build_ps_app.tcl` before
 programming. Do not pair an old generated BIT with a new ELF by accident.
 
@@ -49,4 +51,10 @@ implementation reported WNS +2.049 ns, WHS +0.036 ns, TNS/THS 0, and DRC
 two advisories/no errors. The PS application was built successfully against
 the new HDF in an isolated SDK workspace, satisfying gate 3's compile half.
 LCD/D1 physical regression and gate 4 remain untested. The matched test
-artifacts and hashes are under `candidates/numberA_0928_numberC_p7_legacy/`.
+legacy artifacts and hashes are under
+`candidates/numberA_0928_numberC_p7_legacy/`. The A-map candidate is under
+`candidates/numberA_0928_numberC_p7_A/`: WNS +1.615 ns, WHS +0.036 ns,
+two DRC advisories, and a matched SDK build. Its Zynq-only JTAG checks
+passed; visible LCD/touch/LED behavior and actual STM32 SPI comparison are
+still unverified. The PS EVENTS page currently holds virtual self-test data,
+so live external capture/display is a separate remaining task.

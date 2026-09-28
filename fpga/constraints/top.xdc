@@ -7,11 +7,12 @@ set_property -dict {PACKAGE_PIN P21 IOSTANDARD LVCMOS33} [get_ports led_ps_activ
 set_false_path -to [get_ports led_heartbeat]
 set_false_path -to [get_ports led_ps_active]
 
-# Passive SPI Mode-0 monitor inputs from the STM32F407 test source.
-set_property -dict {PACKAGE_PIN AA8  IOSTANDARD LVCMOS33 PULLUP true} [get_ports SPI_CS_N]
-set_property -dict {PACKAGE_PIN AB10 IOSTANDARD LVCMOS33 PULLDOWN true} [get_ports SPI_SCLK]
-set_property -dict {PACKAGE_PIN AB9  IOSTANDARD LVCMOS33 PULLDOWN true} [get_ports SPI_MOSI]
-set_property -dict {PACKAGE_PIN AA7  IOSTANDARD LVCMOS33 PULLDOWN true} [get_ports SPI_MISO]
+# Passive SPI Mode-0 monitor inputs on A's P7 wiring plan. The FPGA only
+# observes the STM32-to-flash bus and does not drive any SPI line.
+set_property -dict {PACKAGE_PIN U11 IOSTANDARD LVCMOS33 PULLUP true} [get_ports SPI_CS_N]
+set_property -dict {PACKAGE_PIN U12 IOSTANDARD LVCMOS33} [get_ports SPI_SCLK]
+set_property -dict {PACKAGE_PIN U10 IOSTANDARD LVCMOS33} [get_ports SPI_MOSI]
+set_property -dict {PACKAGE_PIN U9  IOSTANDARD LVCMOS33} [get_ports SPI_MISO]
 
 # All four pins enter two-stage synchronizers in spi_mode0_monitor.
 set_false_path -from [get_ports {SPI_CS_N SPI_SCLK SPI_MOSI SPI_MISO}]

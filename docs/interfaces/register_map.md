@@ -75,9 +75,9 @@ The core exposes one generic external producer port:
 `ext_evt_dropped_count[31:0]` for producer-side loss observability. It and the
 AXI virtual self-test source feed the same round-robin arbiter and the same
 snapshot buffer. In this integration build the external port is connected to
-the passive SPI Mode-0 monitor. The current C board mapping is P7-38/35/36/33
-(CS/SCLK/MOSI/MISO, FPGA AA8/AB10/AB9/AA7). A's new mapping is
-P7-2/1/3/4 (FPGA U11/U12/U10/U9); the physical STM32 wiring decision is
-pending. Check the selected XDC and actual wiring before programming.
+the passive SPI Mode-0 monitor. The legacy C candidate map is P7-38/35/36/33
+(CS/SCLK/MOSI/MISO, FPGA AA8/AB10/AB9/AA7) in the legacy candidate only.
+The current integration XDC follows A's P7-2/1/3/4 map (FPGA
+U11/U12/U10/U9). Check the selected BIT and actual wiring before programming.
 
 All writes honor AXI `WSTRB`. Undefined addresses read as zero and ignore writes.

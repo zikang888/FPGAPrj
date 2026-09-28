@@ -2,6 +2,9 @@
 set script_dir [file dirname [file normalize [info script]]]
 set repo_dir [file normalize [file join $script_dir .. ..]]
 set bit_file [file join $repo_dir Multi_protocol.runs impl_1 multi_protocol_bd_wrapper.bit]
+if {[info exists ::env(ZYNQ_TEST_BIT)] && $::env(ZYNQ_TEST_BIT) ne ""} {
+    set bit_file [file normalize $::env(ZYNQ_TEST_BIT)]
+}
 if {![info exists ::env(ZYNQ_TEST_ELF)] || $::env(ZYNQ_TEST_ELF) eq ""} {
     error "Set ZYNQ_TEST_ELF to a freshly built ELF; the existing SDK ELF may be stale"
 }
