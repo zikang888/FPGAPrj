@@ -13,10 +13,29 @@ RemoteSystemsTempFiles/
 # Rebuildable caches and simulation scratch data
 /Multi_protocol.cache/
 /Multi_protocol.empty.cache/
+/Multi_protocol.gen/
+/Multi_protocol.ip_user_files/
+/Multi_protocol.runs/
+/Multi_protocol.sim/
 xsim.dir/
 *.wdb
 *.vcd
 *.pb
+
+# Xilinx SDK/Eclipse machine-local and rebuildable output
+/Multi_protocol.sdk/.metadata/
+/Multi_protocol.sdk/.sdk/
+/Multi_protocol.sdk/platform_app/Debug/
+/Multi_protocol.sdk/platform_bsp/
+
+# Vivado block-design output products (regenerated from the tracked .bd)
+/Multi_protocol.srcs/sources_1/bd/mref/
+/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/hdl/
+/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/hw_handoff/
+/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/ip/
+/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/sim/
+/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/synth/
+/Multi_protocol.srcs/sources_1/bd/multi_protocol_bd/*.bxml
 
 # Temporary validation, migration, backup and duplicate-release directories
 /.sdk*/
