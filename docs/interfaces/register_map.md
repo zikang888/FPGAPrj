@@ -5,9 +5,9 @@ Base address: `0x4000_0000`, aperture: 64 KiB.
 | Offset | Name | Access | Reset/value |
 |---:|---|---|---:|
 | `0x0000` | SYS_ID | RO | `0x4D505254` |
-| `0x0004` | VERSION | RO | `0x00010003` |
-| `0x0008` | BUILD_ID | RO | `0x20260926` |
-| `0x000C` | CAPABILITIES | RO | bit0=`event snapshot`, bit1=`external ready/valid ingress`, bit2=`SPI Mode-0 monitor` |
+| `0x0004` | VERSION | RO | `0x00010004` |
+| `0x0008` | BUILD_ID | RO | `0x20261005` |
+| `0x000C` | CAPABILITIES | RO | bit0=`event snapshot`, bit1=`external ready/valid ingress`, bit2=`SPI Mode-0 monitor`, bit3=`SPI acceptance statistics` |
 | `0x0010` | SYS_CTRL | RW | `0` |
 | `0x0014` | SYS_STATUS | RO | bit0=`ready` |
 | `0x0018` | IO_MODE | RW | `0` (`OBSERVE`) |
@@ -19,6 +19,17 @@ Base address: `0x4000_0000`, aperture: 64 KiB.
 | `0x0030` | LED_CTRL | RW | bit0 controls D1 (P21) |
 | `0x0034` | EVENT_ARB_STATUS | RO | arbitration contention count |
 | `0x0038` | EXT_DROPPED_COUNT | RO | drop count reported by the connected external producer |
+| `0x003C` | SPI_EVENT_COUNT | RO | accepted SPI START + DATA + END + FRAME_ERROR events |
+| `0x0040` | SPI_START_COUNT | RO | accepted SPI transaction starts |
+| `0x0044` | SPI_DATA_COUNT | RO | accepted full-duplex byte events |
+| `0x0048` | SPI_END_COUNT | RO | accepted normal transaction ends |
+| `0x004C` | SPI_FRAME_ERROR_COUNT | RO | incomplete-byte/frame-error events |
+| `0x0050` | SPI_BOUNDARY_ERROR_COUNT | RO | DATA/END without matching START, nested START, or unknown event type |
+| `0x0054` | SPI_DUPLICATE_COUNT | RO | exact duplicate 128-bit events accepted consecutively |
+| `0x0058` | SPI_SEQUENCE_ERROR_COUNT | RO | non-consecutive transaction ID observed at START |
+| `0x005C` | SPI_LAST_TRANSACTION_ID | RO | most recent START transaction ID in bits `[23:0]` |
+| `0x0060` | SPI_STATS_STATUS | RO | bit0 transaction open, bit1 last event valid, bit2 last transaction valid, bit3 any parser/statistics error |
+| `0x0064` | SPI_STATS_CTRL | WO | write bit0=`1` to clear all SPI acceptance statistics and checker state |
 | `0x1000` | CAPTURE_CTRL | WO | bit0=`ARM`, bit1=`ACK`, bit2=`SOFT_TRIGGER`; issue as separate commands |
 | `0x1004` | CAPTURE_STATUS | RO | bit0=`active`, bit1=`ready`, bit2=`overwritten`, bit3=`core or external dropped_count != 0` |
 | `0x1008` | SNAPSHOT_ID | RO | increments for each completed snapshot |
@@ -69,6 +80,15 @@ Protocol listeners use ready/valid transfer semantics. An event is accepted only
 when `evt_valid && evt_ready` is true. A producer asserting `evt_valid` while
 `evt_ready` is low must keep `evt_data` and `evt_trigger` stable. Arbitration or
 producer overflow must be counted; events must never disappear silently.
+
+The SPI statistics block observes only external SPI events that complete the
+`ext_evt_valid && ext_evt_ready` handshake. For 100 successful four-byte JEDEC
+transactions, after clearing statistics, the expected counters are
+`START=100`, `DATA=400`, `END=100`, `EVENT=600`, while external drops, frame
+errors, boundary errors, duplicates and sequence errors must all remain zero.
+Repeated payload bytes are legal and are not considered duplicates because a
+real event carries a distinct timestamp; duplicate detection compares the full
+128-bit event.
 
 The core exposes one generic external producer port:
 `ext_evt_valid/ext_evt_ready/ext_evt_data[127:0]/ext_evt_trigger`, plus

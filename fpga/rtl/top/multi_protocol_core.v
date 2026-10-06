@@ -53,9 +53,15 @@ module multi_protocol_core (
 );
 
 localparam [31:0] SYS_ID_VALUE       = 32'h4D50_5254; // "MPRT"
-localparam [31:0] VERSION_VALUE      = 32'h0001_0003; // event format v1, platform 3
-localparam [31:0] BUILD_ID_VALUE     = 32'h2026_0926;
-localparam [31:0] CAPABILITIES_VALUE = 32'h0000_0007; // bit0: snapshot, bit1: external ingress, bit2: SPI monitor
+localparam [31:0] VERSION_VALUE      = 32'h0001_0004; // event format v1, platform 4
+localparam [31:0] BUILD_ID_VALUE     = 32'h2026_1005;
+localparam [31:0] CAPABILITIES_VALUE = 32'h0000_000F; // + bit3: SPI acceptance statistics
+
+localparam [3:0] PROTOCOL_SPI      = 4'h2;
+localparam [5:0] EVENT_START       = 6'h00;
+localparam [5:0] EVENT_DATA        = 6'h01;
+localparam [5:0] EVENT_END         = 6'h02;
+localparam [5:0] EVENT_FRAME_ERROR = 6'h3F;
 
 localparam [15:0] REG_SYS_ID       = 16'h0000;
 localparam [15:0] REG_VERSION      = 16'h0004;
@@ -72,6 +78,17 @@ localparam [15:0] REG_SCRATCH      = 16'h002C;
 localparam [15:0] REG_LED_CTRL     = 16'h0030;
 localparam [15:0] REG_EVENT_ARB_STATUS = 16'h0034;
 localparam [15:0] REG_EXT_DROPPED_COUNT = 16'h0038;
+localparam [15:0] REG_SPI_EVENT_COUNT = 16'h003C;
+localparam [15:0] REG_SPI_START_COUNT = 16'h0040;
+localparam [15:0] REG_SPI_DATA_COUNT = 16'h0044;
+localparam [15:0] REG_SPI_END_COUNT = 16'h0048;
+localparam [15:0] REG_SPI_FRAME_ERROR_COUNT = 16'h004C;
+localparam [15:0] REG_SPI_BOUNDARY_ERROR_COUNT = 16'h0050;
+localparam [15:0] REG_SPI_DUPLICATE_COUNT = 16'h0054;
+localparam [15:0] REG_SPI_SEQUENCE_ERROR_COUNT = 16'h0058;
+localparam [15:0] REG_SPI_LAST_TRANSACTION_ID = 16'h005C;
+localparam [15:0] REG_SPI_STATS_STATUS = 16'h0060;
+localparam [15:0] REG_SPI_STATS_CTRL = 16'h0064;
 
 localparam [15:0] REG_CAPTURE_CTRL    = 16'h1000;
 localparam [15:0] REG_CAPTURE_STATUS  = 16'h1004;
@@ -89,6 +106,21 @@ reg [31:0] irq_enable_reg;
 reg [31:0] scratch_reg;
 reg [31:0] led_ctrl_reg;
 reg [31:0] dropped_count_reg;
+
+reg [31:0] spi_event_count;
+reg [31:0] spi_start_count;
+reg [31:0] spi_data_count;
+reg [31:0] spi_end_count;
+reg [31:0] spi_frame_error_count;
+reg [31:0] spi_boundary_error_count;
+reg [31:0] spi_duplicate_count;
+reg [31:0] spi_sequence_error_count;
+reg [23:0] spi_active_transaction_id;
+reg [23:0] spi_last_transaction_id;
+reg         spi_transaction_open;
+reg         spi_have_last_transaction;
+reg [127:0] spi_last_event;
+reg         spi_last_event_valid;
 
 reg         capture_arm_pulse;
 reg         capture_ack_pulse;
@@ -143,6 +175,10 @@ wire virtual_overflow;
 wire capture_input_ready;
 wire capture_event_accept;
 wire inactive_event_drop;
+wire spi_stats_clear_command;
+wire ext_spi_event_accept;
+wire [5:0] ext_spi_event_type;
+wire [23:0] ext_spi_transaction_id;
 
 assign aw_hs = s_axi_awvalid && s_axi_awready;
 assign w_hs = s_axi_wvalid && s_axi_wready;
@@ -165,6 +201,13 @@ assign virtual_overflow = virtual_enqueue_command && !virtual_enqueue_ready;
 assign capture_input_ready = !arm_command && !capture_arm_pulse;
 assign capture_event_accept = capture_event_valid && capture_input_ready;
 assign inactive_event_drop = capture_event_accept && !capture_active;
+assign spi_stats_clear_command = write_commit &&
+                                 write_addr == REG_SPI_STATS_CTRL &&
+                                 write_strb[0] && write_data[0];
+assign ext_spi_event_accept = ext_evt_valid && ext_evt_ready &&
+                              ext_evt_data[63:60] == PROTOCOL_SPI;
+assign ext_spi_event_type = ext_evt_data[53:48];
+assign ext_spi_transaction_id = ext_evt_data[23:0];
 
 assign led_heartbeat = heartbeat_state;
 assign led_ps_active = led_ctrl_reg[0];
@@ -202,6 +245,25 @@ function [31:0] read_register;
             REG_LED_CTRL:     read_register = led_ctrl_reg;
             REG_EVENT_ARB_STATUS: read_register = event_contention_count;
             REG_EXT_DROPPED_COUNT: read_register = ext_evt_dropped_count;
+            REG_SPI_EVENT_COUNT: read_register = spi_event_count;
+            REG_SPI_START_COUNT: read_register = spi_start_count;
+            REG_SPI_DATA_COUNT: read_register = spi_data_count;
+            REG_SPI_END_COUNT: read_register = spi_end_count;
+            REG_SPI_FRAME_ERROR_COUNT: read_register = spi_frame_error_count;
+            REG_SPI_BOUNDARY_ERROR_COUNT: read_register = spi_boundary_error_count;
+            REG_SPI_DUPLICATE_COUNT: read_register = spi_duplicate_count;
+            REG_SPI_SEQUENCE_ERROR_COUNT: read_register = spi_sequence_error_count;
+            REG_SPI_LAST_TRANSACTION_ID: read_register = {8'd0, spi_last_transaction_id};
+            REG_SPI_STATS_STATUS: read_register = {
+                28'd0,
+                ((spi_frame_error_count != 0) ||
+                 (spi_boundary_error_count != 0) ||
+                 (spi_duplicate_count != 0) ||
+                 (spi_sequence_error_count != 0)),
+                spi_have_last_transaction,
+                spi_last_event_valid,
+                spi_transaction_open
+            };
             REG_CAPTURE_STATUS: read_register = {
                 28'd0,
                 ((dropped_count_reg != 0) || (ext_evt_dropped_count != 0)),
@@ -285,6 +347,20 @@ always @(posedge s_axi_aclk) begin
         scratch_reg      <= 32'd0;
         led_ctrl_reg     <= 32'd0;
         dropped_count_reg <= 32'd0;
+        spi_event_count <= 32'd0;
+        spi_start_count <= 32'd0;
+        spi_data_count <= 32'd0;
+        spi_end_count <= 32'd0;
+        spi_frame_error_count <= 32'd0;
+        spi_boundary_error_count <= 32'd0;
+        spi_duplicate_count <= 32'd0;
+        spi_sequence_error_count <= 32'd0;
+        spi_active_transaction_id <= 24'd0;
+        spi_last_transaction_id <= 24'd0;
+        spi_transaction_open <= 1'b0;
+        spi_have_last_transaction <= 1'b0;
+        spi_last_event <= 128'd0;
+        spi_last_event_valid <= 1'b0;
         capture_arm_pulse <= 1'b0;
         capture_ack_pulse <= 1'b0;
         virtual_evt_valid <= 1'b0;
@@ -316,6 +392,83 @@ always @(posedge s_axi_aclk) begin
                 2'b01, 2'b10: dropped_count_reg <= dropped_count_reg + 32'd1;
                 2'b11:        dropped_count_reg <= dropped_count_reg + 32'd2;
                 default: begin
+                end
+            endcase
+        end
+
+        // SPI acceptance statistics observe only events that complete the
+        // external ready/valid handshake. They therefore measure the exact
+        // stream delivered into the unique arbiter/snapshot path.
+        if (spi_stats_clear_command) begin
+            spi_event_count <= 32'd0;
+            spi_start_count <= 32'd0;
+            spi_data_count <= 32'd0;
+            spi_end_count <= 32'd0;
+            spi_frame_error_count <= 32'd0;
+            spi_boundary_error_count <= 32'd0;
+            spi_duplicate_count <= 32'd0;
+            spi_sequence_error_count <= 32'd0;
+            spi_active_transaction_id <= 24'd0;
+            spi_last_transaction_id <= 24'd0;
+            spi_transaction_open <= 1'b0;
+            spi_have_last_transaction <= 1'b0;
+            spi_last_event <= 128'd0;
+            spi_last_event_valid <= 1'b0;
+        end else if (ext_spi_event_accept) begin
+            spi_event_count <= spi_event_count + 32'd1;
+            if (spi_last_event_valid && ext_evt_data == spi_last_event) begin
+                spi_duplicate_count <= spi_duplicate_count + 32'd1;
+            end
+            spi_last_event <= ext_evt_data;
+            spi_last_event_valid <= 1'b1;
+
+            case (ext_spi_event_type)
+                EVENT_START: begin
+                    spi_start_count <= spi_start_count + 32'd1;
+                    if (spi_transaction_open) begin
+                        spi_boundary_error_count <=
+                            spi_boundary_error_count + 32'd1;
+                    end
+                    if (spi_have_last_transaction &&
+                        ext_spi_transaction_id !=
+                            (spi_last_transaction_id + 24'd1)) begin
+                        spi_sequence_error_count <=
+                            spi_sequence_error_count + 32'd1;
+                    end
+                    spi_transaction_open <= 1'b1;
+                    spi_active_transaction_id <= ext_spi_transaction_id;
+                    spi_last_transaction_id <= ext_spi_transaction_id;
+                    spi_have_last_transaction <= 1'b1;
+                end
+                EVENT_DATA: begin
+                    spi_data_count <= spi_data_count + 32'd1;
+                    if (!spi_transaction_open ||
+                        ext_spi_transaction_id != spi_active_transaction_id) begin
+                        spi_boundary_error_count <=
+                            spi_boundary_error_count + 32'd1;
+                    end
+                end
+                EVENT_END: begin
+                    spi_end_count <= spi_end_count + 32'd1;
+                    if (!spi_transaction_open ||
+                        ext_spi_transaction_id != spi_active_transaction_id) begin
+                        spi_boundary_error_count <=
+                            spi_boundary_error_count + 32'd1;
+                    end
+                    spi_transaction_open <= 1'b0;
+                end
+                EVENT_FRAME_ERROR: begin
+                    spi_frame_error_count <= spi_frame_error_count + 32'd1;
+                    if (!spi_transaction_open ||
+                        ext_spi_transaction_id != spi_active_transaction_id) begin
+                        spi_boundary_error_count <=
+                            spi_boundary_error_count + 32'd1;
+                    end
+                    spi_transaction_open <= 1'b0;
+                end
+                default: begin
+                    spi_boundary_error_count <=
+                        spi_boundary_error_count + 32'd1;
                 end
             endcase
         end

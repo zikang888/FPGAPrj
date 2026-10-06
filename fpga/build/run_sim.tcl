@@ -38,7 +38,7 @@ run_test $build_dir event_snapshot_buffer_tb \
 run_test $build_dir event_arbiter_2_tb \
     "PASS: two-source ready/valid arbitration, backpressure and fairness"
 run_test $build_dir multi_protocol_core_tb \
-    "PASS: multi_protocol_core AXI, virtual and external snapshot end-to-end test"
+    "PASS: multi_protocol_core AXI, snapshots and SPI acceptance statistics"
 run_test $build_dir spi_mode0_monitor_tb \
     "PASS: SPI Mode-0 ready/valid, golden corpus, pause, phase, error and stress test"
 run_test $build_dir spi_snapshot_path_tb \

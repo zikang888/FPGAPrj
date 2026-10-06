@@ -23,6 +23,11 @@ smoke test without a real SPI slave, use a separate test output for MISO and
 never connect two push-pull outputs together. If a board-mounted flash shares
 the proposed CS GPIO, select another GPIO or isolate that flash first.
 
+The PL applies a four-sample CS stability filter after the two-flop
+synchronizer. This rejects short ringing/crosstalk pulses on the board-to-board
+CS lead without changing the sampled SPI data. The RTL regression contains an
+explicit 20 ns CS-high disturbance in the middle of a byte.
+
 ## STM32F407 generator requirements
 
 - SPI master, Mode 0: CPOL=0 and CPHA=0.
@@ -52,6 +57,34 @@ the proposed CS GPIO, select another GPIO or isolate that flash first.
 5. `REG_EXT_DROPPED_COUNT` remains zero in the normal smoke test. A non-zero
    value means the event consumer was backpressured long enough to lose a new
    SPI event.
+
+## Second-week 100-transaction acceptance
+
+With XSCT connected to the Zynq, clear the PL counters before starting STM32
+traffic:
+
+```tcl
+set SPI_STATS_ACTION clear
+source fpga/build/zynq_spi_stats.tcl
+```
+
+Run `spi jedec 100` on the STM32. Then read and automatically check the PL
+result:
+
+```tcl
+set SPI_STATS_ACTION check
+set SPI_EXPECTED_TRANSACTIONS 100
+source fpga/build/zynq_spi_stats.tcl
+```
+
+The acceptance result is `SPI_ACCEPTANCE_PASS`, with `events=600`,
+`starts=100`, `data=400`, `ends=100`, and every error/drop counter equal to
+zero. Save the STM32 UART log and the logic-analyzer export from this same run;
+do not compare results from different runs.
+
+Member A delivers the listener, unique event path, frozen pin map and these PL
+counters. Rendering the live transaction on the LCD is the PS/UI integration
+owned by member C.
 
 ## Scope and safety
 

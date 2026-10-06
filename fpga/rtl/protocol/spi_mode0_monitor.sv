@@ -10,7 +10,8 @@
 // One unified event is emitted for transaction start, every full-duplex byte,
 // transaction end, or an incomplete byte detected when CS rises.
 module spi_mode0_monitor #(
-    parameter [3:0] CHANNEL = 4'd0
+    parameter [3:0] CHANNEL = 4'd0,
+    parameter integer CS_FILTER_CYCLES = 4
 ) (
     input  wire         clk,
     input  wire         rst_n,
@@ -40,6 +41,8 @@ localparam [5:0] EVENT_FRAME_ERROR = 6'h3F;
 reg spi_sclk_d;
 (* ASYNC_REG = "TRUE" *) reg spi_cs_meta;
 (* ASYNC_REG = "TRUE" *) reg spi_cs_sync;
+reg [CS_FILTER_CYCLES-1:0] spi_cs_history;
+reg spi_cs_filtered;
 reg spi_cs_d;
 (* ASYNC_REG = "TRUE" *) reg spi_mosi_meta;
 (* ASYNC_REG = "TRUE" *) reg spi_mosi_sync;
@@ -50,8 +53,8 @@ reg [2:0] bit_count;
 reg [7:0] mosi_shift;
 reg [7:0] miso_shift;
 
-wire cs_falling = spi_cs_d && !spi_cs_sync;
-wire cs_rising  = !spi_cs_d && spi_cs_sync;
+wire cs_falling = spi_cs_d && !spi_cs_filtered;
+wire cs_rising  = !spi_cs_d && spi_cs_filtered;
 wire sclk_rising = !spi_sclk_d && spi_sclk_sync;
 
 function automatic [127:0] make_event;
@@ -81,6 +84,8 @@ always @(posedge clk) begin
         spi_sclk_d <= 1'b0;
         spi_cs_meta <= 1'b1;
         spi_cs_sync <= 1'b1;
+        spi_cs_history <= {CS_FILTER_CYCLES{1'b1}};
+        spi_cs_filtered <= 1'b1;
         spi_cs_d <= 1'b1;
         spi_mosi_meta <= 1'b0;
         spi_mosi_sync <= 1'b0;
@@ -101,7 +106,17 @@ always @(posedge clk) begin
         spi_sclk_d <= spi_sclk_sync;
         spi_cs_meta <= spi_cs_n;
         spi_cs_sync <= spi_cs_meta;
-        spi_cs_d <= spi_cs_sync;
+        spi_cs_history <= {spi_cs_history[CS_FILTER_CYCLES-2:0],
+                           spi_cs_sync};
+        // Long flying leads can ring on CS while SCLK and data remain valid.
+        // Accept a new CS level only after it has occupied the complete
+        // history window; intermediate samples retain the prior level.
+        if (&spi_cs_history) begin
+            spi_cs_filtered <= 1'b1;
+        end else if (~|spi_cs_history) begin
+            spi_cs_filtered <= 1'b0;
+        end
+        spi_cs_d <= spi_cs_filtered;
         spi_mosi_meta <= spi_mosi;
         spi_mosi_sync <= spi_mosi_meta;
         spi_miso_meta <= spi_miso;
@@ -146,7 +161,7 @@ always @(posedge clk) begin
                 dropped_event_count <= dropped_event_count + 32'd1;
             end
             bit_count <= 3'd0;
-        end else if (sclk_rising && monitor_active && !spi_cs_sync) begin
+        end else if (sclk_rising && monitor_active && !spi_cs_filtered) begin
             mosi_shift <= {mosi_shift[6:0], spi_mosi_sync};
             miso_shift <= {miso_shift[6:0], spi_miso_sync};
             if (bit_count == 3'd7) begin

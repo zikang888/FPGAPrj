@@ -111,6 +111,32 @@ task send_ext_event;
     end
 endtask
 
+task send_spi_event;
+    input [63:0] event_time;
+    input [5:0] event_type;
+    input [15:0] flags;
+    input [7:0] payload_length;
+    input [23:0] transaction;
+    input trigger;
+    begin
+        @(negedge clk);
+        ext_evt_data <= {
+            event_time,
+            4'h2, 4'h0, 2'b11, event_type,
+            flags,
+            payload_length,
+            transaction
+        };
+        ext_evt_trigger <= trigger;
+        ext_evt_valid <= 1'b1;
+        @(posedge clk);
+        while (!ext_evt_ready) @(posedge clk);
+        @(negedge clk);
+        ext_evt_valid <= 1'b0;
+        ext_evt_trigger <= 1'b0;
+    end
+endtask
+
 task axi_read;
     input [15:0] address;
     output [31:0] value;
@@ -146,12 +172,12 @@ initial begin
     end
 
     axi_read(16'h0004, value);
-    if (value !== 32'h0001_0003) begin
+    if (value !== 32'h0001_0004) begin
         $fatal(1, "FAIL: VERSION = %h", value);
     end
 
     axi_read(16'h000C, value);
-    if (value !== 32'h0000_0007) begin
+    if (value !== 32'h0000_000F) begin
         $fatal(1, "FAIL: CAPABILITIES = %h", value);
     end
 
@@ -306,7 +332,77 @@ initial begin
         $fatal(1, "FAIL: external producer drop status missing = %h", value);
     end
 
-    $display("PASS: multi_protocol_core AXI, virtual and external snapshot end-to-end test");
+    // SPI acceptance statistics: first prove one clean JEDEC transaction.
+    ext_evt_dropped_count = 32'd0;
+    axi_write(16'h0064, 32'h0000_0001, 4'hF); // clear statistics
+    send_spi_event(64'd100, 6'h00, 16'h0000, 8'd0, 24'd1, 1'b0);
+    send_spi_event(64'd110, 6'h01, 16'hFF9F, 8'd2, 24'd1, 1'b0);
+    send_spi_event(64'd120, 6'h01, 16'hEF00, 8'd2, 24'd1, 1'b0);
+    send_spi_event(64'd130, 6'h01, 16'h4000, 8'd2, 24'd1, 1'b0);
+    send_spi_event(64'd140, 6'h01, 16'h1800, 8'd2, 24'd1, 1'b0);
+    send_spi_event(64'd150, 6'h02, 16'h0000, 8'd0, 24'd1, 1'b0);
+
+    axi_read(16'h003C, value);
+    if (value !== 32'd6) $fatal(1, "FAIL: SPI event count = %h", value);
+    axi_read(16'h0040, value);
+    if (value !== 32'd1) $fatal(1, "FAIL: SPI start count = %h", value);
+    axi_read(16'h0044, value);
+    if (value !== 32'd4) $fatal(1, "FAIL: SPI data count = %h", value);
+    axi_read(16'h0048, value);
+    if (value !== 32'd1) $fatal(1, "FAIL: SPI end count = %h", value);
+    axi_read(16'h004C, value);
+    if (value !== 32'd0) $fatal(1, "FAIL: clean SPI frame errors = %h", value);
+    axi_read(16'h0050, value);
+    if (value !== 32'd0) $fatal(1, "FAIL: clean SPI boundary errors = %h", value);
+    axi_read(16'h0054, value);
+    if (value !== 32'd0) $fatal(1, "FAIL: clean SPI duplicates = %h", value);
+    axi_read(16'h0058, value);
+    if (value !== 32'd0) $fatal(1, "FAIL: clean SPI sequence errors = %h", value);
+    axi_read(16'h005C, value);
+    if (value !== 32'd1) $fatal(1, "FAIL: clean SPI last transaction = %h", value);
+    axi_read(16'h0060, value);
+    if (value !== 32'h0000_0006) $fatal(1, "FAIL: clean SPI status = %h", value);
+
+    // Exact duplicate events, transaction-ID gaps, an orphan DATA event and
+    // a residual frame must all be distinguished by hardware counters.
+    send_spi_event(64'd200, 6'h00, 16'h0000, 8'd0, 24'd2, 1'b0);
+    send_spi_event(64'd210, 6'h01, 16'hAAAA, 8'd2, 24'd2, 1'b0);
+    send_spi_event(64'd210, 6'h01, 16'hAAAA, 8'd2, 24'd2, 1'b0);
+    send_spi_event(64'd220, 6'h02, 16'h0000, 8'd0, 24'd2, 1'b0);
+    send_spi_event(64'd300, 6'h00, 16'h0000, 8'd0, 24'd4, 1'b0);
+    send_spi_event(64'd310, 6'h02, 16'h0000, 8'd0, 24'd4, 1'b0);
+    send_spi_event(64'd320, 6'h01, 16'h1234, 8'd2, 24'd5, 1'b0);
+    send_spi_event(64'd330, 6'h00, 16'h0000, 8'd0, 24'd5, 1'b0);
+    send_spi_event(64'd340, 6'h3F, 16'h0004, 8'd0, 24'd5, 1'b1);
+
+    axi_read(16'h003C, value);
+    if (value !== 32'd15) $fatal(1, "FAIL: SPI total event count = %h", value);
+    axi_read(16'h0040, value);
+    if (value !== 32'd4) $fatal(1, "FAIL: SPI total start count = %h", value);
+    axi_read(16'h0044, value);
+    if (value !== 32'd7) $fatal(1, "FAIL: SPI total data count = %h", value);
+    axi_read(16'h0048, value);
+    if (value !== 32'd3) $fatal(1, "FAIL: SPI total end count = %h", value);
+    axi_read(16'h004C, value);
+    if (value !== 32'd1) $fatal(1, "FAIL: SPI frame error count = %h", value);
+    axi_read(16'h0050, value);
+    if (value !== 32'd1) $fatal(1, "FAIL: SPI boundary error count = %h", value);
+    axi_read(16'h0054, value);
+    if (value !== 32'd1) $fatal(1, "FAIL: SPI duplicate count = %h", value);
+    axi_read(16'h0058, value);
+    if (value !== 32'd1) $fatal(1, "FAIL: SPI sequence error count = %h", value);
+    axi_read(16'h005C, value);
+    if (value !== 32'd5) $fatal(1, "FAIL: SPI last transaction = %h", value);
+    axi_read(16'h0060, value);
+    if (value !== 32'h0000_000E) $fatal(1, "FAIL: SPI error status = %h", value);
+
+    axi_write(16'h0064, 32'h0000_0001, 4'hF);
+    axi_read(16'h003C, value);
+    if (value !== 32'd0) $fatal(1, "FAIL: SPI statistics clear = %h", value);
+    axi_read(16'h0060, value);
+    if (value !== 32'd0) $fatal(1, "FAIL: SPI status clear = %h", value);
+
+    $display("PASS: multi_protocol_core AXI, snapshots and SPI acceptance statistics");
     $finish;
 end
 

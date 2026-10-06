@@ -93,7 +93,13 @@ begin
         #50;
         spi_sclk = 1'b0;
         if (bit_index == 4) begin
-            #1000;
+            // A short CS-high disturbance must not split the transaction.
+            // It models ringing/crosstalk seen on long board-to-board leads.
+            #10;
+            spi_cs_n = 1'b1;
+            #20;
+            spi_cs_n = 1'b0;
+            #970;
         end
     end
 end
@@ -196,7 +202,7 @@ initial begin
     check_event(10, 6'h01, 16'h1800, 8'd2, 24'd2, 1'b0);
     check_event(11, 6'h02, 16'h0000, 8'd0, 24'd2, 1'b0);
 
-    // Asynchronous phase offset and a long low-level SCLK pause.
+    // Asynchronous phase offset, long SCLK pause and a short CS glitch.
     #17;
     spi_begin();
     spi_byte_with_pause(8'hA5, 8'h3C);
