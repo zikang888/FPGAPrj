@@ -1,6 +1,6 @@
 # STM32F407 多协议真值节点（成员 C）
 
-本目录保存天空星 STM32F407VGT6 的多协议测试代码。它从
+本目录保存天空星 STM32F407VGT6 的完整多协议测试工程。它从
 `test/fpga_NumberC-A-full-integration` 建立，目标是给 Zynq 平台产生可重复的
 SPI、UART、I²C、CAN 流量和独立 JSONL 真值日志。
 
@@ -10,10 +10,12 @@ SPI、UART、I²C、CAN 流量和独立 JSONL 真值日志。
 stm32_f407/
 ├── common/       # 与 STM32 HAL 解耦的协议测试和日志代码
 ├── hal/          # STM32F407 HAL 回调适配
-├── examples/     # CubeMX main.c 的 USER CODE 接入示例
+├── app/          # 串口命令、CAN过滤器、按键和板级应用
+├── firmware/     # CubeMX、HAL/CMSIS、Core 和 Keil MDK-ARM 完整工程
 ├── tests/        # 电脑端 fake-platform 单元测试
 ├── CMakeLists.txt
-└── STM32CubeMX配置.md
+├── STM32CubeMX_config.md  # 完整工程的配置说明
+└── STM32CubeMX配置.md     # 第一周的旧接入说明，保留供追溯
 ```
 
 协议规则的唯一真源不在代码目录，而在：
@@ -32,20 +34,25 @@ docs/protocol-rules/protocol_rules.yaml
 - UART 双向回环。
 - AT24C256 写入、ACK polling、读回比较。
 - CAN 标准帧回环。
-- JSONL 真值日志与本地事务号；SPI 记录同时包含实际 RX `data` 和 TX `tx`。
+- JSONL 真值日志与本地事务号。
 - 可选同步脉冲接口。
 - SPI 残帧、UART 错误停止位的板级扩展钩子；默认不绑定，防止误驱动。
 
-这不是完整的 CubeMX 生成工程。`hal/` 需要加入 STM32CubeMX/Keil 工程，初始化
-代码仍由 CubeMX 生成。实际板型、排针、时钟、CAN 滤波器和收发器必须在上板
-前复核。
+完整 Keil 工程入口：
 
-SPI 初次联调先调用 `MemberC_Init()`，再调用 `MemberC_RunSmokeTests()`；后者先
-读取实物 JEDEC ID，再连续读 10 次核对一致性。读到全 `00`/全 `FF` 会报校验失败。
-首次读值仍须人工对照实物 Flash 型号，不应把“重复一致”当作芯片型号认证。
-当前接入示例针对已焊装板载 W25Q128 的天空星 F407VGT6 高配版，使用 PA4
-GPIO 软件片选。CubeMX 中必须把 PA4 配成默认高电平的推挽输出；其他板型或未焊装
-Flash 的版本不能直接照搬。
+```text
+stm32_f407/firmware/Projects/MDK-ARM/sky_star_protocol_node.uvprojx
+```
+
+CubeMX 配置入口：
+
+```text
+stm32_f407/firmware/sky_star_protocol_node.ioc
+```
+
+整合工程已使用 Keil ARMCC 5.06 update 2 实际编译，结果为 0 error、0 warning。
+`examples/` 是第一周的旧接入示例；上板以 `firmware/` 和 `app/` 为准。
+SPI JSONL 日志同时保留实际 RX `data` 与发送字节 `tx`，供 FPGA 快照逐字节对账。
 
 ## 电脑端测试
 
@@ -59,16 +66,38 @@ ctest --test-dir stm32_f407/build --output-on-failure
 
 ## 与当前 FPGA 候选连接
 
-SPI 第一闭环固定为 STM32 主机、**板载** W25Q128 从机、FPGA 被动监听；
-不要再并联同 CS 的第二颗外置 Flash：
+SPI 第一闭环固定为 STM32 主机、W25Q128 从机、FPGA 被动监听：
 
 | 信号 | STM32F407 | AC820 P7 | FPGA |
 |---|---|---|---|
-| CS_N | PA4，软件 GPIO 输出 | P7-2 | U11，输入 |
+| CS_N | PA4 | P7-2 | U11，输入 |
 | SCLK | PA5 | P7-1 | U12，输入 |
 | MOSI | PA7 | P7-3 | U10，输入 |
 | MISO | PA6 | P7-4 | U9，输入 |
 
 三方共地，使用 3.3 V 逻辑。FPGA 不驱动这四根线。
-P7 的物理编号和排针朝向仍需对照实物丝印复核。引脚依据见
-[立创官方 SPI-FLASH 教程](https://wiki.lckfb.com/zh-hans/tkx/tkx-stm32f407vxt6/beginner/spi.html)。
+
+天空星当前配置固定为：
+
+| 功能 | 天空星引脚 | 参数 |
+|---|---|---|
+| 板载 W25Q128 | PA4/PA5/PA6/PA7 | CS/SCK/MISO/MOSI，SPI1 Mode 0，1.3125 MHz |
+| FPGA UART 测试 | PD8/PD9 | USART3，115200 8N1 |
+| 日志与命令 | PA9/PA10 | USART1，115200 8N1 |
+| 外接 AT24C256 | PB6/PB7 | I²C1，100 kHz |
+| 外接 SN65HVD230 | PD0/PD1 | CAN1 RX/TX，500 kbit/s |
+| 用户 LED | PB2 | 成功点亮，失败熄灭 |
+| 用户按键 | PA0 | 按下执行一次 SPI JEDEC 测试 |
+| 同步脉冲 | PC6 | 输出到 FPGA 可选同步输入 |
+
+USART1 命令：
+
+```text
+spi jedec [count]
+spi pattern [count]
+uart loop [count]
+i2c eeprom [count]
+can loop [count]
+all
+help
+```
