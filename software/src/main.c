@@ -22,7 +22,8 @@
 #define SCRATCH_TEST    0xA5A55A5AU
 
 static XUartPs g_uart;
-static CaptureDemoCache g_event_cache;
+static CaptureDemoCache g_demo_cache;
+static CaptureDemoCache g_live_cache;
 
 static int uart_init(void)
 {
@@ -44,11 +45,15 @@ int main(void)
     u8 touch_ok = 0U;
     u8 capture_ok = 0U;
     CaptureDemoSnapshot capture_snapshot;
+    CaptureDemoSnapshot live_snapshot;
+    const CaptureDemoSnapshot *visible_snapshot;
+    int live_result;
     PlatformUiStatus ui_status;
     PlatformUiPage page = PLATFORM_UI_PAGE_HOME;
     PlatformUiAction action;
 
     memset(&capture_snapshot, 0, sizeof(capture_snapshot));
+    memset(&live_snapshot, 0, sizeof(live_snapshot));
     memset(&ui_status, 0, sizeof(ui_status));
 
     if (uart_init() != XST_SUCCESS) {
@@ -93,11 +98,11 @@ int main(void)
         xil_printf("CAPTURE DEMO ERROR\r\n");
     }
     if (capture_ok != 0U) {
-        if (capture_demo_cache_snapshot(&g_event_cache,
+        if (capture_demo_cache_snapshot(&g_demo_cache,
                                         &capture_snapshot) == XST_SUCCESS) {
-            platform_ui_set_event_cache(&g_event_cache);
+            platform_ui_set_event_cache(&g_demo_cache);
             xil_printf("EVENT CACHE READY: count=%lu\r\n",
-                       (unsigned long)g_event_cache.count);
+                       (unsigned long)g_demo_cache.count);
         } else {
             xil_printf("EVENT CACHE ERROR; showing initial window only\r\n");
         }
@@ -137,10 +142,54 @@ int main(void)
             Xil_Out32(REG_LED_CTRL, (u32)led_on);
             ui_status.led_on = led_on;
             xil_printf("LED %s\r\n", (led_on != 0U) ? "ON" : "OFF");
+        } else if (action == PLATFORM_UI_ACTION_CAPTURE_LIVE) {
+            if (ui_status.capture_source != 0U) {
+                ui_status.capture_source = 0U;
+                ui_status.dropped_count = capture_snapshot.dropped_count;
+                platform_ui_set_event_cache(g_demo_cache.valid != 0U ?
+                                            &g_demo_cache : 0);
+                xil_printf("EVENT SOURCE VIRTUAL\r\n");
+            } else if (capture_live_arm() == XST_SUCCESS) {
+                ui_status.capture_source = 1U;
+                platform_ui_set_event_cache(0);
+                xil_printf("SPI CAPTURE ARMED; waiting for 9F plus 16 events\r\n");
+            } else {
+                xil_printf("SPI CAPTURE ARM ERROR\r\n");
+            }
+        }
+        if (ui_status.capture_source == 1U) {
+            live_result = capture_live_poll(&live_snapshot);
+            if (live_result > 0) {
+                if (capture_demo_cache_snapshot(&g_live_cache,
+                                                &live_snapshot) == XST_SUCCESS) {
+                    ui_status.capture_source = 2U;
+                    ui_status.dropped_count = live_snapshot.dropped_count;
+                    platform_ui_set_event_cache(&g_live_cache);
+                    xil_printf("SPI SNAPSHOT READY: id=%lu count=%lu trigger=%lu\r\n",
+                               (unsigned long)live_snapshot.snapshot_id,
+                               (unsigned long)live_snapshot.count,
+                               (unsigned long)live_snapshot.trigger_index);
+                } else {
+                    ui_status.capture_source = 0U;
+                    platform_ui_set_event_cache(&g_demo_cache);
+                    xil_printf("SPI SNAPSHOT CACHE ERROR\r\n");
+                }
+                action = PLATFORM_UI_ACTION_CAPTURE_LIVE;
+            } else if (live_result < 0) {
+                ui_status.capture_source = 0U;
+                platform_ui_set_event_cache(&g_demo_cache);
+                xil_printf("SPI CAPTURE STATUS ERROR\r\n");
+                action = PLATFORM_UI_ACTION_CAPTURE_LIVE;
+            }
         }
         if (action != PLATFORM_UI_ACTION_NONE) {
+            visible_snapshot = page != PLATFORM_UI_PAGE_EVENTS ?
+                (capture_ok != 0U ? &capture_snapshot : 0) :
+                (ui_status.capture_source == 1U ? 0 :
+                 (ui_status.capture_source == 2U ? &live_snapshot :
+                  (capture_ok != 0U ? &capture_snapshot : 0)));
             platform_ui_render_page(page, &ui_status,
-                                    capture_ok != 0U ? &capture_snapshot : 0);
+                                    visible_snapshot);
         }
         platform_ui_tick();
         usleep(5000U);

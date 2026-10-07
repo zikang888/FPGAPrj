@@ -196,7 +196,7 @@ initial begin
     spi_byte(8'h00, 8'h18);
     spi_end();
     check_event(6, 6'h00, 16'h0000, 8'd0, 24'd2, 1'b0);
-    check_event(7, 6'h01, 16'hFF9F, 8'd2, 24'd2, 1'b0);
+    check_event(7, 6'h01, 16'hFF9F, 8'd2, 24'd2, 1'b1);
     check_event(8, 6'h01, 16'hEF00, 8'd2, 24'd2, 1'b0);
     check_event(9, 6'h01, 16'h4000, 8'd2, 24'd2, 1'b0);
     check_event(10, 6'h01, 16'h1800, 8'd2, 24'd2, 1'b0);
@@ -255,7 +255,17 @@ initial begin
     #100;
     check_event(119, 6'h00, 16'h0000, 8'd0, 24'd6, 1'b0);
 
-    if (event_count !== 120) begin
+    // A payload byte equal to 9F must not retrigger a non-JEDEC transaction.
+    spi_begin();
+    spi_byte(8'h55, 8'h11);
+    spi_byte(8'h9F, 8'h22);
+    spi_end();
+    check_event(120, 6'h00, 16'h0000, 8'd0, 24'd7, 1'b0);
+    check_event(121, 6'h01, 16'h1155, 8'd2, 24'd7, 1'b0);
+    check_event(122, 6'h01, 16'h229F, 8'd2, 24'd7, 1'b0);
+    check_event(123, 6'h02, 16'h0000, 8'd0, 24'd7, 1'b0);
+
+    if (event_count !== 124) begin
         $display("FAIL final event_count=%0d", event_count);
         failures = failures + 1;
     end
