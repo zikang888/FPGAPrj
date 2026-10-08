@@ -1,5 +1,6 @@
 #include "platform_ui.h"
 #include "pixel_scroll.h"
+#include "event_view.h"
 
 #include "font.h"
 #include "touch.h"
@@ -309,12 +310,6 @@ static u8 all_checks_passed(const PlatformUiStatus *status)
             status->ext_dropped_count == 0U) ? 1U : 0U;
 }
 
-static const char *protocol_name(u32 protocol)
-{
-    static const char *names[] = {"VIRT", "UART", "SPI", "I2C", "CAN"};
-    return protocol < 5U ? names[protocol] : "UNKN";
-}
-
 static void draw_header(const char *title, const PlatformUiStatus *status,
                         const CaptureDemoSnapshot *snapshot)
 {
@@ -534,22 +529,16 @@ static void draw_events_chrome(const PlatformUiStatus *status,
 static void draw_event_row_at(const u32 *words, u32 event_index,
                               u32 trigger_index, int y_position)
 {
-    u32 word0;
-    u32 word1;
-    u32 protocol;
-    u32 event_type;
-    u32 flags;
+    EventView view;
+    char type_text[8];
     u32 row_bg;
     u16 y;
 
     if (words == 0 || y_position > 407 ||
         y_position + 32 < 122) return;
 
-    word0 = words[0];
-    word1 = words[1];
-    protocol = (word1 >> 28) & 0xFU;
-    event_type = (word1 >> 16) & 0x3FU;
-    flags = word1 & 0xFFFFU;
+    view = event_view_decode(words);
+    event_view_type_text(view.event_type, type_text);
     y = (u16)y_position;
     row_bg = event_index == trigger_index ? C_ACTIVE :
              ((event_index & 1U) != 0U ? C_BG : C_PANEL);
@@ -560,11 +549,13 @@ static void draw_event_row_at(const u32 *words, u32 event_index,
          event_index == trigger_index ? C_TRIGGER : C_MUTED,
          row_bg);
     dec32(100U, (u16)(y + 8U), event_index, C_TEXT, row_bg);
-    text(164U, (u16)(y + 8U), protocol_name(protocol),
-         protocol == 0U ? C_MUTED : C_CYAN, row_bg);
-    hex32(222U, (u16)(y + 8U), event_type, C_TEXT, row_bg);
-    hex32(294U, (u16)(y + 8U), flags, C_TEXT, row_bg);
-    hex32(406U, (u16)(y + 8U), word0 & 0x00FFFFFFU,
+    text(164U, (u16)(y + 8U), event_view_protocol_name(view.protocol),
+         view.protocol == 0U ? C_MUTED : C_CYAN, row_bg);
+    text(222U, (u16)(y + 8U), type_text,
+         event_view_is_error(&view) ? C_RED : C_TEXT, row_bg);
+    hex32(294U, (u16)(y + 8U), view.flags,
+          event_view_is_error(&view) ? C_RED : C_TEXT, row_bg);
+    hex32(406U, (u16)(y + 8U), view.transaction_id,
           C_TEXT, row_bg);
     hex32(542U, (u16)(y + 8U), words[2],
           C_MUTED, row_bg);
