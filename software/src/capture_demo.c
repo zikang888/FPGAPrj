@@ -132,11 +132,13 @@ int capture_demo_run(CaptureDemoSnapshot *snapshot)
         return XST_FAILURE;
     }
 
-    for (index = 0U; index < 8U; ++index) {
+    /* The PL freezes four events after the trigger. Put the demo trigger at
+     * index 20 so all 25 virtual events fit without inactive-event drops. */
+    for (index = 0U; index < 20U; ++index) {
         Xil_Out32(REG_VIRTUAL_EVENT, index);
     }
-    Xil_Out32(REG_VIRTUAL_EVENT, VIRTUAL_TRIGGER | 8U);
-    for (index = 9U; index < 25U; ++index) {
+    Xil_Out32(REG_VIRTUAL_EVENT, VIRTUAL_TRIGGER | 20U);
+    for (index = 21U; index < 25U; ++index) {
         Xil_Out32(REG_VIRTUAL_EVENT, index);
     }
 

@@ -9,7 +9,13 @@ foreach name {ZYNQ_TEST_BIT ZYNQ_TEST_ELF ZYNQ_TEST_INIT} {
 }
 
 connect -url tcp:127.0.0.1:3121
-puts "TARGETS_BEGIN\n[targets]\nTARGETS_END"
+set initial_targets [targets]
+puts "TARGETS_BEGIN\n$initial_targets\nTARGETS_END"
+if {[string first "ARM Cortex-A9 MPCore #0" $initial_targets] < 0 ||
+    [string first "JTAG port open error" $initial_targets] >= 0} {
+    disconnect
+    error "PS DAP unavailable before BIT transfer; stop without programming"
+}
 puts "JTAG_TARGETS_BEGIN\n[jtag targets]\nJTAG_TARGETS_END"
 jtag targets -set -filter {level == 0}
 set supported [jtag frequency -list]
