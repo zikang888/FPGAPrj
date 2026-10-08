@@ -233,7 +233,7 @@ initial begin
         $fatal(1, "FAIL: snapshot id = %h", value);
     end
     axi_read(16'h100C, value);
-    if (value !== 32'd20) begin
+    if (value !== 32'd8) begin
         $fatal(1, "FAIL: snapshot count = %h", value);
     end
     axi_read(16'h1010, value);
@@ -253,8 +253,8 @@ initial begin
     if (value[0] !== 1'b1) begin
         $fatal(1, "FAIL: trigger flag missing = %h", value);
     end
-    axi_read(16'h6130, value);
-    if (value[23:0] !== 24'd19) begin
+    axi_read(16'h6070, value);
+    if (value[23:0] !== 24'd7) begin
         $fatal(1, "FAIL: last snapshot transaction = %h", value);
     end
 
@@ -301,7 +301,7 @@ initial begin
         $fatal(1, "FAIL: external snapshot id = %h", value);
     end
     axi_read(16'h100C, value);
-    if (value !== 32'd17) begin
+    if (value !== 32'd5) begin
         $fatal(1, "FAIL: external snapshot count = %h", value);
     end
     axi_read(16'h1010, value);
@@ -312,8 +312,8 @@ initial begin
     if (value[23:0] !== 24'hA0_0000) begin
         $fatal(1, "FAIL: first external snapshot event = %h", value);
     end
-    axi_read(16'h6100, value);
-    if (value[23:0] !== 24'hA0_0010) begin
+    axi_read(16'h6040, value);
+    if (value[23:0] !== 24'hA0_0004) begin
         $fatal(1, "FAIL: last external snapshot event = %h", value);
     end
 

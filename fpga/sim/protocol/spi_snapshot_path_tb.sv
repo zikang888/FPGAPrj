@@ -76,7 +76,7 @@ assign arb_ready = !arm;
 event_snapshot_buffer #(
     .EVENT_WIDTH(128),
     .DEPTH(256),
-    .POST_TRIGGER_EVENTS(16)
+    .POST_TRIGGER_EVENTS(4)
 ) snapshot_buffer (
     .clk(clk), .rst_n(rst_n), .arm(arm), .ack(ack),
     .in_valid(arb_valid && arb_ready),
@@ -172,8 +172,8 @@ initial begin
     spi_partial_nibble();
     spi_end();
 
-    // More than sixteen events after the trigger. The snapshot must freeze
-    // after exactly sixteen; later events are drained but not stored.
+    // More than four events after the trigger. The snapshot must freeze
+    // after exactly four; later events are drained but not stored.
     for (post_index = 0; post_index < 6; post_index = post_index + 1) begin
         spi_begin();
         spi_byte(post_index[7:0], ~post_index[7:0]);
@@ -182,7 +182,7 @@ initial begin
     #300;
 
     if (!snapshot_ready || capture_active || snapshot_id !== 32'd1 ||
-        snapshot_count !== 9'd21 || snapshot_trigger_index !== 8'd4 ||
+        snapshot_count !== 9'd9 || snapshot_trigger_index !== 8'd4 ||
         snapshot_overwritten) begin
         $display("FAIL metadata ready=%0d active=%0d id=%0d count=%0d trig=%0d over=%0d",
                  snapshot_ready, capture_active, snapshot_id, snapshot_count,
@@ -211,25 +211,23 @@ initial begin
         failures = failures + 1;
     end
 
-    read_snapshot(8'd20, value);
+    read_snapshot(8'd8, value);
     if (value[63:60] !== 4'h2) begin
         $display("FAIL last post-trigger event=%032h", value);
         failures = failures + 1;
     end
 
-    // Re-arm: a normal 9F command must freeze after sixteen later SPI events.
+    // Re-arm: one normal 9F JEDEC transaction must be enough to freeze.
     pulse_arm();
-    for (post_index = 0; post_index < 3; post_index = post_index + 1) begin
-        spi_begin();
-        spi_byte(8'h9F, 8'hFF);
-        spi_byte(8'h00, 8'hEF);
-        spi_byte(8'h00, 8'h40);
-        spi_byte(8'h00, 8'h18);
-        spi_end();
-    end
+    spi_begin();
+    spi_byte(8'h9F, 8'hFF);
+    spi_byte(8'h00, 8'hEF);
+    spi_byte(8'h00, 8'h40);
+    spi_byte(8'h00, 8'h18);
+    spi_end();
     #300;
     if (!snapshot_ready || capture_active || snapshot_id !== 32'd2 ||
-        snapshot_count !== 9'd18 || snapshot_trigger_index !== 8'd1) begin
+        snapshot_count !== 9'd6 || snapshot_trigger_index !== 8'd1) begin
         $display("FAIL JEDEC metadata ready=%0d active=%0d id=%0d count=%0d trig=%0d",
                  snapshot_ready, capture_active, snapshot_id,
                  snapshot_count, snapshot_trigger_index);
@@ -240,7 +238,7 @@ initial begin
         $display("FAIL JEDEC trigger data=%032h", value);
         failures = failures + 1;
     end
-    read_snapshot(8'd17, value);
+    read_snapshot(8'd5, value);
     if (value[53:48] !== 6'h02) begin
         $display("FAIL JEDEC post-trigger tail=%032h", value);
         failures = failures + 1;

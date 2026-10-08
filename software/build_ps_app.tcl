@@ -38,6 +38,15 @@ foreach project_name $stale_projects {
 }
 
 createhw -name platform_hw -hwspec $hdf_file
+set implementation_bit [file join $proj_dir Multi_protocol.runs impl_1 \
+    multi_protocol_bd_wrapper.bit]
+set platform_bit [file join $ws_dir platform_hw \
+    multi_protocol_bd_wrapper.bit]
+if {[file exists $implementation_bit]} {
+    # Keep SDK's conventional Program FPGA path synchronized with the
+    # implementation result even when the HDF was exported headlessly.
+    file copy -force $implementation_bit $platform_bit
+}
 createbsp -name platform_bsp -hwproject platform_hw \
     -proc ps7_cortexa9_0 -os standalone
 createapp -name platform_app -hwproject platform_hw \

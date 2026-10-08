@@ -152,7 +152,7 @@ int main(void)
             } else if (capture_live_arm() == XST_SUCCESS) {
                 ui_status.capture_source = 1U;
                 platform_ui_set_event_cache(0);
-                xil_printf("SPI CAPTURE ARMED; waiting for 9F plus 16 events\r\n");
+                xil_printf("SPI CAPTURE ARMED; one JEDEC transaction is enough\r\n");
             } else {
                 xil_printf("SPI CAPTURE ARM ERROR\r\n");
             }
@@ -183,11 +183,15 @@ int main(void)
             }
         }
         if (action != PLATFORM_UI_ACTION_NONE) {
-            visible_snapshot = page != PLATFORM_UI_PAGE_EVENTS ?
-                (capture_ok != 0U ? &capture_snapshot : 0) :
-                (ui_status.capture_source == 1U ? 0 :
-                 (ui_status.capture_source == 2U ? &live_snapshot :
-                  (capture_ok != 0U ? &capture_snapshot : 0)));
+            if (ui_status.capture_source == 2U) {
+                /* Keep every page tied to the newest real capture. */
+                visible_snapshot = &live_snapshot;
+            } else if (page == PLATFORM_UI_PAGE_EVENTS &&
+                       ui_status.capture_source == 1U) {
+                visible_snapshot = 0;
+            } else {
+                visible_snapshot = capture_ok != 0U ? &capture_snapshot : 0;
+            }
             platform_ui_render_page(page, &ui_status,
                                     visible_snapshot);
         }

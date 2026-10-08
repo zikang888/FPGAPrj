@@ -304,7 +304,9 @@ event_arbiter_2 #(
 event_snapshot_buffer #(
     .EVENT_WIDTH(128),
     .DEPTH(256),
-    .POST_TRIGGER_EVENTS(16)
+    // A 9F JEDEC read has four events after the triggering command byte:
+    // three response bytes and END. One transaction can therefore freeze.
+    .POST_TRIGGER_EVENTS(4)
 ) capture_buffer (
     .clk(s_axi_aclk),
     .rst_n(s_axi_aresetn),
