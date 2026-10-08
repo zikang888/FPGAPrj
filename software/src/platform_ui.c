@@ -1,6 +1,7 @@
 #include "platform_ui.h"
 #include "pixel_scroll.h"
 #include "event_view.h"
+#include "event_audit.h"
 
 #include "font.h"
 #include "touch.h"
@@ -51,6 +52,8 @@ static PlatformUiStatus g_requested_status;
 static CaptureDemoSnapshot g_requested_snapshot;
 static u8 g_requested_snapshot_valid;
 static const CaptureDemoCache *g_event_cache;
+static EventAudit g_event_audit;
+static u8 g_event_audit_valid;
 static u32 g_scroll_px;
 static u32 g_scroll_snapshot_id;
 static u8 g_render_pending;
@@ -496,6 +499,14 @@ static void draw_events_chrome(const PlatformUiStatus *status,
                                const CaptureDemoSnapshot *snapshot)
 {
     draw_header("PROTOCOL DECODE", status, snapshot);
+    if (snapshot != 0 && g_event_cache != 0 &&
+        g_event_cache->valid != 0U &&
+        g_event_cache->snapshot_id == snapshot->snapshot_id &&
+        g_event_audit_valid != 0U) {
+        text(422U, 13U, "ERR", C_MUTED, C_HEADER);
+        dec32(459U, 13U, g_event_audit.errors,
+              g_event_audit.errors != 0U ? C_RED : C_GREEN, C_HEADER);
+    }
     fill(14U, 50U, 786U, 84U, C_PANEL);
     outline(14U, 50U, 786U, 84U, C_BORDER);
     text(28U, 60U, "SNAP", C_MUTED, C_PANEL);
@@ -624,6 +635,12 @@ static void render_events_page(const PlatformUiStatus *status,
 void platform_ui_set_event_cache(const CaptureDemoCache *cache)
 {
     g_event_cache = cache;
+    g_event_audit_valid = 0U;
+    if (cache != 0 && cache->valid != 0U &&
+        event_audit_snapshot(&cache->event_word[0][0], cache->count,
+                             cache->trigger_index, &g_event_audit) != 0) {
+        g_event_audit_valid = 1U;
+    }
 }
 
 void platform_ui_tick(void)

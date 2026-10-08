@@ -20,6 +20,7 @@ typedef struct {
 typedef struct {
     u32 snapshot_id;
     u32 count;
+    u32 trigger_index;
     u32 event_word[CAPTURE_MAX_EVENTS][4];
     u8 valid;
 } CaptureDemoCache;

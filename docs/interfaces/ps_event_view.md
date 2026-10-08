@@ -31,8 +31,28 @@ event_view_test
 事件码、128-bit 各字段、SPI TX/RX 拆分及错误事件不得误判为 SPI DATA。
 现有 `pixel_scroll_test` 也须继续通过，PS 工程须用配套 HDF 生成 ELF。
 
+## UART/I²C 接入前的快照审计接口
+
+`software/src/event_audit.h` 的 `event_audit_snapshot()` 消费连续的
+`count × 4` 个原始 word 和 trigger index；`CaptureDemoCache` 缓存触发
+索引后，EVENTS 页在每次切换快照时只统计一次，并在页眉显示该快照的
+`ERR` 总数。行内 `ERROR` 类型仍为红色，原始 flags 不被改写。
+审计结果按协议 ID 给出总事件、START/DATA/END/ERROR 数；另计未知协议、
+保留扩展类型、64 位时间戳逆序，以及仅对已定义 SPI DATA 的长度异常。
+ERROR 代表捕获到了故障事件，不会被误报为快照元数据损坏。
+
+`software/tests/event_audit_test.c` 用混合 UART/I²C 原始事件和 ERROR、
+未知扩展事件验证上述计数，也覆盖无效 count/trigger、未知协议及
+时间戳逆序。样例里的 UART/I²C flags 只是原始数值，**不定义**字节、
+地址、ACK/NACK 或错误子类。UART 的空闲间隔边界和 I²C 的重复 START
+尚无已批准的 PL 编码约定，因此审计器不会强行套用 SPI 的六事件序列。
+运行方式与上面的 `event_view_test` 相同，只需改为
+`software/tests/event_audit_test.c`。
+
 验收边界：当前板测仅证明 SPI 监听与 100 笔 JEDEC；UART/I2C/CAN 的 PL
 输入、物理引脚、事件产生及故障注入尚未在此分支实现或上板验证。
-后续接入时，应从 PL 快照窗口提供同 ABI 的黄金事件语料，逐 word 对账
-并在 LCD 查看协议名、ERROR 标记、flags 和事务号；不能只凭本宿主测试
-宣称这些协议链路完成。CAN 是否进入首版由独立电气/资源评审决定。
+后续接入时，应从 PL 快照窗口提供同 ABI 的 UART/I²C 黄金事件语料与
+故障注入语料，逐 word 对账并在 LCD 查看协议名、页眉 ERR、行内 ERROR、
+原始 flags 和事务号；再依据成员 C 批准的协议字段语义增加专项检查。
+不能只凭本宿主测试宣称这些协议链路完成。CAN 是否进入首版由独立
+电气/资源评审决定。
