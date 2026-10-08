@@ -52,6 +52,27 @@ external dropped 均为 0，输出 `SPI_ACCEPTANCE_PASS`。
 `ends=101`，错误与 external dropped 仍为 0。用户目视确认 EVENTS 页
 同步显示这 6 条 SPI（START、4 条 DATA、END），且 `ERR 0` 正常。
 
+## 正式迭代压力回归：1000 笔
+
+清空 PL SPI 统计后发送 `spi jedec 1000`；命令完整回显。STM32 输出
+1000 条事务日志，序号 228 至 1227，全部 `data=FFEF4018`、
+`result=0`，总结为 `iterations=1000 passed=1000 failed=0`。
+同轮 PL 输出 `events=6000`、`starts=1000`、`data=4000`、
+`ends=1000`，frame、boundary、duplicate、sequence 错误及 external
+dropped 全为 0，检查器输出 `SPI_ACCEPTANCE_PASS`。
+
+测试期间先前的单次 6 事件快照保持冻结，因此快照 `DROPPED_COUNT`
+增加到 `0x1770=6000`，`CAPTURE_STATUS=0xA`。这仅表示冻结的快照
+不再收后续事件；**不能解释为 SPI 外部生产者丢了 6000 条**：全局
+SPI 计数恰好覆盖 6000 条，`EXT_DROPPED=0`。结束后须重新运行虚拟
+自检，以清除快照状态。`DROPPED_COUNT=6000` 是 JTAG 寄存器回读，
+不能断言屏幕曾显示 6000；PS UI 使用缓存的快照状态。
+
+测试结束后通过 JTAG 重新下载同一 ELF，启动时自动运行虚拟自检。
+恢复后的只读回读：A9 运行、`SNAPSHOT_ID=7`、`SNAPSHOT_COUNT=25`、
+`TRIGGER_INDEX=20`、`DROPPED_COUNT=0`、`EXT_DROPPED=0`，
+`CAPTURE_STATUS=0x2`。只重载 PS ELF，仍未重刷 BIT/启动介质。
+
 ## 排错发现与未覆盖项
 
 直接把整条命令一次性写入串口时，STM32 回显 `spi jedec 0`，仅执行
@@ -60,6 +81,6 @@ external dropped 均为 0，输出 `SPI_ACCEPTANCE_PASS`。
 回显字节，疑似导致连续输入时 UART overrun；这是**尚待 B 端修复和
 复测的串口命令可靠性问题**，不能把 paced-host workaround 当作固件修复。
 
-当前记录未做 1000 笔正式验收、2 小时连续运行、SPI 不完整字节故障
+当前记录未做 2 小时连续运行、SPI 不完整字节故障
 注入，也未证明 UART/I²C/CAN 的 PL 事件链路。仅更换 ELF 的板测不等于
 完整 BIT/HDF/ELF 重烧录验收。
