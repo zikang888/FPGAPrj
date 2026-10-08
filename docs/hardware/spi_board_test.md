@@ -17,11 +17,12 @@ Do not mix its BIT with the wiring below.
 | SPI1 MOSI / PA7 | SPI_MOSI / P7-3 | U10 | input |
 | SPI1 MISO / PA6 (same net as flash DO) | SPI_MISO / P7-4 | U9 | input |
 
-The FPGA is a high-impedance listener connected in parallel with the STM32
-master and the external W25Q128 module; it never drives MISO. For a two-board
-smoke test without a real SPI slave, use a separate test output for MISO and
-never connect two push-pull outputs together. If a board-mounted flash shares
-the proposed CS GPIO, select another GPIO or isolate that flash first.
+The current two-board setup uses the populated W25Q128 on the standalone
+SkyStar STM32F407VGT6 core board, not a second external Flash module. PA4 is
+the shared onboard Flash CS net. The FPGA is a high-impedance listener and
+never drives MISO. Both boards are powered independently and share only ground
+and the four SPI monitor signals; never tie their 3V3 rails together. An
+alternative external slave requires a separately reviewed wiring plan.
 
 The PL applies a four-sample CS stability filter after the two-flop
 synchronizer. This rejects short ringing/crosstalk pulses on the board-to-board
