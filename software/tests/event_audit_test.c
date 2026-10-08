@@ -59,10 +59,28 @@ static void check_only_defined_spi_shape_and_metadata(void)
     assert(event_audit_snapshot(&words[0][0], 3U, 1U, 0) == 0);
 }
 
+static void check_full_snapshot_capacity(void)
+{
+    uint32_t words[EVENT_AUDIT_MAX_EVENTS][4];
+    EventAudit audit;
+    uint32_t i;
+    for (i = 0U; i < EVENT_AUDIT_MAX_EVENTS; ++i) {
+        make_event(words[i], 3U, i == 255U ? 0x3FU : 1U,
+                   i == 255U ? 0U : 1U, 0U, 9U, i);
+    }
+    assert(event_audit_snapshot(&words[0][0], EVENT_AUDIT_MAX_EVENTS,
+                                255U, &audit) == 1);
+    assert(audit.total == 256U && audit.protocol_events[3] == 256U);
+    assert(audit.protocol_data[3] == 255U && audit.protocol_errors[3] == 1U);
+    assert(audit.errors == 1U && audit.trigger_protocol == 3U);
+    assert(audit.timestamp_regressions == 0U);
+}
+
 int main(void)
 {
     check_uart_i2c_and_errors();
     check_only_defined_spi_shape_and_metadata();
+    check_full_snapshot_capacity();
     puts("event audit tests passed");
     return 0;
 }
