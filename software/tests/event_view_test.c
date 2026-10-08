@@ -76,11 +76,61 @@ static void check_error_is_not_spi_data(void)
     assert(event_view_spi_bytes(&view, &miso, &mosi) == 0);
 }
 
+static void check_all_ids_and_type_buffer(void)
+{
+    uint32_t words[4] = {0U, 0U, 0U, 0U};
+    unsigned int protocol;
+    unsigned int type;
+
+    for (protocol = 0U; protocol < 16U; ++protocol) {
+        for (type = 0U; type < 64U; ++type) {
+            char buffer[9] = {'?', '?', '?', '?', '?', '?', '?', '?', '!'};
+            EventView view;
+            words[1] = ((uint32_t)protocol << 28) |
+                       ((uint32_t)type << 16) | UINT32_C(0xA55A);
+            view = event_view_decode(words);
+            assert(view.protocol == protocol);
+            assert(view.event_type == type);
+            assert(view.flags == UINT16_C(0xA55A));
+            assert(event_view_is_error(&view) == (type == 63U));
+            event_view_type_text(view.event_type, buffer);
+            assert(buffer[8] == '!');
+            assert(memchr(buffer, '\0', 8U) != NULL);
+            if (type >= 3U && type < 63U) {
+                assert(strncmp(buffer, "EXT", 3U) == 0);
+            }
+        }
+    }
+}
+
+static void check_field_boundaries(void)
+{
+    const uint32_t all_ones[4] = {
+        UINT32_MAX, UINT32_MAX, UINT32_MAX, UINT32_MAX
+    };
+    const EventView view = event_view_decode(all_ones);
+    uint8_t miso = 0x5AU;
+    uint8_t mosi = 0xA5U;
+
+    assert(view.timestamp == UINT64_MAX);
+    assert(view.transaction_id == UINT32_C(0x00FFFFFF));
+    assert(view.payload_length == UINT8_MAX);
+    assert(view.protocol == 15U);
+    assert(view.channel == 15U);
+    assert(view.direction == 3U);
+    assert(view.event_type == 63U);
+    assert(view.flags == UINT16_MAX);
+    assert(event_view_spi_bytes(&view, &miso, &mosi) == 0);
+    assert(miso == 0x5AU && mosi == 0xA5U);
+}
+
 int main(void)
 {
     check_common_fields();
     check_protocols_and_types();
     check_error_is_not_spi_data();
+    check_all_ids_and_type_buffer();
+    check_field_boundaries();
     puts("event view tests passed");
     return 0;
 }
