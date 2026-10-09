@@ -24,8 +24,8 @@ typedef struct {
     u32 version;
     u32 capabilities;
     u32 scratch;
-    u32 dropped_count;
-    u32 ext_dropped_count;
+    u32 core_rejected_count;
+    u32 external_loss_count;
     u32 arbitration_count;
     u8 id_ok;
     u8 version_ok;
@@ -40,6 +40,8 @@ typedef struct {
 int platform_ui_init(void);
 void platform_ui_set_event_cache(const CaptureDemoCache *cache);
 void platform_ui_tick(void);
+void platform_ui_update_counters(u32 core_rejected_count,
+                                 u32 external_loss_count);
 void platform_ui_render_page(PlatformUiPage page,
                              const PlatformUiStatus *status,
                              const CaptureDemoSnapshot *snapshot);

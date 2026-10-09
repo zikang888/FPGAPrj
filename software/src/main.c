@@ -8,6 +8,8 @@
 #include "xuartps.h"
 #include "sleep.h"
 #include "string.h"
+#include "xtime_l.h"
+#include "ui_counter_semantics.h"
 
 #define CORE_BASE       XPAR_MULTI_PROTOCOL_CORE_0_BASEADDR
 #define REG_SYS_ID      (CORE_BASE + 0x0000U)
@@ -17,6 +19,8 @@
 #define REG_LED_CTRL    (CORE_BASE + 0x0030U)
 #define REG_ARB_STATUS  (CORE_BASE + 0x0034U)
 #define REG_EXT_DROPPED (CORE_BASE + 0x0038U)
+#define REG_CORE_REJECTED (CORE_BASE + 0x1014U)
+#define COUNTER_POLL_TICKS ((uint64_t)COUNTS_PER_SECOND / 2U)
 
 #define EXPECTED_ID     0x4D505254U
 #define SCRATCH_TEST    0xA5A55A5AU
@@ -51,6 +55,10 @@ int main(void)
     PlatformUiStatus ui_status;
     PlatformUiPage page = PLATFORM_UI_PAGE_HOME;
     PlatformUiAction action;
+    XTime last_counter_poll;
+    XTime now;
+    u32 core_rejected;
+    u32 external_loss;
 
     memset(&capture_snapshot, 0, sizeof(capture_snapshot));
     memset(&live_snapshot, 0, sizeof(live_snapshot));
@@ -112,8 +120,8 @@ int main(void)
     ui_status.version = version;
     ui_status.capabilities = Xil_In32(REG_CAPABILITIES);
     ui_status.scratch = scratch;
-    ui_status.dropped_count = capture_snapshot.dropped_count;
-    ui_status.ext_dropped_count = Xil_In32(REG_EXT_DROPPED);
+    ui_status.core_rejected_count = Xil_In32(REG_CORE_REJECTED);
+    ui_status.external_loss_count = Xil_In32(REG_EXT_DROPPED);
     ui_status.arbitration_count = Xil_In32(REG_ARB_STATUS);
     ui_status.id_ok = (id == EXPECTED_ID) ? 1U : 0U;
     ui_status.version_ok = ((version & 0xFFFF0000U) == 0x00010000U) ? 1U : 0U;
@@ -124,8 +132,23 @@ int main(void)
     platform_ui_render_page(page, &ui_status,
                             capture_ok != 0U ? &capture_snapshot : 0);
     xil_printf("UI READY\r\n");
+    XTime_GetTime(&last_counter_poll);
 
     while (1) {
+        XTime_GetTime(&now);
+        if (ui_counter_poll_due((uint64_t)now, (uint64_t)last_counter_poll,
+                                COUNTER_POLL_TICKS)) {
+            last_counter_poll = now;
+            core_rejected = Xil_In32(REG_CORE_REJECTED);
+            external_loss = Xil_In32(REG_EXT_DROPPED);
+            if (ui_counter_changed(ui_status.core_rejected_count,
+                                   ui_status.external_loss_count,
+                                   core_rejected, external_loss)) {
+                ui_status.core_rejected_count = core_rejected;
+                ui_status.external_loss_count = external_loss;
+                platform_ui_update_counters(core_rejected, external_loss);
+            }
+        }
         action = (touch_ok != 0U) ? platform_ui_poll_action() :
                  PLATFORM_UI_ACTION_NONE;
         if (action == PLATFORM_UI_ACTION_HOME) {
@@ -145,7 +168,6 @@ int main(void)
         } else if (action == PLATFORM_UI_ACTION_CAPTURE_LIVE) {
             if (ui_status.capture_source != 0U) {
                 ui_status.capture_source = 0U;
-                ui_status.dropped_count = capture_snapshot.dropped_count;
                 platform_ui_set_event_cache(g_demo_cache.valid != 0U ?
                                             &g_demo_cache : 0);
                 xil_printf("EVENT SOURCE VIRTUAL\r\n");
@@ -163,7 +185,6 @@ int main(void)
                 if (capture_demo_cache_snapshot(&g_live_cache,
                                                 &live_snapshot) == XST_SUCCESS) {
                     ui_status.capture_source = 2U;
-                    ui_status.dropped_count = live_snapshot.dropped_count;
                     platform_ui_set_event_cache(&g_live_cache);
                     xil_printf("SPI SNAPSHOT READY: id=%lu count=%lu trigger=%lu\r\n",
                                (unsigned long)live_snapshot.snapshot_id,

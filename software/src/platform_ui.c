@@ -2,6 +2,7 @@
 #include "pixel_scroll.h"
 #include "event_view.h"
 #include "event_audit.h"
+#include "ui_counter_semantics.h"
 
 #include "font.h"
 #include "touch.h"
@@ -58,6 +59,7 @@ static u32 g_scroll_px;
 static u32 g_scroll_snapshot_id;
 static u8 g_render_pending;
 static u8 g_render_full;
+static u8 g_counter_render_pending;
 static u8 g_frame_pending;
 static XTime g_frame_switched_at;
 static u16 g_dirty_y0;
@@ -309,14 +311,17 @@ static u8 all_checks_passed(const PlatformUiStatus *status)
 {
     return (status->id_ok != 0U && status->version_ok != 0U &&
             status->scratch_ok != 0U && status->touch_ok != 0U &&
-            status->capture_ok != 0U && status->dropped_count == 0U &&
-            status->ext_dropped_count == 0U) ? 1U : 0U;
+            status->capture_ok != 0U &&
+            ui_counter_health_ok(status->external_loss_count)) ? 1U : 0U;
 }
 
 static void draw_header(const char *title, const PlatformUiStatus *status,
                         const CaptureDemoSnapshot *snapshot)
 {
     u32 state_bg = status->capture_ok != 0U ? C_ACTIVE : C_BUTTON;
+    const char *state = status->capture_ok == 0U ? "IDLE" :
+                        status->capture_source == 1U ? "ARMED" :
+                        status->capture_source == 2U ? "FROZEN" : "DEMO";
 
     fill(0U, 0U, 799U, 41U, C_HEADER);
     fill(0U, 40U, 799U, 41U, C_CYAN);
@@ -324,7 +329,7 @@ static void draw_header(const char *title, const PlatformUiStatus *status,
     text(116U, 13U, title, C_TEXT, C_HEADER);
 
     fill(582U, 7U, 670U, 34U, state_bg);
-    text(596U, 13U, status->capture_ok != 0U ? "TRIGGER" : "IDLE",
+    text(596U, 13U, state,
          status->capture_ok != 0U ? C_GREEN : C_WARN, state_bg);
     text(690U, 13U, "SNAP", C_MUTED, C_HEADER);
     dec32(730U, 13U, snapshot != 0 ? snapshot->snapshot_id : 0U,
@@ -438,12 +443,12 @@ static void render_home_page(const PlatformUiStatus *status,
     draw_value_badge(572U, 52U, 786U, 115U, "EVENTS", count, C_CYAN);
     draw_value_badge(572U, 124U, 786U, 187U, "TRIGGER INDEX", trigger,
                      C_TRIGGER);
-    draw_value_badge(572U, 196U, 786U, 259U, "CORE DROPS",
-                     status->dropped_count,
-                     status->dropped_count == 0U ? C_GREEN : C_WARN);
-    draw_value_badge(572U, 268U, 786U, 331U, "EXT DROPS",
-                     status->ext_dropped_count,
-                     status->ext_dropped_count == 0U ? C_GREEN : C_WARN);
+    draw_value_badge(572U, 196U, 786U, 259U, "CORE REJECTED",
+                     status->core_rejected_count, C_CYAN);
+    draw_value_badge(572U, 268U, 786U, 331U, "EXT LOSS",
+                     status->external_loss_count,
+                     ui_counter_health_ok(status->external_loss_count) ?
+                     C_GREEN : C_WARN);
     draw_badge(572U, 340U, 786U, 407U, "PLATFORM",
                all_checks_passed(status) != 0U ? "READY" : "ATTENTION",
                all_checks_passed(status) != 0U ? C_GREEN : C_WARN);
@@ -461,6 +466,16 @@ static void draw_check_row(u16 y, const char *label, u32 value, u8 passed)
          passed != 0U ? C_GREEN : C_RED, bg);
 }
 
+static void draw_info_row(u16 y, const char *label, u32 value)
+{
+    fill(22U, y, 548U, (u16)(y + 40U), C_PANEL);
+    outline(22U, y, 548U, (u16)(y + 40U), C_BORDER);
+    fill(22U, y, 27U, (u16)(y + 40U), C_CYAN);
+    text(40U, (u16)(y + 12U), label, C_TEXT, C_PANEL);
+    dec32(272U, (u16)(y + 12U), value, C_MUTED, C_PANEL);
+    text(486U, (u16)(y + 12U), "INFO", C_CYAN, C_PANEL);
+}
+
 static void render_self_test_page(const PlatformUiStatus *status,
                                   const CaptureDemoSnapshot *snapshot)
 {
@@ -474,10 +489,9 @@ static void render_self_test_page(const PlatformUiStatus *status,
                    status->touch_ok);
     draw_check_row(248U, "EVENT SNAPSHOT", (u32)status->capture_ok,
                    status->capture_ok);
-    draw_check_row(296U, "CORE DROP", status->dropped_count,
-                   status->dropped_count == 0U);
-    draw_check_row(344U, "EXTERNAL DROP", status->ext_dropped_count,
-                   status->ext_dropped_count == 0U);
+    draw_info_row(296U, "CORE REJECTED", status->core_rejected_count);
+    draw_check_row(344U, "EXTERNAL LOSS", status->external_loss_count,
+                   ui_counter_health_ok(status->external_loss_count));
 
     fill(560U, 56U, 786U, 392U, C_PANEL);
     outline(560U, 56U, 786U, 392U, passed != 0U ? C_GREEN : C_WARN);
@@ -518,8 +532,8 @@ static void draw_events_chrome(const PlatformUiStatus *status,
     text(292U, 60U, "TRIGGER", C_MUTED, C_PANEL);
     dec32(364U, 60U, snapshot != 0 ? snapshot->trigger_index : 0U,
           C_TRIGGER, C_PANEL);
-    text(460U, 60U, "DROP", C_MUTED, C_PANEL);
-    dec32(504U, 60U, status->dropped_count, C_GREEN, C_PANEL);
+    text(448U, 60U, "REJ", C_MUTED, C_PANEL);
+    dec32(488U, 60U, status->core_rejected_count, C_CYAN, C_PANEL);
     fill(580U, 53U, 781U, 81U, C_BUTTON);
     outline(580U, 53U, 781U, 81U, C_CYAN);
     text(616U, 60U,
@@ -660,6 +674,41 @@ void platform_ui_tick(void)
         }
         draw_navigation(g_requested_page, &g_requested_status);
         present_frame_region(0U, FB_H - 1U);
+        g_counter_render_pending = 0U;
+    } else if (g_counter_render_pending != 0U) {
+        if (g_requested_page == PLATFORM_UI_PAGE_HOME) {
+            draw_value_badge(572U, 196U, 786U, 259U, "CORE REJECTED",
+                             g_requested_status.core_rejected_count, C_CYAN);
+            draw_value_badge(572U, 268U, 786U, 331U, "EXT LOSS",
+                             g_requested_status.external_loss_count,
+                             ui_counter_health_ok(g_requested_status.external_loss_count) ?
+                             C_GREEN : C_WARN);
+            draw_badge(572U, 340U, 786U, 407U, "PLATFORM",
+                       all_checks_passed(&g_requested_status) != 0U ?
+                       "READY" : "ATTENTION",
+                       all_checks_passed(&g_requested_status) != 0U ?
+                       C_GREEN : C_WARN);
+            present_frame_region(196U, 407U);
+        } else if (g_requested_page == PLATFORM_UI_PAGE_SELF_TEST) {
+            draw_info_row(296U, "CORE REJECTED",
+                          g_requested_status.core_rejected_count);
+            draw_check_row(344U, "EXTERNAL LOSS",
+                           g_requested_status.external_loss_count,
+                           ui_counter_health_ok(g_requested_status.external_loss_count));
+            fill(560U, 56U, 786U, 150U, C_PANEL);
+            outline(560U, 56U, 786U, 150U,
+                    all_checks_passed(&g_requested_status) != 0U ? C_GREEN : C_WARN);
+            text(582U, 76U, "OVERALL STATUS", C_MUTED, C_PANEL);
+            text(606U, 112U,
+                 all_checks_passed(&g_requested_status) != 0U ? "READY" : "CHECK",
+                 all_checks_passed(&g_requested_status) != 0U ? C_GREEN : C_WARN,
+                 C_PANEL);
+            present_frame_region(56U, 392U);
+        } else {
+            draw_events_chrome(&g_requested_status, snapshot);
+            present_frame_region(0U, 120U);
+        }
+        g_counter_render_pending = 0U;
     } else if (g_requested_page == PLATFORM_UI_PAGE_EVENTS) {
         draw_events_region(snapshot);
         present_frame_region(EVENTS_Y0, EVENTS_Y1);
@@ -667,6 +716,17 @@ void platform_ui_tick(void)
     g_rendered_page = g_requested_page;
     g_render_pending = 0U;
     g_render_full = 0U;
+}
+
+void platform_ui_update_counters(u32 core_rejected_count,
+                                 u32 external_loss_count)
+{
+    if (g_requested_status.core_rejected_count == core_rejected_count &&
+        g_requested_status.external_loss_count == external_loss_count) return;
+    g_requested_status.core_rejected_count = core_rejected_count;
+    g_requested_status.external_loss_count = external_loss_count;
+    g_counter_render_pending = 1U;
+    g_render_pending = 1U;
 }
 
 void platform_ui_render_page(PlatformUiPage page,
@@ -778,7 +838,6 @@ void platform_ui_render_capture(const CaptureDemoSnapshot *snapshot,
     status.touch_ok = touch_ok;
     status.capture_ok = (snapshot != 0) ? 1U : 0U;
     status.led_on = led_on;
-    if (snapshot != 0) status.dropped_count = snapshot->dropped_count;
     platform_ui_render_page(PLATFORM_UI_PAGE_EVENTS, &status, snapshot);
 }
 
