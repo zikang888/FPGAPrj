@@ -31,5 +31,10 @@ turn into a continuous scrolling log.
 - SDK 2018.3 generated a fresh BSP in `.sdk_live_counter_validation` from the
   existing HDF; ARM application compiled and linked with no C errors. ELF
   SHA-256: `BF1524179320937EBE782D0624F11E2FD126403ADDE0112EC681129D6E821E87`.
-- On-board LCD counter update and scroll responsiveness: **pending** until
-  this commit is integrated and its matching ELF is downloaded to the AC820.
+- Integrated as `a8bef42` in `codex/fpga-ab-week2-c-integration`.
+  The first controlled ELF-only download stopped at its read-only PL ABI
+  precheck: A9 #0/#1 were enumerated as Running, but AXI `SYS_ID` at
+  `0x40000000` timed out. **No ELF download occurred.** The XSCT wrapper
+  returned process code 0 despite printing the Tcl error, so the process code
+  is not treated as a pass. LCD counter update and scroll responsiveness
+  remain **pending on-board verification** after PL/PS access is restored.

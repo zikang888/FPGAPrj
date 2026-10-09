@@ -186,6 +186,9 @@ void mc_board_app_poll(void)
         if (value == '\r' || value == '\n') {
             if (g_command_length > 0U) {
                 g_command[g_command_length] = '\0';
+                /* Echo only the completed line. Blocking TX after every RX
+                 * byte lets back-to-back 115200-baud input overrun USART1. */
+                console_write(g_command);
                 console_write("\r\n");
                 run_command(g_command);
                 g_command_length = 0U;
@@ -196,7 +199,6 @@ void mc_board_app_poll(void)
             }
         } else if (g_command_length + 1U < sizeof(g_command)) {
             g_command[g_command_length++] = (char)value;
-            (void)HAL_UART_Transmit(&huart1, &value, 1U, 50U);
         }
     }
 
