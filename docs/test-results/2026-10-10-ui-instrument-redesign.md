@@ -62,3 +62,30 @@ SPI 事务丢失。PL 计数每 0.5 秒轮询，在 HOME、SELF TEST、EVENTS、
    STM32 发一笔真实事务后看 HOME 字节轨迹和 EVENTS 六事件逐项对账。
    先前两笔 STM32 JEDEC 回读为 `FFFEFFFF`、`FFFFFFFF`，与预期不符，
    因此真实回读正确性尚未验收，不能由注入截图代替。
+
+## 当日实板续测：真实 SPI 闭环
+
+AC820 完整重上电后，使用匹配的 `multi_protocol_bd_wrapper.bit`、
+`ps7_init.tcl` 和上述 SHA-256 的 ELF 一次完成易失性 PL 配置、PS 初始化与
+应用下载。组合脚本回读 `SYS_ID=4D505254`、`VERSION=00010004`、
+`CAPABILITIES=0000000F`，打印 `ZYNQ_JTAG_PL_FIRST_TEST_DONE`；用户确认
+LCD 已显示新版 HOME。注意单独下载 PL 后再尝试读未初始化的 AXI 曾触发
+DAP AP transaction error，不能把“PL DONE=1”当作 PS 可访问的证据。
+
+HOME 帧缓存只读导出时显示 `ARMED / WAIT SPI`，因此彼时快照 count=0 是
+等待输入，而不是 DEMO 生成失败。随后在 COM4/115200 向 STM32 发送
+`spi jedec 1`：STM32 回应 `tx=9F000000`、`data=FFEF4018`、
+`result=0`、1/1 passed。PL 冻结快照 `STATUS=2`、`COUNT=6`，原始事件
+依次为 START、四条 SPI DATA、END，同一 transaction ID 为 1；DATA
+flags 依次为 `FF9F`、`EF00`、`4000`、`1800`，与 TX/RX 逐字节一致。
+全局 SPI 统计为 events=6、starts=1、data=4、ends=1，外部丢失和
+FRAME/BOUNDARY/DUPLICATE/SEQUENCE 四项错误均为 0，脚本输出
+`SPI_ACCEPTANCE_PASS`。
+
+再次只读导出 LCD 双帧缓存，两帧均显示 `FROZEN / REAL SPI`、
+`EXTERNAL LOSS 0`，HOME 的 TX `9F 00 00 00`、RX `FF EF 40 18` 和
+数字轨迹正常，无可见遮挡。这是**真实 STM32→PL→PS→LCD** 数据，不是
+前述 RAM 注入截图；原始 PNG 保存在忽略目录
+`.sdk_ui_redesign_validation/frame0_real_spi.png` 和 `frame1_real_spi.png`。
+实体触摸进入 EVENTS/ERRORS/SELF TEST 的最后一轮人工观察尚待回报，
+不能由帧缓存 HOME 截图代替。
