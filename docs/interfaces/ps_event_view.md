@@ -56,3 +56,12 @@ ERROR 代表捕获到了故障事件，不会被误报为快照元数据损坏�
 原始 flags 和事务号；再依据成员 C 批准的协议字段语义增加专项检查。
 不能只凭本宿主测试宣称这些协议链路完成。CAN 是否进入首版由独立
 电气/资源评审决定。
+
+## HOME 的 SPI 字节轨迹（2026-10-10）
+
+`software/src/spi_trace.h` 仅对真实冻结快照查找同一事务的 START、
+四条有效 SPI DATA 和 END，并提取 MOSI/MISO 字节供 HOME 绘图。图上
+`DECODED - NOT SAMPLED` 表示按字节位序重建的数字电平，不含真实时间轴或
+电压采样；DEMO 事件不会生成波形。宿主测试为
+`software/tests/spi_trace_test.c`。真实 STM32 回读正确性必须另外对账，
+不能只以该绘图或宿主测试作为验收。

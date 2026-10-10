@@ -21,4 +21,16 @@ static inline int ui_counter_changed(uint32_t old_core, uint32_t old_external,
     return old_core != new_core || old_external != new_external;
 }
 
+/* A rejected event in a frozen one-shot snapshot is informational. The four
+ * SPI checker faults and producer-side loss are actual monitor faults. */
+static inline int ui_monitor_errors_present(uint32_t external_loss,
+                                            uint32_t frame_errors,
+                                            uint32_t boundary_errors,
+                                            uint32_t duplicates,
+                                            uint32_t sequence_errors)
+{
+    return (external_loss | frame_errors | boundary_errors |
+            duplicates | sequence_errors) != 0U;
+}
+
 #endif

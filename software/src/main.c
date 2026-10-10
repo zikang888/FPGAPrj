@@ -19,6 +19,10 @@
 #define REG_LED_CTRL    (CORE_BASE + 0x0030U)
 #define REG_ARB_STATUS  (CORE_BASE + 0x0034U)
 #define REG_EXT_DROPPED (CORE_BASE + 0x0038U)
+#define REG_SPI_FRAME_ERRORS (CORE_BASE + 0x004CU)
+#define REG_SPI_BOUNDARY_ERRORS (CORE_BASE + 0x0050U)
+#define REG_SPI_DUPLICATES (CORE_BASE + 0x0054U)
+#define REG_SPI_SEQUENCE_ERRORS (CORE_BASE + 0x0058U)
 #define REG_CORE_REJECTED (CORE_BASE + 0x1014U)
 #define COUNTER_POLL_TICKS ((uint64_t)COUNTS_PER_SECOND / 2U)
 
@@ -45,7 +49,6 @@ int main(void)
     u32 id;
     u32 version;
     u32 scratch;
-    u8 led_on = 0U;
     u8 touch_ok = 0U;
     u8 capture_ok = 0U;
     CaptureDemoSnapshot capture_snapshot;
@@ -59,6 +62,10 @@ int main(void)
     XTime now;
     u32 core_rejected;
     u32 external_loss;
+    u32 spi_frame_errors;
+    u32 spi_boundary_errors;
+    u32 spi_duplicates;
+    u32 spi_sequence_errors;
 
     memset(&capture_snapshot, 0, sizeof(capture_snapshot));
     memset(&live_snapshot, 0, sizeof(live_snapshot));
@@ -122,13 +129,16 @@ int main(void)
     ui_status.scratch = scratch;
     ui_status.core_rejected_count = Xil_In32(REG_CORE_REJECTED);
     ui_status.external_loss_count = Xil_In32(REG_EXT_DROPPED);
+    ui_status.spi_frame_errors = Xil_In32(REG_SPI_FRAME_ERRORS);
+    ui_status.spi_boundary_errors = Xil_In32(REG_SPI_BOUNDARY_ERRORS);
+    ui_status.spi_duplicates = Xil_In32(REG_SPI_DUPLICATES);
+    ui_status.spi_sequence_errors = Xil_In32(REG_SPI_SEQUENCE_ERRORS);
     ui_status.arbitration_count = Xil_In32(REG_ARB_STATUS);
     ui_status.id_ok = (id == EXPECTED_ID) ? 1U : 0U;
     ui_status.version_ok = ((version & 0xFFFF0000U) == 0x00010000U) ? 1U : 0U;
     ui_status.scratch_ok = (scratch == SCRATCH_TEST) ? 1U : 0U;
     ui_status.touch_ok = touch_ok;
     ui_status.capture_ok = capture_ok;
-    ui_status.led_on = led_on;
     platform_ui_render_page(page, &ui_status,
                             capture_ok != 0U ? &capture_snapshot : 0);
     xil_printf("UI READY\r\n");
@@ -141,12 +151,24 @@ int main(void)
             last_counter_poll = now;
             core_rejected = Xil_In32(REG_CORE_REJECTED);
             external_loss = Xil_In32(REG_EXT_DROPPED);
+            spi_frame_errors = Xil_In32(REG_SPI_FRAME_ERRORS);
+            spi_boundary_errors = Xil_In32(REG_SPI_BOUNDARY_ERRORS);
+            spi_duplicates = Xil_In32(REG_SPI_DUPLICATES);
+            spi_sequence_errors = Xil_In32(REG_SPI_SEQUENCE_ERRORS);
             if (ui_counter_changed(ui_status.core_rejected_count,
                                    ui_status.external_loss_count,
-                                   core_rejected, external_loss)) {
+                                   core_rejected, external_loss) ||
+                ui_status.spi_frame_errors != spi_frame_errors ||
+                ui_status.spi_boundary_errors != spi_boundary_errors ||
+                ui_status.spi_duplicates != spi_duplicates ||
+                ui_status.spi_sequence_errors != spi_sequence_errors) {
                 ui_status.core_rejected_count = core_rejected;
                 ui_status.external_loss_count = external_loss;
-                platform_ui_update_counters(core_rejected, external_loss);
+                ui_status.spi_frame_errors = spi_frame_errors;
+                ui_status.spi_boundary_errors = spi_boundary_errors;
+                ui_status.spi_duplicates = spi_duplicates;
+                ui_status.spi_sequence_errors = spi_sequence_errors;
+                platform_ui_update_counters(&ui_status);
             }
         }
         action = (touch_ok != 0U) ? platform_ui_poll_action() :
@@ -160,11 +182,9 @@ int main(void)
         } else if (action == PLATFORM_UI_ACTION_EVENTS) {
             page = PLATFORM_UI_PAGE_EVENTS;
             xil_printf("UI PAGE EVENTS\r\n");
-        } else if (action == PLATFORM_UI_ACTION_LED_TOGGLE) {
-            led_on ^= 1U;
-            Xil_Out32(REG_LED_CTRL, (u32)led_on);
-            ui_status.led_on = led_on;
-            xil_printf("LED %s\r\n", (led_on != 0U) ? "ON" : "OFF");
+        } else if (action == PLATFORM_UI_ACTION_ERRORS) {
+            page = PLATFORM_UI_PAGE_ERRORS;
+            xil_printf("UI PAGE ERRORS\r\n");
         } else if (action == PLATFORM_UI_ACTION_CAPTURE_LIVE) {
             if (ui_status.capture_source != 0U) {
                 ui_status.capture_source = 0U;

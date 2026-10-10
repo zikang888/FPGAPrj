@@ -33,6 +33,8 @@ configparams force-mem-access 0
 
 puts "STOP_CPU0"
 stop
+puts "RESET_CPU0_FOR_CLEAN_ELF_START"
+rst -processor
 puts "DOWNLOAD_ELF $elf_file"
 dow $elf_file
 puts "RUN_CPU0"

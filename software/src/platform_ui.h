@@ -7,7 +7,8 @@
 typedef enum {
     PLATFORM_UI_PAGE_HOME = 0,
     PLATFORM_UI_PAGE_SELF_TEST = 1,
-    PLATFORM_UI_PAGE_EVENTS = 2
+    PLATFORM_UI_PAGE_EVENTS = 2,
+    PLATFORM_UI_PAGE_ERRORS = 3
 } PlatformUiPage;
 
 typedef enum {
@@ -15,7 +16,7 @@ typedef enum {
     PLATFORM_UI_ACTION_HOME,
     PLATFORM_UI_ACTION_SELF_TEST,
     PLATFORM_UI_ACTION_EVENTS,
-    PLATFORM_UI_ACTION_LED_TOGGLE,
+    PLATFORM_UI_ACTION_ERRORS,
     PLATFORM_UI_ACTION_CAPTURE_LIVE
 } PlatformUiAction;
 
@@ -26,6 +27,10 @@ typedef struct {
     u32 scratch;
     u32 core_rejected_count;
     u32 external_loss_count;
+    u32 spi_frame_errors;
+    u32 spi_boundary_errors;
+    u32 spi_duplicates;
+    u32 spi_sequence_errors;
     u32 arbitration_count;
     u8 id_ok;
     u8 version_ok;
@@ -40,8 +45,7 @@ typedef struct {
 int platform_ui_init(void);
 void platform_ui_set_event_cache(const CaptureDemoCache *cache);
 void platform_ui_tick(void);
-void platform_ui_update_counters(u32 core_rejected_count,
-                                 u32 external_loss_count);
+void platform_ui_update_counters(const PlatformUiStatus *status);
 void platform_ui_render_page(PlatformUiPage page,
                              const PlatformUiStatus *status,
                              const CaptureDemoSnapshot *snapshot);

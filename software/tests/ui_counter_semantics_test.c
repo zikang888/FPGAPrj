@@ -18,5 +18,8 @@ int main(void)
     assert(!ui_counter_poll_due(499U, 0U, 500U));
     assert(ui_counter_poll_due(500U, 0U, 500U));
     assert(ui_counter_poll_due(2U, UINT64_MAX - 2U, 4U));
+    assert(!ui_monitor_errors_present(0U, 0U, 0U, 0U, 0U));
+    assert(ui_monitor_errors_present(1U, 0U, 0U, 0U, 0U));
+    assert(ui_monitor_errors_present(0U, 0U, 1U, 0U, 0U));
     return 0;
 }
