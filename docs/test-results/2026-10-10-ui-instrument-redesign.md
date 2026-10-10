@@ -89,3 +89,34 @@ FRAME/BOUNDARY/DUPLICATE/SEQUENCE 四项错误均为 0，脚本输出
 `.sdk_ui_redesign_validation/frame0_real_spi.png` 和 `frame1_real_spi.png`。
 实体触摸进入 EVENTS/ERRORS/SELF TEST 的最后一轮人工观察尚待回报，
 不能由帧缓存 HOME 截图代替。
+
+用户随后确认 EVENTS 六事件与滚动、ERRORS 零故障页、SELF TEST READY
+三项触摸观察均正常。上述真实 SPI 闭环及界面回归因此完成。
+
+## 错误事件目录接入与 ERRORS 页第二轮布局
+
+队友提供的候选故障列表已整理为
+`docs/interfaces/error_event_catalog.md` 和纯 C99
+`software/src/error_model.h`：20 个软件错误 ID、证据来源与
+“未测量”状态。仅 `SPI PARTIAL BYTE` 绑定当前 PL 的
+`SPI_FRAME_ERROR_COUNT`；其余候选不会被伪装成计数为零的已检测项。
+页面另保留真实的 EXTERNAL LOSS、BND/DUP/SEQ 和快照 ERROR 诊断。
+
+严格 C99 宿主回归（`error_model`、`spi_trace`、`ui_counter_semantics`、
+`event_view`、`event_audit`、`pixel_scroll`）全部通过。SDK 2018.3
+首次重建 ELF SHA-256 为
+`F68DE76013E53DD6E9DCD47209D815818C02764D8555BFBCB1457F72ADDFB486`；
+它通过 PL ABI 预检下载，重启后 PL 快照 count=25。随后仅改 PS RAM
+当前页号进行 ERRORS 布局测试：板上导出的双帧均无文字遮挡，四个已测
+区域与 `-- = NOT MEASURED` 的候选项分明。测试注入后已经再次下载
+正式 ELF，PL 快照又回到 25 条 DEMO。RAM 注入**不是**故障检测上板验收；
+SPI 半字节故障仍需队友补 1–7 个 SCLK 后释放 CS 的受控测试固件。
+
+补充语义检查：AT24C256 写周期的 BUSY NACK 可能是正常暂态，接口将其
+标为 INFO，不凭该计数把全局状态置为故障。六项严格 C99 宿主测试再次
+全部通过；最终 ELF SHA-256 为
+`6DE98916F42E52A37C28166D0C26588D92547D498E60913A08EDEEA213BBB92A`。
+它通过 ELF-only ABI 预检再次下载，PL `SYS_ID/VERSION/CAPABILITIES`
+匹配，最终快照 count=25，板上已恢复正式 DEMO 应用而非调试 RAM 状态。
+新布局的实体触摸命中尚未单独核对；这一轮板端页面视觉验证使用
+RAM-only 页号注入，不能说成真实触摸点击。

@@ -3,6 +3,7 @@
 
 #include "xil_types.h"
 #include "capture_demo.h"
+#include "error_model.h"
 
 typedef enum {
     PLATFORM_UI_PAGE_HOME = 0,
@@ -32,6 +33,7 @@ typedef struct {
     u32 spi_duplicates;
     u32 spi_sequence_errors;
     u32 arbitration_count;
+    ErrorModel error_model;
     u8 id_ok;
     u8 version_ok;
     u8 scratch_ok;

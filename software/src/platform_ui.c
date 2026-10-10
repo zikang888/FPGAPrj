@@ -314,6 +314,7 @@ static u8 all_checks_passed(const PlatformUiStatus *status)
             status->scratch_ok != 0U && status->touch_ok != 0U &&
             status->capture_ok != 0U &&
             (g_event_audit_valid == 0U || g_event_audit.errors == 0U) &&
+            !error_model_has_fault(&status->error_model) &&
             !ui_monitor_errors_present(status->external_loss_count,
                                        status->spi_frame_errors,
                                        status->spi_boundary_errors,
@@ -511,24 +512,60 @@ static void render_self_test_page(const PlatformUiStatus *status,
 }
 
 static void draw_error_metric(u16 x0, u16 x1, u16 y,
-                              const char *label, u32 value, u8 is_fault)
+                              const char *label, u32 value, u8 known)
 {
-    u32 accent = is_fault == 0U ? C_CYAN :
+    u32 accent = known == 0U ? C_MUTED :
                  value == 0U ? C_GREEN : C_RED;
-    fill(x0, y, x1, (u16)(y + 52U), C_PANEL);
-    outline(x0, y, x1, (u16)(y + 52U), C_BORDER);
-    fill(x0, y, (u16)(x0 + 4U), (u16)(y + 52U), accent);
-    text((u16)(x0 + 14U), (u16)(y + 7U), label, C_MUTED, C_PANEL);
-    dec32((u16)(x0 + 14U), (u16)(y + 29U), value, accent, C_PANEL);
-    text((u16)(x1 - 65U), (u16)(y + 29U),
-         is_fault == 0U ? "INFO" : value == 0U ? "OK" : "FAULT",
+    fill(x0, y, x1, (u16)(y + 69U), C_PANEL);
+    outline(x0, y, x1, (u16)(y + 69U), C_BORDER);
+    fill(x0, y, (u16)(x0 + 4U), (u16)(y + 69U), accent);
+    text((u16)(x0 + 14U), (u16)(y + 10U), label, C_MUTED, C_PANEL);
+    if (known != 0U)
+        dec32((u16)(x0 + 14U), (u16)(y + 36U), value, accent, C_PANEL);
+    else
+        text((u16)(x0 + 14U), (u16)(y + 36U), "--", accent, C_PANEL);
+    text((u16)(x1 - 90U), (u16)(y + 36U),
+         known == 0U ? "NO DATA" : value == 0U ? "OK" : "FAULT",
          accent, C_PANEL);
+}
+
+static void draw_spi_checker_tile(const PlatformUiStatus *status)
+{
+    u8 fault = status->spi_boundary_errors != 0U ||
+               status->spi_duplicates != 0U ||
+               status->spi_sequence_errors != 0U;
+    u32 accent = fault != 0U ? C_RED : C_GREEN;
+    fill(14U, 207U, 390U, 276U, C_PANEL);
+    outline(14U, 207U, 390U, 276U, C_BORDER);
+    fill(14U, 207U, 18U, 276U, accent);
+    text(28U, 217U, "SPI EVENT CHECK", C_MUTED, C_PANEL);
+    text(28U, 243U, "BND", C_MUTED, C_PANEL);
+    dec32(65U, 243U, status->spi_boundary_errors, accent, C_PANEL);
+    text(129U, 243U, "DUP", C_MUTED, C_PANEL);
+    dec32(166U, 243U, status->spi_duplicates, accent, C_PANEL);
+    text(230U, 243U, "SEQ", C_MUTED, C_PANEL);
+    dec32(267U, 243U, status->spi_sequence_errors, accent, C_PANEL);
+}
+
+static void draw_planned_case(u16 x, u16 y, const char *label,
+                              const ErrorModel *model, ErrorCode code)
+{
+    ErrorObservation reading = error_model_get(model, code);
+    text(x, y, label, C_MUTED, C_PANEL);
+    if (reading.origin == ERROR_ORIGIN_NONE)
+        text((u16)(x + 265U), y, "--", C_MUTED, C_PANEL);
+    else
+        dec32((u16)(x + 265U), y, reading.count,
+              reading.count == 0U ? C_GREEN : C_RED, C_PANEL);
 }
 
 static void render_errors_page(const PlatformUiStatus *status,
                                const CaptureDemoSnapshot *snapshot)
 {
+    ErrorObservation partial = error_model_get(&status->error_model,
+                                                ERROR_SPI_PARTIAL_BYTE);
     u32 snapshot_errors = 0U;
+    u8 snapshot_known = 0U;
     u8 fault;
     const char *source = status->capture_source == 1U ? "ARMED" :
                          status->capture_source == 2U ? "REAL SPI" : "DEMO";
@@ -536,42 +573,45 @@ static void render_errors_page(const PlatformUiStatus *status,
         g_event_cache->valid != 0U && g_event_audit_valid != 0U &&
         g_event_cache->snapshot_id == snapshot->snapshot_id) {
         snapshot_errors = g_event_audit.errors;
+        snapshot_known = 1U;
     }
     fault = (u8)(ui_monitor_errors_present(status->external_loss_count,
                                            status->spi_frame_errors,
                                            status->spi_boundary_errors,
                                            status->spi_duplicates,
                                            status->spi_sequence_errors) ||
+                 error_model_has_fault(&status->error_model) ||
                  snapshot_errors != 0U);
     draw_header("ERROR MONITOR", status, snapshot);
     fill(14U, 52U, 786U, 116U, C_PANEL);
     outline(14U, 52U, 786U, 116U, fault != 0U ? C_RED : C_GREEN);
     text(30U, 61U, "MONITOR STATUS", C_MUTED, C_PANEL);
-    text(30U, 86U, fault != 0U ? "ERROR DETECTED" : "NO MONITOR ERRORS",
+    text(30U, 86U, fault != 0U ? "ERROR DETECTED" : "NO DETECTED ERRORS",
          fault != 0U ? C_RED : C_GREEN, C_PANEL);
     text(592U, 61U, "SOURCE", C_MUTED, C_PANEL);
     text(592U, 86U, source, C_CYAN, C_PANEL);
 
-    draw_error_metric(14U, 390U, 128U, "EXTERNAL LOSS",
+    draw_error_metric(14U, 390U, 128U, "SPI PARTIAL BYTE",
+                      partial.count, partial.origin != ERROR_ORIGIN_NONE);
+    draw_error_metric(406U, 786U, 128U, "EXTERNAL EVENT LOSS",
                       status->external_loss_count, 1U);
-    draw_error_metric(14U, 390U, 190U, "SPI FRAME ERROR",
-                      status->spi_frame_errors, 1U);
-    draw_error_metric(14U, 390U, 252U, "SPI BOUNDARY ERROR",
-                      status->spi_boundary_errors, 1U);
-    draw_error_metric(14U, 390U, 314U, "SPI DUPLICATE",
-                      status->spi_duplicates, 1U);
+    draw_spi_checker_tile(status);
+    draw_error_metric(406U, 786U, 207U, "SNAPSHOT ERROR EVENTS",
+                      snapshot_errors, snapshot_known);
 
-    draw_error_metric(406U, 786U, 128U, "SPI SEQUENCE ERROR",
-                      status->spi_sequence_errors, 1U);
-    draw_error_metric(406U, 786U, 190U, "SNAPSHOT ERROR EVENTS",
-                      snapshot_errors, 1U);
-    draw_error_metric(406U, 786U, 252U, "CORE REJECTED",
-                      status->core_rejected_count, 0U);
-    fill(406U, 314U, 786U, 407U, C_PANEL);
-    outline(406U, 314U, 786U, 407U, C_BORDER);
-    text(421U, 330U, "CORE REJECTED IS INFO", C_CYAN, C_PANEL);
-    text(421U, 356U, "FROZEN SNAPSHOTS REFUSE", C_MUTED, C_PANEL);
-    text(421U, 377U, "LATER EVENTS BY DESIGN", C_MUTED, C_PANEL);
+    fill(14U, 288U, 786U, 407U, C_PANEL);
+    outline(14U, 288U, 786U, 407U, C_BORDER);
+    text(28U, 297U, "MORE FAULT CASES  (-- = NOT MEASURED)", C_CYAN, C_PANEL);
+    draw_planned_case(28U, 323U, "SPI SHORT TXN", &status->error_model,
+                      ERROR_SPI_SHORT_TRANSACTION);
+    draw_planned_case(420U, 323U, "SPI BAD RESPONSE", &status->error_model,
+                      ERROR_SPI_RESPONSE_MISMATCH);
+    draw_planned_case(28U, 346U, "UART STOP BIT", &status->error_model,
+                      ERROR_UART_STOP_BIT);
+    draw_planned_case(420U, 346U, "I2C ADDRESS NACK", &status->error_model,
+                      ERROR_I2C_ADDRESS_NACK);
+    text(28U, 378U, "OTHER SPI / UART / I2C / CAN CASES: INTERFACE READY",
+         C_MUTED, C_PANEL);
 }
 
 static void draw_events_chrome(const PlatformUiStatus *status,
@@ -786,7 +826,9 @@ void platform_ui_update_counters(const PlatformUiStatus *status)
         g_requested_status.spi_frame_errors == status->spi_frame_errors &&
         g_requested_status.spi_boundary_errors == status->spi_boundary_errors &&
         g_requested_status.spi_duplicates == status->spi_duplicates &&
-        g_requested_status.spi_sequence_errors == status->spi_sequence_errors)
+        g_requested_status.spi_sequence_errors == status->spi_sequence_errors &&
+        error_model_equal(&g_requested_status.error_model,
+                          &status->error_model))
         return;
     g_requested_status.core_rejected_count = status->core_rejected_count;
     g_requested_status.external_loss_count = status->external_loss_count;
@@ -794,6 +836,7 @@ void platform_ui_update_counters(const PlatformUiStatus *status)
     g_requested_status.spi_boundary_errors = status->spi_boundary_errors;
     g_requested_status.spi_duplicates = status->spi_duplicates;
     g_requested_status.spi_sequence_errors = status->spi_sequence_errors;
+    g_requested_status.error_model = status->error_model;
     g_counter_render_pending = 1U;
     g_render_pending = 1U;
 }

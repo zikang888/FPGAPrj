@@ -70,6 +70,7 @@ int main(void)
     memset(&capture_snapshot, 0, sizeof(capture_snapshot));
     memset(&live_snapshot, 0, sizeof(live_snapshot));
     memset(&ui_status, 0, sizeof(ui_status));
+    error_model_init(&ui_status.error_model);
 
     if (uart_init() != XST_SUCCESS) {
         while (1) {
@@ -130,6 +131,11 @@ int main(void)
     ui_status.core_rejected_count = Xil_In32(REG_CORE_REJECTED);
     ui_status.external_loss_count = Xil_In32(REG_EXT_DROPPED);
     ui_status.spi_frame_errors = Xil_In32(REG_SPI_FRAME_ERRORS);
+    /* The existing PL frame-error counter specifically means CS rose with
+     * 1..7 bits pending. No other listed protocol fault is wired yet. */
+    (void)error_model_report(&ui_status.error_model,
+                             ERROR_SPI_PARTIAL_BYTE, ERROR_ORIGIN_PL,
+                             ui_status.spi_frame_errors);
     ui_status.spi_boundary_errors = Xil_In32(REG_SPI_BOUNDARY_ERRORS);
     ui_status.spi_duplicates = Xil_In32(REG_SPI_DUPLICATES);
     ui_status.spi_sequence_errors = Xil_In32(REG_SPI_SEQUENCE_ERRORS);
@@ -165,6 +171,9 @@ int main(void)
                 ui_status.core_rejected_count = core_rejected;
                 ui_status.external_loss_count = external_loss;
                 ui_status.spi_frame_errors = spi_frame_errors;
+                (void)error_model_report(&ui_status.error_model,
+                                         ERROR_SPI_PARTIAL_BYTE,
+                                         ERROR_ORIGIN_PL, spi_frame_errors);
                 ui_status.spi_boundary_errors = spi_boundary_errors;
                 ui_status.spi_duplicates = spi_duplicates;
                 ui_status.spi_sequence_errors = spi_sequence_errors;
