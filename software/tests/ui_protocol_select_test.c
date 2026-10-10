@@ -22,5 +22,13 @@ int main(void)
     assert(!ui_protocol_from_touch(200U, 130U, &selected));
     assert(!ui_protocol_from_touch(30U, 180U, &selected));
     assert(!ui_protocol_from_touch(30U, 120U, 0));
+    assert(ui_protocol_event_matches(UI_PROTOCOL_SPI, 2U, 0));
+    assert(!ui_protocol_event_matches(UI_PROTOCOL_SPI, 1U, 0));
+    assert(ui_protocol_event_matches(UI_PROTOCOL_UART, 1U, 0));
+    assert(ui_protocol_event_matches(UI_PROTOCOL_I2C, 3U, 0));
+    assert(ui_protocol_event_matches(UI_PROTOCOL_CAN, 4U, 0));
+    assert(ui_protocol_event_matches(UI_PROTOCOL_SPI, 0U, 1));
+    assert(!ui_protocol_event_matches(UI_PROTOCOL_UART, 0U, 1));
+    assert(!ui_protocol_event_matches(UI_PROTOCOL_SPI, 0U, 0));
     return 0;
 }

@@ -28,6 +28,20 @@ static inline int ui_protocol_live(UiProtocol protocol, uint32_t capabilities)
     return protocol == UI_PROTOCOL_SPI && (capabilities & (1U << 2)) != 0U;
 }
 
+/* Event ABI IDs differ from UI order: UART=1, SPI=2, I2C=3, CAN=4.
+ * Virtual demo rows (ID 0) are visible only in the SPI demo view and must
+ * always be labelled as demonstration data, never as SPI bus traffic. */
+static inline int ui_protocol_event_matches(UiProtocol selected,
+                                            uint8_t event_protocol,
+                                            int demo_snapshot)
+{
+    static const uint8_t event_id[UI_PROTOCOL_COUNT] = {2U, 1U, 3U, 4U};
+    if ((unsigned int)selected >= UI_PROTOCOL_COUNT) return 0;
+    if (demo_snapshot != 0)
+        return selected == UI_PROTOCOL_SPI && event_protocol == 0U;
+    return event_protocol == event_id[selected];
+}
+
 static inline uint16_t ui_protocol_tab_left(UiProtocol protocol)
 {
     static const uint16_t left[UI_PROTOCOL_COUNT] = {14U, 205U, 396U, 587U};

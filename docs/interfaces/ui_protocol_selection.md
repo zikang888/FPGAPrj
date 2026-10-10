@@ -13,9 +13,17 @@ HOME 上的 SPI / UART / I2C / CAN 四个标签是**运行时界面选择**，�
 | CAN | `NOT WIRED` | 同上；CAN 仍是首版扩展项 |
 
 顶部 `PLATFORM READY/CHECK` 表示板级健康，不表示所选协议已接入；
-`SPI CAPTURE` 是当前唯一真实监听器的状态。EVENTS 页面仍显示统一
-快照里的**所有**协议事件，不随 HOME 标签暗中过滤；当选择非 SPI
-协议时，EVENTS 的 SPI 武装按钮显示 `SELECT SPI` 并禁止点击。
+`SPI CAPTURE` 是当前唯一真实监听器的状态。所有页面页眉显示
+`VIEW <协议>`；非 SPI 的页眉状态为 `OFFLINE`。SELF TEST 中
+`BOARD HEALTH` 仍检查公共硬件，右下角另标所选监听器是否接入，
+避免把板级 READY 当作协议可用。
+
+EVENTS 对真实快照按事件 ABI 协议 ID 过滤，滚动范围和 `MATCH` 数量
+只统计所选协议；SPI 的虚拟自检快照单独标为 `DEMO`，并不被说成
+真实 SPI 事件。未接入的协议明确显示无实时事件，禁用 SPI 武装按钮。
+ERRORS 对 SPI 展示已连接的检测项；对 UART/I²C/CAN 显示检测器未
+连接，不把未测量误写成零错误。`GLOBAL EXTERNAL LOSS` 单独标注为
+全局计数，不代表所选协议的诊断结果。
 
 未来接入 UART/I²C/CAN 时，先批准对应 PL 能力位、输入引脚、事件 ABI
 和故障规则，再实现真实 listener 与抓取路径，最后更新
