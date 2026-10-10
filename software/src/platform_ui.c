@@ -376,14 +376,34 @@ static void draw_home_status(const PlatformUiStatus *status)
                          status->capture_source == 2U ? "REAL SPI" : "DEMO";
     fill(14U, 52U, 786U, 100U, C_PANEL);
     outline(14U, 52U, 786U, 100U, C_BORDER);
-    text(30U, 59U, "MONITOR", C_MUTED, C_PANEL);
+    text(30U, 59U, "PLATFORM", C_MUTED, C_PANEL);
     text(30U, 78U, all_checks_passed(status) != 0U ? "READY" : "CHECK",
          all_checks_passed(status) != 0U ? C_GREEN : C_WARN, C_PANEL);
-    text(286U, 59U, "SOURCE", C_MUTED, C_PANEL);
+    text(286U, 59U, "SPI CAPTURE", C_MUTED, C_PANEL);
     text(286U, 78U, source, C_CYAN, C_PANEL);
     text(574U, 59U, "EXTERNAL LOSS", C_MUTED, C_PANEL);
     dec32(574U, 78U, status->external_loss_count,
           status->external_loss_count == 0U ? C_GREEN : C_WARN, C_PANEL);
+}
+
+static void draw_protocol_tabs(const PlatformUiStatus *status)
+{
+    unsigned int i;
+    for (i = 0U; i < UI_PROTOCOL_COUNT; ++i) {
+        UiProtocol protocol = (UiProtocol)i;
+        u16 x0 = ui_protocol_tab_left(protocol);
+        u16 x1 = ui_protocol_tab_right(protocol);
+        u8 active = status->selected_protocol == protocol;
+        u8 live = (u8)ui_protocol_live(protocol, status->capabilities);
+        u32 bg = active != 0U ? C_ACTIVE : C_BUTTON;
+        fill(x0, 112U, x1, 166U, bg);
+        outline(x0, 112U, x1, 166U, active != 0U ? C_CYAN : C_BORDER);
+        fill(x0, 112U, x1, 115U, active != 0U ? C_CYAN : C_BORDER);
+        text((u16)(x0 + 14U), 123U, ui_protocol_name(protocol), C_TEXT, bg);
+        text((u16)(x0 + 14U), 145U,
+             live != 0U ? "PL READY" : "NOT WIRED",
+             live != 0U ? C_GREEN : C_MUTED, bg);
+    }
 }
 
 static void draw_spi_wave_lane(const u8 bytes[SPI_TRACE_BYTES], u16 high_y,
@@ -408,7 +428,8 @@ static void render_home_page(const PlatformUiStatus *status,
     u32 byte_index;
     int have_trace = 0;
 
-    if (status->capture_source == 2U && g_event_cache != 0 &&
+    if (status->selected_protocol == UI_PROTOCOL_SPI &&
+        status->capture_source == 2U && g_event_cache != 0 &&
         g_event_cache->valid != 0U && snapshot != 0 &&
         g_event_cache->snapshot_id == snapshot->snapshot_id) {
         have_trace = spi_trace_extract(&g_event_cache->event_word[0][0],
@@ -417,41 +438,54 @@ static void render_home_page(const PlatformUiStatus *status,
 
     draw_header("PROTOCOL MONITOR", status, snapshot);
     draw_home_status(status);
-    fill(14U, 112U, 786U, 407U, C_PANEL);
-    outline(14U, 112U, 786U, 407U, C_BORDER);
-    text(30U, 126U, "SPI BYTE TRACE", C_CYAN, C_PANEL);
-    text(302U, 126U, "DECODED - NOT SAMPLED", C_MUTED, C_PANEL);
-    hline(30U, 770U, 160U, C_BORDER);
+    draw_protocol_tabs(status);
+    fill(14U, 176U, 786U, 407U, C_PANEL);
+    outline(14U, 176U, 786U, 407U, C_BORDER);
+    if (status->selected_protocol != UI_PROTOCOL_SPI) {
+        text(30U, 190U, ui_protocol_name(status->selected_protocol),
+             C_CYAN, C_PANEL);
+        text(92U, 190U, "PROTOCOL VIEW", C_MUTED, C_PANEL);
+        hline(30U, 770U, 214U, C_BORDER);
+        text(246U, 248U, "PL LISTENER NOT CONNECTED", C_TEXT, C_PANEL);
+        text(226U, 278U, "SELECTION SAVED - NO LIVE INPUT", C_CYAN, C_PANEL);
+        text(210U, 310U, "EVENTS SHOW THE GLOBAL SNAPSHOT", C_MUTED, C_PANEL);
+        return;
+    }
+    text(30U, 190U, "SPI BYTE TRACE", C_CYAN, C_PANEL);
+    text(302U, 190U, "DECODED - NOT SAMPLED", C_MUTED, C_PANEL);
+    hline(30U, 770U, 214U, C_BORDER);
     if (have_trace == 0) {
-        text(274U, 216U,
+        text(274U, 244U,
              status->capture_source == 1U ? "WAITING FOR SPI DATA" :
+             status->capture_source == 2U ? "NO COMPLETE SPI TXN" :
              "NO REAL SPI CAPTURE", C_TEXT, C_PANEL);
-        text(250U, 246U,
+        text(250U, 274U,
              status->capture_source == 1U ? "SEND ONE STM32 JEDEC" :
+             status->capture_source == 2U ? "CHECK EVENTS FOR DETAILS" :
              "TAP HERE TO ARM SPI", C_CYAN, C_PANEL);
-        text(194U, 284U, "DEMO EVENTS ARE NOT BUS WAVEFORMS", C_MUTED, C_PANEL);
+        text(194U, 310U, "DEMO EVENTS ARE NOT BUS WAVEFORMS", C_MUTED, C_PANEL);
         return;
     }
 
-    text(30U, 197U, "MOSI", C_CYAN, C_PANEL);
-    text(30U, 279U, "MISO", C_GREEN, C_PANEL);
-    text(84U, 197U, "TX", C_MUTED, C_PANEL);
-    text(84U, 279U, "RX", C_MUTED, C_PANEL);
+    text(30U, 232U, "MOSI", C_CYAN, C_PANEL);
+    text(30U, 300U, "MISO", C_GREEN, C_PANEL);
+    text(84U, 232U, "TX", C_MUTED, C_PANEL);
+    text(84U, 300U, "RX", C_MUTED, C_PANEL);
     for (byte_index = 0U; byte_index <= SPI_TRACE_BYTES; ++byte_index) {
         u16 x = (u16)(196U + byte_index * 120U);
-        vline(x, 178U, 324U, C_GRID);
+        vline(x, 224U, 340U, C_GRID);
     }
-    draw_spi_wave_lane(trace.mosi, 193U, 223U, C_CYAN);
-    draw_spi_wave_lane(trace.miso, 275U, 305U, C_GREEN);
-    text(30U, 344U, "TX", C_CYAN, C_PANEL);
-    text(30U, 374U, "RX", C_GREEN, C_PANEL);
+    draw_spi_wave_lane(trace.mosi, 231U, 255U, C_CYAN);
+    draw_spi_wave_lane(trace.miso, 299U, 323U, C_GREEN);
+    text(30U, 355U, "TX", C_CYAN, C_PANEL);
+    text(30U, 381U, "RX", C_GREEN, C_PANEL);
     for (byte_index = 0U; byte_index < SPI_TRACE_BYTES; ++byte_index) {
         u16 x = (u16)(242U + byte_index * 120U);
-        hex8(x, 344U, trace.mosi[byte_index], C_CYAN, C_PANEL);
-        hex8(x, 374U, trace.miso[byte_index], C_GREEN, C_PANEL);
+        hex8(x, 355U, trace.mosi[byte_index], C_CYAN, C_PANEL);
+        hex8(x, 381U, trace.miso[byte_index], C_GREEN, C_PANEL);
     }
-    text(692U, 344U, "HEX", C_MUTED, C_PANEL);
-    text(692U, 374U, "HEX", C_MUTED, C_PANEL);
+    text(692U, 355U, "HEX", C_MUTED, C_PANEL);
+    text(692U, 381U, "HEX", C_MUTED, C_PANEL);
 }
 
 static void draw_check_row(u16 y, const char *label, u32 value, u8 passed)
@@ -640,11 +674,16 @@ static void draw_events_chrome(const PlatformUiStatus *status,
     text(448U, 60U, "REJ", C_MUTED, C_PANEL);
     dec32(488U, 60U, status->core_rejected_count, C_CYAN, C_PANEL);
     fill(580U, 53U, 781U, 81U, C_BUTTON);
-    outline(580U, 53U, 781U, 81U, C_CYAN);
+    outline(580U, 53U, 781U, 81U,
+            ui_protocol_live(status->selected_protocol,
+                             status->capabilities) ? C_CYAN : C_BORDER);
     text(616U, 60U,
+         !ui_protocol_live(status->selected_protocol,
+                           status->capabilities) ? "SELECT SPI" :
          status->capture_source == 1U ? "WAIT SPI" :
          (status->capture_source == 2U ? "SHOW DEMO" : "ARM SPI"),
-         C_CYAN, C_BUTTON);
+         ui_protocol_live(status->selected_protocol,
+                          status->capabilities) ? C_CYAN : C_MUTED, C_BUTTON);
 
     fill(14U, 92U, 786U, 120U, C_HEADER);
     text(28U, 99U, "MARK", C_MUTED, C_HEADER);
@@ -873,6 +912,7 @@ PlatformUiAction platform_ui_poll_action(void)
     u16 y;
     u32 next_scroll;
     u32 maximum;
+    UiProtocol selected;
 
     gt911_scan(&TouchInfo);
     if (TouchInfo.Touch_Num == 0U) {
@@ -916,12 +956,19 @@ PlatformUiAction platform_ui_poll_action(void)
                            g_requested_snapshot.snapshot_id) ? 1U : 0U;
     if (dragging_events != 0U) return PLATFORM_UI_ACTION_NONE;
 
+    if (g_requested_page == PLATFORM_UI_PAGE_HOME &&
+        ui_protocol_from_touch(x, y, &selected))
+        return (PlatformUiAction)(PLATFORM_UI_ACTION_SELECT_SPI + selected);
     if (g_requested_page == PLATFORM_UI_PAGE_EVENTS &&
+        ui_protocol_live(g_requested_status.selected_protocol,
+                         g_requested_status.capabilities) &&
         y >= 50U && y <= 84U && x >= 580U && x <= 786U)
         return PLATFORM_UI_ACTION_CAPTURE_LIVE;
     if (g_requested_page == PLATFORM_UI_PAGE_HOME &&
+        ui_protocol_live(g_requested_status.selected_protocol,
+                         g_requested_status.capabilities) &&
         g_requested_status.capture_source == 0U &&
-        y >= 112U && y <= 407U && x >= 14U && x <= 786U)
+        y >= 176U && y <= 407U && x >= 14U && x <= 786U)
         return PLATFORM_UI_ACTION_CAPTURE_LIVE;
     if (y < 414U || y > 479U) return PLATFORM_UI_ACTION_NONE;
     if (x >= 12U && x <= 188U) return PLATFORM_UI_ACTION_HOME;

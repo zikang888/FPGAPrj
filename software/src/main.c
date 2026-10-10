@@ -71,6 +71,7 @@ int main(void)
     memset(&live_snapshot, 0, sizeof(live_snapshot));
     memset(&ui_status, 0, sizeof(ui_status));
     error_model_init(&ui_status.error_model);
+    ui_status.selected_protocol = UI_PROTOCOL_SPI;
 
     if (uart_init() != XST_SUCCESS) {
         while (1) {
@@ -194,8 +195,20 @@ int main(void)
         } else if (action == PLATFORM_UI_ACTION_ERRORS) {
             page = PLATFORM_UI_PAGE_ERRORS;
             xil_printf("UI PAGE ERRORS\r\n");
+        } else if (action >= PLATFORM_UI_ACTION_SELECT_SPI &&
+                   action <= PLATFORM_UI_ACTION_SELECT_CAN) {
+            ui_status.selected_protocol = (UiProtocol)
+                (action - PLATFORM_UI_ACTION_SELECT_SPI);
+            xil_printf("UI PROTOCOL %s: %s\r\n",
+                       ui_protocol_name(ui_status.selected_protocol),
+                       ui_protocol_live(ui_status.selected_protocol,
+                                        ui_status.capabilities) ?
+                       "PL LISTENER READY" : "PL LISTENER NOT CONNECTED");
         } else if (action == PLATFORM_UI_ACTION_CAPTURE_LIVE) {
-            if (ui_status.capture_source != 0U) {
+            if (!ui_protocol_live(ui_status.selected_protocol,
+                                  ui_status.capabilities)) {
+                xil_printf("CAPTURE DISABLED: SELECT LIVE SPI\r\n");
+            } else if (ui_status.capture_source != 0U) {
                 ui_status.capture_source = 0U;
                 platform_ui_set_event_cache(g_demo_cache.valid != 0U ?
                                             &g_demo_cache : 0);

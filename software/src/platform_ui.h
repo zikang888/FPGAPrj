@@ -4,6 +4,7 @@
 #include "xil_types.h"
 #include "capture_demo.h"
 #include "error_model.h"
+#include "ui_protocol_select.h"
 
 typedef enum {
     PLATFORM_UI_PAGE_HOME = 0,
@@ -18,7 +19,11 @@ typedef enum {
     PLATFORM_UI_ACTION_SELF_TEST,
     PLATFORM_UI_ACTION_EVENTS,
     PLATFORM_UI_ACTION_ERRORS,
-    PLATFORM_UI_ACTION_CAPTURE_LIVE
+    PLATFORM_UI_ACTION_CAPTURE_LIVE,
+    PLATFORM_UI_ACTION_SELECT_SPI,
+    PLATFORM_UI_ACTION_SELECT_UART,
+    PLATFORM_UI_ACTION_SELECT_I2C,
+    PLATFORM_UI_ACTION_SELECT_CAN
 } PlatformUiAction;
 
 typedef struct {
@@ -42,6 +47,7 @@ typedef struct {
     u8 led_on;
     /* 0: virtual demo, 1: waiting for SPI, 2: frozen real SPI snapshot. */
     u8 capture_source;
+    UiProtocol selected_protocol;
 } PlatformUiStatus;
 
 int platform_ui_init(void);
