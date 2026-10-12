@@ -1,7 +1,6 @@
 # STM32F407 多协议真值节点（成员 C）
 
-本目录保存天空星 STM32F407VGT6 的完整多协议测试工程。它从
-`test/fpga_NumberC-A-full-integration` 建立，目标是给 Zynq 平台产生可重复的
+本目录保存天空星 STM32F407VGT6 的完整多协议测试工程，目标是给 Zynq 平台产生可重复的
 SPI、UART、I²C、CAN 流量和独立 JSONL 真值日志。
 
 ## 目录
@@ -34,8 +33,10 @@ docs/protocol-rules/protocol_rules.yaml
 - AT24C256 写入、ACK polling、读回比较。
 - CAN 标准帧回环。
 - JSONL 真值日志与本地事务号。
+- 20 项可选择错误事件菜单；PA0 短按切换、长按触发，USART1 也可用 `fault` 命令控制。
+- 128×64 SSD1306 4 线 SPI OLED 页面，使用 PB12/PB13/PB15、PC4/PC5。
 - 可选同步脉冲接口。
-- SPI 残帧、UART 错误停止位的板级扩展钩子；默认不绑定，防止误驱动。
+- SPI 残帧、UART 错误停止位/Break 的 GPIO 波形钩子已绑定；CAN 物理错误仍需外部注入。
 
 完整 Keil 工程入口：
 
@@ -84,8 +85,11 @@ SPI 第一闭环固定为 STM32 主机、W25Q128 从机、FPGA 被动监听：
 | 外接 AT24C256 | PB6/PB7 | I²C1，100 kHz |
 | 外接 SN65HVD230 | PD0/PD1 | CAN1 RX/TX，500 kbit/s |
 | 用户 LED | PB2 | 成功点亮，失败熄灭 |
-| 用户按键 | PA0 | 按下执行一次 SPI JEDEC 测试 |
+| 用户按键 | PA0 | 短按切换错误事件，长按执行 |
 | 同步脉冲 | PC6 | 输出到 FPGA 可选同步输入 |
+| OLED | PB12/PB13/PB15、PC4/PC5 | 128×64 SSD1306 4 线 SPI |
+
+错误事件和 OLED 接线详见 `docs/hardware/stm32_fault_menu_oled.md`。
 
 USART1 命令：
 
@@ -97,4 +101,7 @@ i2c eeprom [count]
 can loop [count]
 all
 help
+fault list
+fault select 0
+fault run
 ```

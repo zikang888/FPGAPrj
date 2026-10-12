@@ -3,6 +3,8 @@
 #include "main.h"
 #include "mc_protocol_runner.h"
 #include "mc_stm32f407_hal_port.h"
+#include "mc_faults.h"
+#include "mc_oled.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,6 +25,11 @@ static mc_runner_t g_runner;
 static char g_command[MC_COMMAND_CAPACITY];
 static size_t g_command_length;
 static GPIO_PinState g_previous_key_state;
+static uint32_t g_key_down_ms;
+static int g_long_press_ran;
+static mc_fault_id_t g_selected_fault;
+static int g_last_fault_result = MC_ERR_UNSUPPORTED;
+static int g_has_fault_result;
 
 static void console_write(const char *text)
 {
@@ -44,8 +51,97 @@ static void print_help(void)
         "  i2c eeprom [count]   AT24C256 write/read test at 0x50\r\n"
         "  can loop [count]     CAN1 frame echo test, ID 0x321\r\n"
         "  all                  Run one smoke test per protocol\r\n"
+        "  fault list           List selectable fault cases\r\n"
+        "  fault select N       Select case index N (0..19)\r\n"
+        "  fault run [N]        Trigger selected/indexed case\r\n"
         "  help                 Show this help\r\n"
-        "USER_KEY also runs one SPI JEDEC test.\r\n> ");
+        "USER_KEY: short=next, hold 0.8s=run.\r\n> ");
+}
+
+static void display_fault_menu(void)
+{
+    char line[24];
+    unsigned int base = ((unsigned int)g_selected_fault / 4U) * 4U;
+    unsigned int i;
+    const mc_fault_info_t *selected = mc_fault_get(g_selected_fault);
+    mc_oled_clear();
+    mc_oled_text(0U, 0U, "FAULT SELECT");
+    for (i = 0U; i < 4U; ++i) {
+        const mc_fault_info_t *item = mc_fault_get((mc_fault_id_t)(base + i));
+        if (item != NULL) {
+            (void)snprintf(line, sizeof(line), "%c%02u %s",
+                           base + i == (unsigned int)g_selected_fault ? '>' : ' ',
+                           base + i, item->label);
+            mc_oled_text(0U, (uint8_t)(i + 1U), line);
+        }
+    }
+    mc_oled_text(0U, 5U, "TAP NEXT HOLD RUN");
+    if (g_has_fault_result) {
+        if (g_last_fault_result == MC_ERR_UNSUPPORTED) {
+            strcpy(line, "NEEDS EXTERNAL HW");
+        } else {
+        (void)snprintf(line, sizeof(line), "RESULT %d", g_last_fault_result);
+        }
+    } else if (selected != NULL) {
+        switch (selected->requirement) {
+        case MC_FAULT_LOCAL: strcpy(line, "READY"); break;
+        case MC_FAULT_NEEDS_WIRING: strcpy(line, "NEEDS LINK"); break;
+        case MC_FAULT_NEEDS_PEER: strcpy(line, "NEEDS PEER"); break;
+        case MC_FAULT_EXTERNAL_ONLY: strcpy(line, "EXTERNAL ONLY"); break;
+        default: strcpy(line, "NOT BASELINE"); break;
+        }
+    } else {
+        strcpy(line, "INVALID");
+    }
+    mc_oled_text(0U, 6U, line);
+    if (selected != NULL) {
+        (void)snprintf(line, sizeof(line), "CASE %lu", (unsigned long)selected->case_id);
+        mc_oled_text(0U, 7U, line);
+    }
+    mc_oled_flush();
+}
+
+static void print_fault_list(void)
+{
+    unsigned int i;
+    char line[100];
+    for (i = 0U; i < (unsigned int)MC_FAULT_COUNT; ++i) {
+        const mc_fault_info_t *item = mc_fault_get((mc_fault_id_t)i);
+        (void)snprintf(line, sizeof(line), "%2u case=%lu %-20s requirement=%d\r\n",
+                       i, (unsigned long)item->case_id, item->label, item->requirement);
+        console_write(line);
+    }
+    console_write("> ");
+}
+
+static void trigger_selected_fault(void)
+{
+    const mc_fault_info_t *item = mc_fault_get(g_selected_fault);
+    char line[110];
+    if (item == NULL) {
+        return;
+    }
+    (void)snprintf(line, sizeof(line), "\r\nFAULT case=%lu %s\r\n",
+                   (unsigned long)item->case_id, item->label);
+    console_write(line);
+    g_last_fault_result = mc_fault_run(&g_runner, g_selected_fault);
+    g_has_fault_result = 1;
+    (void)snprintf(line, sizeof(line), "FAULT result=%d\r\n> ", g_last_fault_result);
+    console_write(line);
+    HAL_GPIO_WritePin(USER_LED_GPIO_Port, USER_LED_Pin,
+                      g_last_fault_result == MC_OK ? GPIO_PIN_SET : GPIO_PIN_RESET);
+    display_fault_menu();
+}
+
+static void select_fault(unsigned int index)
+{
+    if (index >= (unsigned int)MC_FAULT_COUNT) {
+        console_write("Invalid fault index\r\n> ");
+        return;
+    }
+    g_selected_fault = (mc_fault_id_t)index;
+    g_has_fault_result = 0;
+    display_fault_menu();
 }
 
 static uint32_t parse_count(const char *command)
@@ -101,6 +197,29 @@ static void run_command(const char *command)
 
     if (strcmp(command, "help") == 0) {
         print_help();
+    } else if (strcmp(command, "fault list") == 0) {
+        print_fault_list();
+    } else if (strncmp(command, "fault select ", 13U) == 0) {
+        char *endptr;
+        unsigned long index = strtoul(command + 13, &endptr, 10);
+        if (endptr == command + 13 || *endptr != '\0') {
+            console_write("Invalid fault index\r\n");
+        } else {
+            select_fault((unsigned int)index);
+        }
+        console_write("> ");
+    } else if (strncmp(command, "fault run", 9U) == 0) {
+        if (command[9] == ' ') {
+            char *endptr;
+            unsigned long index = strtoul(command + 10, &endptr, 10);
+            if (endptr == command + 10 || *endptr != '\0' ||
+                index >= (unsigned long)MC_FAULT_COUNT) {
+                console_write("Invalid fault index\r\n> ");
+                return;
+            }
+            select_fault((unsigned int)index);
+        }
+        trigger_selected_fault();
     } else if (strncmp(command, "spi jedec", 9U) == 0) {
         run_spi_jedec(iterations);
     } else if (strncmp(command, "spi pattern", 11U) == 0) {
@@ -169,7 +288,13 @@ void mc_board_app_init(void)
     mc_runner_init(&g_runner, &platform);
     g_command_length = 0U;
     g_previous_key_state = HAL_GPIO_ReadPin(USER_KEY_GPIO_Port, USER_KEY_Pin);
+    g_key_down_ms = HAL_GetTick();
+    g_long_press_ran = 0;
+    g_selected_fault = MC_FAULT_SPI_PARTIAL;
+    g_has_fault_result = 0;
     can_result = can_start_accept_all();
+    mc_oled_init();
+    display_fault_menu();
 
     console_write("\r\nSkyStar STM32F407 protocol truth node\r\n");
     console_write("Clock=168MHz SPI1=1.3125MHz I2C1=100k UART1/UART3=115200 CAN1=500k\r\n");
@@ -202,11 +327,15 @@ void mc_board_app_poll(void)
 
     key_state = HAL_GPIO_ReadPin(USER_KEY_GPIO_Port, USER_KEY_Pin);
     if (key_state == GPIO_PIN_SET && g_previous_key_state == GPIO_PIN_RESET) {
-        HAL_Delay(20U);
-        if (HAL_GPIO_ReadPin(USER_KEY_GPIO_Port, USER_KEY_Pin) == GPIO_PIN_SET) {
-            console_write("\r\nUSER_KEY: SPI JEDEC smoke\r\n");
-            run_spi_jedec(1U);
-        }
+        g_key_down_ms = HAL_GetTick();
+        g_long_press_ran = 0;
+    } else if (key_state == GPIO_PIN_SET && !g_long_press_ran &&
+               (uint32_t)(HAL_GetTick() - g_key_down_ms) >= 800U) {
+        g_long_press_ran = 1;
+        trigger_selected_fault();
+    } else if (key_state == GPIO_PIN_RESET && g_previous_key_state == GPIO_PIN_SET &&
+               !g_long_press_ran && (uint32_t)(HAL_GetTick() - g_key_down_ms) >= 25U) {
+        select_fault((unsigned int)(g_selected_fault + 1U) % (unsigned int)MC_FAULT_COUNT);
     }
     g_previous_key_state = key_state;
 }

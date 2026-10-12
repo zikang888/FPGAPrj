@@ -1,4 +1,5 @@
 #include "mc_protocol_runner.h"
+#include "mc_faults.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -21,6 +22,13 @@ typedef struct {
     size_t can_length;
     char log[8192];
     size_t log_length;
+    size_t last_spi_length;
+    size_t last_uart_length;
+    uint32_t uart_baudrate;
+    uint32_t partial_count;
+    uint32_t bad_stop_count;
+    uint32_t break_count;
+    uint32_t i2c_busy_probes;
 } fake_t;
 
 static uint32_t fake_now(void *opaque)
@@ -58,6 +66,7 @@ static int fake_spi_transfer(void *opaque,
         return MC_ERR_IO;
     }
     memset(rx, 0, length);
+    fake->last_spi_length = length;
     if (length == 4U && tx[0] == 0x9FU && tx[1] == 0U && tx[2] == 0U && tx[3] == 0U) {
         rx[1] = 0xEFU;
         rx[2] = 0x40U;
@@ -78,6 +87,7 @@ static int fake_uart_write(void *opaque,
     }
     memcpy(fake->uart_data, data, length);
     fake->uart_length = length;
+    fake->last_uart_length = length;
     return MC_OK;
 }
 
@@ -105,6 +115,9 @@ static int fake_i2c_write(void *opaque,
         return MC_ERR_IO;
     }
     memcpy(&fake->eeprom[memory_address], data, length);
+    if (memory_address == 0x0120U) {
+        fake->i2c_busy_probes = 2U;
+    }
     return MC_OK;
 }
 
@@ -126,9 +139,57 @@ static int fake_i2c_read(void *opaque,
 
 static int fake_i2c_probe(void *opaque, uint8_t address, uint32_t timeout_ms)
 {
-    (void)opaque;
+    fake_t *fake = (fake_t *)opaque;
     (void)timeout_ms;
+    if (address == 0x50U && fake->i2c_busy_probes > 0U) {
+        --fake->i2c_busy_probes;
+        return MC_ERR_TIMEOUT;
+    }
     return address == 0x50U ? MC_OK : MC_ERR_TIMEOUT;
+}
+
+static int fake_spi_partial(void *opaque, uint8_t value, uint8_t valid_bits)
+{
+    fake_t *fake = (fake_t *)opaque;
+    if (value != 0x9FU || valid_bits != 4U) {
+        return MC_ERR_VERIFY;
+    }
+    fake->partial_count++;
+    return MC_OK;
+}
+
+static int fake_uart_bad_stop(void *opaque, uint8_t value, uint32_t baudrate)
+{
+    fake_t *fake = (fake_t *)opaque;
+    if (value != 0x55U || baudrate != 115200U) {
+        return MC_ERR_VERIFY;
+    }
+    fake->bad_stop_count++;
+    return MC_OK;
+}
+
+static int fake_uart_break(void *opaque, uint32_t bits, uint32_t baudrate)
+{
+    fake_t *fake = (fake_t *)opaque;
+    if (bits != 13U || baudrate != 115200U) {
+        return MC_ERR_VERIFY;
+    }
+    fake->break_count++;
+    return MC_OK;
+}
+
+static int fake_uart_baud(void *opaque, uint32_t baudrate)
+{
+    ((fake_t *)opaque)->uart_baudrate = baudrate;
+    return MC_OK;
+}
+
+static int fake_can_ack_probe(void *opaque, uint32_t id, uint32_t timeout_ms)
+{
+    fake_t *fake = (fake_t *)opaque;
+    (void)timeout_ms;
+    fake->can_id = id;
+    return id == 0x321U ? MC_OK : MC_ERR_VERIFY;
 }
 
 static int fake_can_send(void *opaque,
@@ -181,6 +242,11 @@ static mc_platform_t make_platform(fake_t *fake)
     platform.i2c_probe = fake_i2c_probe;
     platform.can_send = fake_can_send;
     platform.can_receive = fake_can_receive;
+    platform.spi_emit_incomplete = fake_spi_partial;
+    platform.uart_emit_bad_stop = fake_uart_bad_stop;
+    platform.uart_emit_break = fake_uart_break;
+    platform.uart_set_baudrate = fake_uart_baud;
+    platform.can_ack_probe = fake_can_ack_probe;
     return platform;
 }
 
@@ -202,9 +268,32 @@ int main(void)
     CHECK(mc_run_uart_loopback(&runner, 2001U, 2U, &summary) == MC_OK);
     CHECK(mc_run_i2c_eeprom(&runner, 3001U, 0x50U, 0x0100U, 2U, &summary) == MC_OK);
     CHECK(mc_run_can_loopback(&runner, 4001U, 0x321U, 2U, &summary) == MC_OK);
+    CHECK(mc_fault_get(MC_FAULT_SPI_PARTIAL)->case_id == 1091U);
+    CHECK(mc_fault_get(MC_FAULT_CAN_CRC)->requirement == MC_FAULT_EXTERNAL_ONLY);
+    CHECK(mc_fault_run(&runner, MC_FAULT_SPI_PARTIAL) == MC_OK);
+    CHECK(fake.partial_count == 1U);
+    CHECK(mc_fault_run(&runner, MC_FAULT_SPI_SHORT) == MC_OK);
+    CHECK(fake.last_spi_length == 2U);
+    CHECK(mc_fault_run(&runner, MC_FAULT_SPI_EXTRA) == MC_OK);
+    CHECK(fake.last_spi_length == 5U);
+    CHECK(mc_fault_run(&runner, MC_FAULT_UART_BAD_STOP) == MC_OK);
+    CHECK(fake.bad_stop_count == 1U);
+    CHECK(mc_fault_run(&runner, MC_FAULT_UART_BREAK) == MC_OK);
+    CHECK(fake.break_count == 1U);
+    CHECK(mc_fault_run(&runner, MC_FAULT_UART_BAUD_MISMATCH) == MC_OK);
+    CHECK(fake.uart_baudrate == 115200U);
+    CHECK(mc_fault_run(&runner, MC_FAULT_UART_MISSING_BYTES) == MC_OK);
+    CHECK(fake.last_uart_length == 3U);
+    CHECK(mc_fault_run(&runner, MC_FAULT_I2C_ADDRESS_NACK) == MC_OK);
+    CHECK(mc_fault_run(&runner, MC_FAULT_I2C_BUSY_NACK) == MC_OK);
+    CHECK(mc_fault_run(&runner, MC_FAULT_CAN_NO_ACK) == MC_OK);
+    CHECK(fake.can_id == 0x321U);
+    CHECK(mc_fault_run(&runner, MC_FAULT_CAN_CRC) == MC_ERR_UNSUPPORTED);
     CHECK(strstr(fake.log, "\"protocol\":\"SPI\"") != NULL);
     CHECK(strstr(fake.log, "\"protocol\":\"CAN\"") != NULL);
     CHECK(strstr(fake.log, "\"result\":0") != NULL);
+    CHECK(strstr(fake.log, "\"case\":1091") != NULL);
+    CHECK(strstr(fake.log, "\"case\":3092") != NULL);
 
     puts("STM32F407 protocol runner tests passed");
     return 0;
