@@ -26,6 +26,9 @@ typedef struct {
 
 void mc_runner_init(mc_runner_t *runner, const mc_platform_t *platform);
 
+/* Reads the mounted part's JEDEC ID; rejects all-00 and all-FF bus reads. */
+int mc_probe_spi_jedec(mc_runner_t *runner, uint32_t case_id, uint8_t id_out[3]);
+
 int mc_run_spi_jedec(mc_runner_t *runner,
                      uint32_t case_id,
                      uint32_t iterations,

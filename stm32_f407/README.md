@@ -28,13 +28,16 @@ docs/protocol-rules/protocol_rules.yaml
 ## 当前支持
 
 - SPI `0x9F` JEDEC ID 读取；发送 `9F 00 00 00`，期望值由实物器件确认。
+- 上电先探测实物 JEDEC ID（用例 1000，最多重试 3 次），拒绝全 `00`/全 `FF`；正常 `spi jedec N` 用探测到的 ID 比对并执行恰好 N 笔测试事务。
 - SPI 固定字节模式。
 - UART 双向回环。
 - AT24C256 写入、ACK polling、读回比较。
 - CAN 标准帧回环。
 - JSONL 真值日志与本地事务号。
+- SPI JSONL 同时记录 `data`（实际 RX）和 `tx`（实际发送），日志失败会反馈到测试结果。
 - 20 项可选择错误事件菜单；PA0 短按切换、长按触发，USART1 也可用 `fault` 命令控制。
 - 128×64 SSD1306 4 线 SPI OLED 页面，使用 PB12/PB13/PB15、PC4/PC5。
+- USART1 使用中断接收缓冲，整行回显；连续快速发送不再逐字节阻塞发送。
 - 可选同步脉冲接口。
 - SPI 残帧、UART 错误停止位/Break 的 GPIO 波形钩子已绑定；CAN 物理错误仍需外部注入。
 
@@ -95,6 +98,7 @@ USART1 命令：
 
 ```text
 spi jedec [count]
+spi probe
 spi pattern [count]
 uart loop [count]
 i2c eeprom [count]

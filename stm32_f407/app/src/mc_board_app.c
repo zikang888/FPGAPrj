@@ -5,6 +5,7 @@
 #include "mc_stm32f407_hal_port.h"
 #include "mc_faults.h"
 #include "mc_oled.h"
+#include "mc_cli_rx.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,6 +25,13 @@ static mc_stm32f407_context_t g_port_context;
 static mc_runner_t g_runner;
 static char g_command[MC_COMMAND_CAPACITY];
 static size_t g_command_length;
+static mc_cli_rx_t g_console_rx;
+static uint8_t g_rx_byte;
+static volatile uint32_t g_uart_rx_errors;
+static uint32_t g_last_dropped;
+static int g_discard_line;
+static uint8_t g_jedec_id[3];
+static int g_jedec_id_valid;
 static GPIO_PinState g_previous_key_state;
 static uint32_t g_key_down_ms;
 static int g_long_press_ran;
@@ -46,6 +54,7 @@ static void print_help(void)
     console_write(
         "\r\nCommands:\r\n"
         "  spi jedec [count]    Read W25Q128 JEDEC ID\r\n"
+        "  spi probe            Read mounted Flash ID again\r\n"
         "  spi pattern [count]  Send deterministic SPI bytes\r\n"
         "  uart loop [count]    USART3 FPGA echo test\r\n"
         "  i2c eeprom [count]   AT24C256 write/read test at 0x50\r\n"
@@ -180,12 +189,38 @@ static void print_summary(const char *name, int result, const mc_run_summary_t *
                       result == MC_OK ? GPIO_PIN_SET : GPIO_PIN_RESET);
 }
 
+static int probe_jedec_id(void)
+{
+    uint32_t attempt;
+    int result = MC_ERR_VERIFY;
+    char line[96];
+    g_jedec_id_valid = 0;
+    for (attempt = 0U; attempt < 3U; ++attempt) {
+        result = mc_probe_spi_jedec(&g_runner, 1000U, g_jedec_id);
+        if (result == MC_OK) {
+            g_jedec_id_valid = 1;
+            (void)snprintf(line, sizeof(line),
+                           "Mounted JEDEC ID=%02X %02X %02X\r\n> ",
+                           g_jedec_id[0], g_jedec_id[1], g_jedec_id[2]);
+            console_write(line);
+            return MC_OK;
+        }
+        HAL_Delay(5U);
+    }
+    (void)snprintf(line, sizeof(line), "JEDEC probe failed after 3 tries, result=%d\r\n> ", result);
+    console_write(line);
+    HAL_GPIO_WritePin(USER_LED_GPIO_Port, USER_LED_Pin, GPIO_PIN_RESET);
+    return result;
+}
+
 static void run_spi_jedec(uint32_t iterations)
 {
-    /* W25Q128JV reference value. Replace after checking the mounted device. */
-    static const uint8_t expected_id[3] = {0xEFU, 0x40U, 0x18U};
     mc_run_summary_t summary;
-    int result = mc_run_spi_jedec(&g_runner, 1001U, iterations, expected_id, &summary);
+    int result;
+    if (!g_jedec_id_valid && probe_jedec_id() != MC_OK) {
+        return;
+    }
+    result = mc_run_spi_jedec(&g_runner, 1001U, iterations, g_jedec_id, &summary);
     print_summary("SPI_JEDEC", result, &summary);
 }
 
@@ -220,6 +255,8 @@ static void run_command(const char *command)
             select_fault((unsigned int)index);
         }
         trigger_selected_fault();
+    } else if (strcmp(command, "spi probe") == 0) {
+        (void)probe_jedec_id();
     } else if (strncmp(command, "spi jedec", 9U) == 0) {
         run_spi_jedec(iterations);
     } else if (strncmp(command, "spi pattern", 11U) == 0) {
@@ -286,7 +323,12 @@ void mc_board_app_init(void)
 
     platform = mc_stm32f407_make_platform(&g_port_context);
     mc_runner_init(&g_runner, &platform);
+    mc_cli_rx_init(&g_console_rx);
     g_command_length = 0U;
+    g_discard_line = 0;
+    g_last_dropped = 0U;
+    g_uart_rx_errors = 0U;
+    g_jedec_id_valid = 0;
     g_previous_key_state = HAL_GPIO_ReadPin(USER_KEY_GPIO_Port, USER_KEY_Pin);
     g_key_down_ms = HAL_GetTick();
     g_long_press_ran = 0;
@@ -296,9 +338,14 @@ void mc_board_app_init(void)
     mc_oled_init();
     display_fault_menu();
 
+    if (HAL_UART_Receive_IT(&huart1, &g_rx_byte, 1U) != HAL_OK) {
+        console_write("USART1 RX interrupt start failed\r\n");
+    }
+
     console_write("\r\nSkyStar STM32F407 protocol truth node\r\n");
     console_write("Clock=168MHz SPI1=1.3125MHz I2C1=100k UART1/UART3=115200 CAN1=500k\r\n");
     console_write(can_result == MC_OK ? "CAN started\r\n" : "CAN start failed; check transceiver\r\n");
+    (void)probe_jedec_id();
     print_help();
 }
 
@@ -306,14 +353,32 @@ void mc_board_app_poll(void)
 {
     uint8_t value;
     GPIO_PinState key_state;
+    unsigned int processed = 0U;
 
-    if (HAL_UART_Receive(&huart1, &value, 1U, 5U) == HAL_OK) {
+    if (g_console_rx.dropped != g_last_dropped || g_uart_rx_errors != 0U) {
+        g_last_dropped = g_console_rx.dropped;
+        g_discard_line = 1;
+        g_command_length = 0U;
+        g_uart_rx_errors = 0U;
+    }
+    if (huart1.RxState == HAL_UART_STATE_READY) {
+        (void)HAL_UART_Receive_IT(&huart1, &g_rx_byte, 1U);
+    }
+    while (processed++ < 64U && mc_cli_rx_pop(&g_console_rx, &value)) {
+        if (g_discard_line) {
+            if (value == '\r' || value == '\n') {
+                g_discard_line = 0;
+                console_write("\r\nUSART1 RX overflow; line discarded\r\n> ");
+            }
+            continue;
+        }
         if (value == '\r' || value == '\n') {
             if (g_command_length > 0U) {
                 g_command[g_command_length] = '\0';
+                console_write(g_command);
                 console_write("\r\n");
-                run_command(g_command);
                 g_command_length = 0U;
+                run_command(g_command);
             }
         } else if (value == 0x08U || value == 0x7FU) {
             if (g_command_length > 0U) {
@@ -321,7 +386,9 @@ void mc_board_app_poll(void)
             }
         } else if (g_command_length + 1U < sizeof(g_command)) {
             g_command[g_command_length++] = (char)value;
-            (void)HAL_UART_Transmit(&huart1, &value, 1U, 50U);
+        } else {
+            g_command_length = 0U;
+            g_discard_line = 1;
         }
     }
 
@@ -338,4 +405,22 @@ void mc_board_app_poll(void)
         select_fault((unsigned int)(g_selected_fault + 1U) % (unsigned int)MC_FAULT_COUNT);
     }
     g_previous_key_state = key_state;
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+    if (huart != NULL && huart->Instance == USART1) {
+        (void)mc_cli_rx_push(&g_console_rx, g_rx_byte);
+        if (HAL_UART_Receive_IT(&huart1, &g_rx_byte, 1U) != HAL_OK) {
+            ++g_uart_rx_errors;
+        }
+    }
+}
+
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
+{
+    if (huart != NULL && huart->Instance == USART1) {
+        ++g_uart_rx_errors;
+        (void)HAL_UART_Receive_IT(&huart1, &g_rx_byte, 1U);
+    }
 }

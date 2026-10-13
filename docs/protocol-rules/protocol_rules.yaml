@@ -1,5 +1,5 @@
 schema_version: 1
-rules_version: "1.1.0-draft-fault-menu"
+rules_version: "1.1.1-draft-fault-menu"
 owner: "成员C"
 approval_status: "draft_member_c_owned"
 change_policy:
@@ -63,6 +63,11 @@ protocols:
       - name: "incomplete_byte"
         match_error: "incomplete_byte"
     cases:
+      - case_id: 1000
+        name: "mounted_flash_jedec_probe"
+        tx_hex: "9F000000"
+        expected: "reject_all_00_or_all_FF; record_actual_tx_and_rx"
+        note: "startup probe is separate from counted JEDEC test transactions"
       - case_id: 1001
         name: "w25q128_jedec_id"
         tx_hex: "9F000000"

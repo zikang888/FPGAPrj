@@ -35,10 +35,12 @@ const mc_fault_info_t *mc_fault_get(mc_fault_id_t id)
 }
 
 static int log_fault(mc_runner_t *runner, const mc_fault_info_t *info,
-                     const uint8_t *data, size_t length, int result,
+                     const uint8_t *data, size_t length,
+                     const uint8_t *tx, size_t tx_length, int result,
                      const char *detail)
 {
     mc_log_record_t record;
+    int log_result;
     if (runner->platform.write_log == NULL) {
         return result;
     }
@@ -48,20 +50,24 @@ static int log_fault(mc_runner_t *runner, const mc_fault_info_t *info,
     record.case_id = info->case_id;
     record.protocol = info->protocol;
     record.operation = info->label;
-    record.direction = "TX";
+    record.direction = tx != NULL ? "TXRX" : "TX";
     record.data = data;
     record.data_length = length;
+    record.tx_data = tx;
+    record.tx_length = tx_length;
     record.result = result;
     record.detail = detail;
-    (void)mc_truth_log_write(&runner->platform, &record);
+    log_result = mc_truth_log_write(&runner->platform, &record);
+    if (result == MC_OK && log_result != MC_OK) {
+        return log_result;
+    }
     return result;
 }
 
-static int spi_bytes(mc_platform_t *p, const uint8_t *tx, size_t length)
+static int spi_bytes(mc_platform_t *p, const uint8_t *tx, uint8_t *rx, size_t length)
 {
-    uint8_t rx[6] = {0U};
     int result;
-    if (p->spi_select == NULL || p->spi_transfer == NULL || length > sizeof(rx)) {
+    if (p->spi_select == NULL || p->spi_transfer == NULL || rx == NULL || length > 6U) {
         return MC_ERR_UNSUPPORTED;
     }
     result = p->spi_select(p->context, 1);
@@ -79,7 +85,11 @@ int mc_fault_run(mc_runner_t *runner, mc_fault_id_t id)
     const mc_fault_info_t *info = mc_fault_get(id);
     mc_platform_t *p;
     uint8_t data[6] = {0U};
+    uint8_t rx[6] = {0U};
+    const uint8_t *payload = data;
+    const uint8_t *tx_data = NULL;
     size_t payload_length = 0U;
+    size_t tx_length = 0U;
     int result = MC_ERR_UNSUPPORTED;
     const char *detail = "unsupported_or_external";
 
@@ -90,7 +100,7 @@ int mc_fault_run(mc_runner_t *runner, mc_fault_id_t id)
     if (p->sync_pulse != NULL) {
         result = p->sync_pulse(p->context, info->case_id);
         if (result != MC_OK) {
-            return log_fault(runner, info, data, 0U, result, "sync_failed");
+            return log_fault(runner, info, data, 0U, NULL, 0U, result, "sync_failed");
         }
     }
     result = MC_ERR_UNSUPPORTED;
@@ -106,13 +116,19 @@ int mc_fault_run(mc_runner_t *runner, mc_fault_id_t id)
     case MC_FAULT_SPI_SHORT:
         data[0] = 0x9FU; data[1] = 0x00U;
         payload_length = 2U;
-        result = spi_bytes(p, data, 2U);
+        result = spi_bytes(p, data, rx, 2U);
+        payload = rx;
+        tx_data = data;
+        tx_length = 2U;
         detail = "2_complete_bytes_expected_4";
         break;
     case MC_FAULT_SPI_EXTRA:
         data[0] = 0x9FU;
         payload_length = 5U;
-        result = spi_bytes(p, data, 5U);
+        result = spi_bytes(p, data, rx, 5U);
+        payload = rx;
+        tx_data = data;
+        tx_length = 5U;
         detail = "5_complete_bytes_expected_4";
         break;
     case MC_FAULT_UART_BAD_STOP:
@@ -209,5 +225,6 @@ int mc_fault_run(mc_runner_t *runner, mc_fault_id_t id)
     default:
         break;
     }
-    return log_fault(runner, info, data, payload_length, result, detail);
+    return log_fault(runner, info, payload, payload_length,
+                     tx_data, tx_length, result, detail);
 }

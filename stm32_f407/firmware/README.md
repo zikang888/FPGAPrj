@@ -18,7 +18,7 @@ sky_star_protocol_node.ioc
 STM32F407VGT6。已在 Keil ARMCC 5.06 update 2 上构建：
 
 ```text
-Program Size: Code=24126 RO-data=2510 RW-data=40 ZI-data=4744
+Program Size: Code=26598 RO-data=2574 RW-data=60 ZI-data=5260
 0 Error(s), 0 Warning(s)
 ```
 
