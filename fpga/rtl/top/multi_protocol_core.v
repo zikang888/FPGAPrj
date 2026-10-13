@@ -53,9 +53,9 @@ module multi_protocol_core (
 );
 
 localparam [31:0] SYS_ID_VALUE       = 32'h4D50_5254; // "MPRT"
-localparam [31:0] VERSION_VALUE      = 32'h0001_0004; // event format v1, platform 4
-localparam [31:0] BUILD_ID_VALUE     = 32'h2026_1005;
-localparam [31:0] CAPABILITIES_VALUE = 32'h0000_000F; // + bit3: SPI acceptance statistics
+localparam [31:0] VERSION_VALUE      = 32'h0001_0005; // event format v1, platform 5
+localparam [31:0] BUILD_ID_VALUE     = 32'h2026_1013;
+localparam [31:0] CAPABILITIES_VALUE = 32'h0000_001F; // + bit4: JEDEC semantic checks
 
 localparam [3:0] PROTOCOL_SPI      = 4'h2;
 localparam [5:0] EVENT_START       = 6'h00;
@@ -89,6 +89,9 @@ localparam [15:0] REG_SPI_SEQUENCE_ERROR_COUNT = 16'h0058;
 localparam [15:0] REG_SPI_LAST_TRANSACTION_ID = 16'h005C;
 localparam [15:0] REG_SPI_STATS_STATUS = 16'h0060;
 localparam [15:0] REG_SPI_STATS_CTRL = 16'h0064;
+localparam [15:0] REG_SPI_SHORT_TRANSACTION_COUNT = 16'h0068;
+localparam [15:0] REG_SPI_EXTRA_BYTE_COUNT = 16'h006C;
+localparam [15:0] REG_SPI_RESPONSE_MISMATCH_COUNT = 16'h0070;
 
 localparam [15:0] REG_CAPTURE_CTRL    = 16'h1000;
 localparam [15:0] REG_CAPTURE_STATUS  = 16'h1004;
@@ -115,12 +118,18 @@ reg [31:0] spi_frame_error_count;
 reg [31:0] spi_boundary_error_count;
 reg [31:0] spi_duplicate_count;
 reg [31:0] spi_sequence_error_count;
+reg [31:0] spi_short_transaction_count;
+reg [31:0] spi_extra_byte_count;
+reg [31:0] spi_response_mismatch_count;
 reg [23:0] spi_active_transaction_id;
 reg [23:0] spi_last_transaction_id;
 reg         spi_transaction_open;
 reg         spi_have_last_transaction;
 reg [127:0] spi_last_event;
 reg         spi_last_event_valid;
+reg [7:0]   spi_transaction_byte_count;
+reg         spi_jedec_active;
+reg         spi_jedec_response_mismatch;
 
 reg         capture_arm_pulse;
 reg         capture_ack_pulse;
@@ -179,6 +188,8 @@ wire spi_stats_clear_command;
 wire ext_spi_event_accept;
 wire [5:0] ext_spi_event_type;
 wire [23:0] ext_spi_transaction_id;
+wire [7:0] ext_spi_miso;
+wire [7:0] ext_spi_mosi;
 
 assign aw_hs = s_axi_awvalid && s_axi_awready;
 assign w_hs = s_axi_wvalid && s_axi_wready;
@@ -208,6 +219,8 @@ assign ext_spi_event_accept = ext_evt_valid && ext_evt_ready &&
                               ext_evt_data[63:60] == PROTOCOL_SPI;
 assign ext_spi_event_type = ext_evt_data[53:48];
 assign ext_spi_transaction_id = ext_evt_data[23:0];
+assign ext_spi_miso = ext_evt_data[47:40];
+assign ext_spi_mosi = ext_evt_data[39:32];
 
 assign led_heartbeat = heartbeat_state;
 assign led_ps_active = led_ctrl_reg[0];
@@ -254,12 +267,18 @@ function [31:0] read_register;
             REG_SPI_DUPLICATE_COUNT: read_register = spi_duplicate_count;
             REG_SPI_SEQUENCE_ERROR_COUNT: read_register = spi_sequence_error_count;
             REG_SPI_LAST_TRANSACTION_ID: read_register = {8'd0, spi_last_transaction_id};
+            REG_SPI_SHORT_TRANSACTION_COUNT: read_register = spi_short_transaction_count;
+            REG_SPI_EXTRA_BYTE_COUNT: read_register = spi_extra_byte_count;
+            REG_SPI_RESPONSE_MISMATCH_COUNT: read_register = spi_response_mismatch_count;
             REG_SPI_STATS_STATUS: read_register = {
                 28'd0,
                 ((spi_frame_error_count != 0) ||
                  (spi_boundary_error_count != 0) ||
                  (spi_duplicate_count != 0) ||
-                 (spi_sequence_error_count != 0)),
+                 (spi_sequence_error_count != 0) ||
+                 (spi_short_transaction_count != 0) ||
+                 (spi_extra_byte_count != 0) ||
+                 (spi_response_mismatch_count != 0)),
                 spi_have_last_transaction,
                 spi_last_event_valid,
                 spi_transaction_open
@@ -357,12 +376,18 @@ always @(posedge s_axi_aclk) begin
         spi_boundary_error_count <= 32'd0;
         spi_duplicate_count <= 32'd0;
         spi_sequence_error_count <= 32'd0;
+        spi_short_transaction_count <= 32'd0;
+        spi_extra_byte_count <= 32'd0;
+        spi_response_mismatch_count <= 32'd0;
         spi_active_transaction_id <= 24'd0;
         spi_last_transaction_id <= 24'd0;
         spi_transaction_open <= 1'b0;
         spi_have_last_transaction <= 1'b0;
         spi_last_event <= 128'd0;
         spi_last_event_valid <= 1'b0;
+        spi_transaction_byte_count <= 8'd0;
+        spi_jedec_active <= 1'b0;
+        spi_jedec_response_mismatch <= 1'b0;
         capture_arm_pulse <= 1'b0;
         capture_ack_pulse <= 1'b0;
         virtual_evt_valid <= 1'b0;
@@ -410,12 +435,18 @@ always @(posedge s_axi_aclk) begin
             spi_boundary_error_count <= 32'd0;
             spi_duplicate_count <= 32'd0;
             spi_sequence_error_count <= 32'd0;
+            spi_short_transaction_count <= 32'd0;
+            spi_extra_byte_count <= 32'd0;
+            spi_response_mismatch_count <= 32'd0;
             spi_active_transaction_id <= 24'd0;
             spi_last_transaction_id <= 24'd0;
             spi_transaction_open <= 1'b0;
             spi_have_last_transaction <= 1'b0;
             spi_last_event <= 128'd0;
             spi_last_event_valid <= 1'b0;
+            spi_transaction_byte_count <= 8'd0;
+            spi_jedec_active <= 1'b0;
+            spi_jedec_response_mismatch <= 1'b0;
         end else if (ext_spi_event_accept) begin
             spi_event_count <= spi_event_count + 32'd1;
             if (spi_last_event_valid && ext_evt_data == spi_last_event) begin
@@ -441,6 +472,9 @@ always @(posedge s_axi_aclk) begin
                     spi_active_transaction_id <= ext_spi_transaction_id;
                     spi_last_transaction_id <= ext_spi_transaction_id;
                     spi_have_last_transaction <= 1'b1;
+                    spi_transaction_byte_count <= 8'd0;
+                    spi_jedec_active <= 1'b0;
+                    spi_jedec_response_mismatch <= 1'b0;
                 end
                 EVENT_DATA: begin
                     spi_data_count <= spi_data_count + 32'd1;
@@ -448,6 +482,26 @@ always @(posedge s_axi_aclk) begin
                         ext_spi_transaction_id != spi_active_transaction_id) begin
                         spi_boundary_error_count <=
                             spi_boundary_error_count + 32'd1;
+                    end else begin
+                        if (spi_transaction_byte_count == 8'd0) begin
+                            spi_jedec_active <= (ext_spi_mosi == 8'h9F);
+                            spi_jedec_response_mismatch <= 1'b0;
+                        end else if (spi_jedec_active) begin
+                            case (spi_transaction_byte_count)
+                                8'd1: if (ext_spi_miso != 8'hEF)
+                                    spi_jedec_response_mismatch <= 1'b1;
+                                8'd2: if (ext_spi_miso != 8'h40)
+                                    spi_jedec_response_mismatch <= 1'b1;
+                                8'd3: if (ext_spi_miso != 8'h18)
+                                    spi_jedec_response_mismatch <= 1'b1;
+                                default: begin
+                                end
+                            endcase
+                        end
+                        if (spi_transaction_byte_count != 8'hFF) begin
+                            spi_transaction_byte_count <=
+                                spi_transaction_byte_count + 8'd1;
+                        end
                     end
                 end
                 EVENT_END: begin
@@ -456,8 +510,20 @@ always @(posedge s_axi_aclk) begin
                         ext_spi_transaction_id != spi_active_transaction_id) begin
                         spi_boundary_error_count <=
                             spi_boundary_error_count + 32'd1;
+                    end else if (spi_jedec_active) begin
+                        if (spi_transaction_byte_count < 8'd4) begin
+                            spi_short_transaction_count <=
+                                spi_short_transaction_count + 32'd1;
+                        end else if (spi_transaction_byte_count > 8'd4) begin
+                            spi_extra_byte_count <=
+                                spi_extra_byte_count + 32'd1;
+                        end else if (spi_jedec_response_mismatch) begin
+                            spi_response_mismatch_count <=
+                                spi_response_mismatch_count + 32'd1;
+                        end
                     end
                     spi_transaction_open <= 1'b0;
+                    spi_jedec_active <= 1'b0;
                 end
                 EVENT_FRAME_ERROR: begin
                     spi_frame_error_count <= spi_frame_error_count + 32'd1;
@@ -467,6 +533,7 @@ always @(posedge s_axi_aclk) begin
                             spi_boundary_error_count + 32'd1;
                     end
                     spi_transaction_open <= 1'b0;
+                    spi_jedec_active <= 1'b0;
                 end
                 default: begin
                     spi_boundary_error_count <=

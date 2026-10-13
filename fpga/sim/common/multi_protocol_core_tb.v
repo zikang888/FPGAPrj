@@ -172,12 +172,12 @@ initial begin
     end
 
     axi_read(16'h0004, value);
-    if (value !== 32'h0001_0004) begin
+    if (value !== 32'h0001_0005) begin
         $fatal(1, "FAIL: VERSION = %h", value);
     end
 
     axi_read(16'h000C, value);
-    if (value !== 32'h0000_000F) begin
+    if (value !== 32'h0000_001F) begin
         $fatal(1, "FAIL: CAPABILITIES = %h", value);
     end
 
@@ -362,6 +362,12 @@ initial begin
     if (value !== 32'd1) $fatal(1, "FAIL: clean SPI last transaction = %h", value);
     axi_read(16'h0060, value);
     if (value !== 32'h0000_0006) $fatal(1, "FAIL: clean SPI status = %h", value);
+    axi_read(16'h0068, value);
+    if (value !== 32'd0) $fatal(1, "FAIL: clean SPI short transactions = %h", value);
+    axi_read(16'h006C, value);
+    if (value !== 32'd0) $fatal(1, "FAIL: clean SPI extra bytes = %h", value);
+    axi_read(16'h0070, value);
+    if (value !== 32'd0) $fatal(1, "FAIL: clean SPI response mismatch = %h", value);
 
     // Exact duplicate events, transaction-ID gaps, an orphan DATA event and
     // a residual frame must all be distinguished by hardware counters.
@@ -396,11 +402,53 @@ initial begin
     axi_read(16'h0060, value);
     if (value !== 32'h0000_000E) $fatal(1, "FAIL: SPI error status = %h", value);
 
+    // JEDEC semantic checks are intentionally restricted to command 0x9F:
+    // two bytes are short, five are extra, and an incorrect EF/40/18 reply
+    // is a response mismatch. A final clean transaction must not add errors.
+    axi_write(16'h0064, 32'h0000_0001, 4'hF);
+    send_spi_event(64'd400, 6'h00, 16'h0000, 8'd0, 24'd1, 1'b0);
+    send_spi_event(64'd410, 6'h01, 16'hFF9F, 8'd2, 24'd1, 1'b0);
+    send_spi_event(64'd420, 6'h01, 16'hEF00, 8'd2, 24'd1, 1'b0);
+    send_spi_event(64'd430, 6'h02, 16'h0000, 8'd0, 24'd1, 1'b0);
+
+    send_spi_event(64'd500, 6'h00, 16'h0000, 8'd0, 24'd2, 1'b0);
+    send_spi_event(64'd510, 6'h01, 16'hFF9F, 8'd2, 24'd2, 1'b0);
+    send_spi_event(64'd520, 6'h01, 16'hEF00, 8'd2, 24'd2, 1'b0);
+    send_spi_event(64'd530, 6'h01, 16'h4000, 8'd2, 24'd2, 1'b0);
+    send_spi_event(64'd540, 6'h01, 16'h1800, 8'd2, 24'd2, 1'b0);
+    send_spi_event(64'd550, 6'h01, 16'hAA00, 8'd2, 24'd2, 1'b0);
+    send_spi_event(64'd560, 6'h02, 16'h0000, 8'd0, 24'd2, 1'b0);
+
+    send_spi_event(64'd600, 6'h00, 16'h0000, 8'd0, 24'd3, 1'b0);
+    send_spi_event(64'd610, 6'h01, 16'hFF9F, 8'd2, 24'd3, 1'b0);
+    send_spi_event(64'd620, 6'h01, 16'hEF00, 8'd2, 24'd3, 1'b0);
+    send_spi_event(64'd630, 6'h01, 16'h4100, 8'd2, 24'd3, 1'b0);
+    send_spi_event(64'd640, 6'h01, 16'h1800, 8'd2, 24'd3, 1'b0);
+    send_spi_event(64'd650, 6'h02, 16'h0000, 8'd0, 24'd3, 1'b0);
+
+    send_spi_event(64'd700, 6'h00, 16'h0000, 8'd0, 24'd4, 1'b0);
+    send_spi_event(64'd710, 6'h01, 16'hFF9F, 8'd2, 24'd4, 1'b0);
+    send_spi_event(64'd720, 6'h01, 16'hEF00, 8'd2, 24'd4, 1'b0);
+    send_spi_event(64'd730, 6'h01, 16'h4000, 8'd2, 24'd4, 1'b0);
+    send_spi_event(64'd740, 6'h01, 16'h1800, 8'd2, 24'd4, 1'b0);
+    send_spi_event(64'd750, 6'h02, 16'h0000, 8'd0, 24'd4, 1'b0);
+
+    axi_read(16'h0068, value);
+    if (value !== 32'd1) $fatal(1, "FAIL: SPI short transaction count = %h", value);
+    axi_read(16'h006C, value);
+    if (value !== 32'd1) $fatal(1, "FAIL: SPI extra byte count = %h", value);
+    axi_read(16'h0070, value);
+    if (value !== 32'd1) $fatal(1, "FAIL: SPI response mismatch count = %h", value);
+    axi_read(16'h0060, value);
+    if (value !== 32'h0000_000E) $fatal(1, "FAIL: SPI semantic error status = %h", value);
+
     axi_write(16'h0064, 32'h0000_0001, 4'hF);
     axi_read(16'h003C, value);
     if (value !== 32'd0) $fatal(1, "FAIL: SPI statistics clear = %h", value);
     axi_read(16'h0060, value);
     if (value !== 32'd0) $fatal(1, "FAIL: SPI status clear = %h", value);
+    axi_read(16'h0068, value);
+    if (value !== 32'd0) $fatal(1, "FAIL: SPI semantic counters clear = %h", value);
 
     $display("PASS: multi_protocol_core AXI, snapshots and SPI acceptance statistics");
     $finish;
