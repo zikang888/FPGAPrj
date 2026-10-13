@@ -67,6 +67,12 @@ typedef struct {
     /* Optional deterministic fault hooks. They must be safe and disabled by default. */
     int (*spi_emit_incomplete)(void *context, uint8_t value, uint8_t valid_bits);
     int (*uart_emit_bad_stop)(void *context, uint8_t value, uint32_t baudrate);
+    int (*uart_emit_break)(void *context, uint32_t bit_times, uint32_t baudrate);
+    int (*uart_set_baudrate)(void *context, uint32_t baudrate);
+    int (*i2c_hold_sda_low)(void *context, uint32_t duration_ms);
+    int (*i2c_hold_scl_low)(void *context, uint32_t duration_ms);
+    int (*i2c_emit_no_stop)(void *context, uint8_t address_7bit, uint32_t hold_ms);
+    int (*can_ack_probe)(void *context, uint32_t standard_id, uint32_t timeout_ms);
     int (*sync_pulse)(void *context, uint32_t case_id);
 } mc_platform_t;
 

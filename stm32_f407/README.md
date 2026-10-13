@@ -30,13 +30,16 @@ docs/protocol-rules/protocol_rules.yaml
 ## 当前支持
 
 - SPI `0x9F` JEDEC ID 读取；发送 `9F 00 00 00`，期望值由实物器件确认。
+- 启动独立探测实物 JEDEC ID（`case=1000`，最多三次），拒绝全 `00`/全 `FF`；正常 `spi jedec N` 使用探测值，执行 N 笔计数事务。
 - SPI 固定字节模式。
 - UART 双向回环。
 - AT24C256 写入、ACK polling、读回比较。
 - CAN 标准帧回环。
-- JSONL 真值日志与本地事务号。
+- JSONL 真值日志与本地事务号；SPI 同时保存实际 RX `data` 和 MOSI `tx`。
 - 可选同步脉冲接口。
-- SPI 残帧、UART 错误停止位的板级扩展钩子；默认不绑定，防止误驱动。
+- USART1 中断接收缓冲与整行回显，保留快速串口命令修复。
+- 20 项可选择故障菜单；PA0 短按切换、长按触发，SSD1306 OLED 显示状态。
+- SPI 残帧、UART 错误停止位/Break 的波形钩子已接入；I²C 故障跳线与 CAN 无 ACK 探测默认关闭。
 
 完整 Keil 工程入口：
 
@@ -87,8 +90,11 @@ SPI 第一闭环固定为 STM32 主机、W25Q128 从机、FPGA 被动监听：
 | 外接 AT24C256 | PB6/PB7 | I²C1，100 kHz |
 | 外接 SN65HVD230 | PD0/PD1 | CAN1 RX/TX，500 kbit/s |
 | 用户 LED | PB2 | 成功点亮，失败熄灭 |
-| 用户按键 | PA0 | 按下执行一次 SPI JEDEC 测试 |
+| 用户按键 | PA0 | 短按选择故障，长按执行 |
 | 同步脉冲 | PC6 | 输出到 FPGA 可选同步输入 |
+| SSD1306 OLED | PB12/PB13/PB15、PC4/PC5 | 128×64、4 线 SPI |
+
+错误事件与 OLED 接线详见 `docs/hardware/stm32_fault_menu_oled.md`。
 
 USART1 命令：
 

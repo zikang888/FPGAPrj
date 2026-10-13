@@ -439,6 +439,11 @@
               <FilePath>../../../common/src/mc_protocol_runner.c</FilePath>
             </File>
             <File>
+              <FileName>mc_cli_rx.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../../../common/src/mc_cli_rx.c</FilePath>
+            </File>
+            <File>
               <FileName>mc_truth_log.c</FileName>
               <FileType>1</FileType>
               <FilePath>../../../common/src/mc_truth_log.c</FilePath>
@@ -452,6 +457,16 @@
               <FileName>mc_board_app.c</FileName>
               <FileType>1</FileType>
               <FilePath>../../../app/src/mc_board_app.c</FilePath>
+            </File>
+            <File>
+              <FileName>mc_faults.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../../../common/src/mc_faults.c</FilePath>
+            </File>
+            <File>
+              <FileName>mc_oled.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../../../app/src/mc_oled.c</FilePath>
             </File>
           </Files>
         </Group>

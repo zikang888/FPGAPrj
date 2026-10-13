@@ -642,6 +642,7 @@ static void render_errors_page(const PlatformUiStatus *status,
               status->external_loss_count == 0U ? C_GREEN : C_RED, C_PANEL);
         text(30U, 352U, "SELECT SPI FOR CONNECTED FAULT CHECKS",
              C_CYAN, C_PANEL);
+        text(30U, 380U, "STM32 EXEC: EXTERNAL LOG ONLY", C_WARN, C_PANEL);
         return;
     }
     fill(14U, 52U, 786U, 116U, C_PANEL);
@@ -671,7 +672,9 @@ static void render_errors_page(const PlatformUiStatus *status,
                       ERROR_UART_STOP_BIT);
     draw_planned_case(420U, 346U, "I2C ADDRESS NACK", &status->error_model,
                       ERROR_I2C_ADDRESS_NACK);
-    text(28U, 378U, "OTHER SPI / UART / I2C / CAN CASES: INTERFACE READY",
+    text(28U, 371U, "STM32 EXEC: EXTERNAL JSONL - NOT WIRED TO ZYNQ",
+         C_WARN, C_PANEL);
+    text(28U, 389U, "PL DETECT: ONLY MEASURED COUNTERS ABOVE",
          C_MUTED, C_PANEL);
 }
 

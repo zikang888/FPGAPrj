@@ -18,7 +18,7 @@ sky_star_protocol_node.ioc
 STM32F407VGT6。已在 Keil ARMCC 5.06 update 2 上构建：
 
 ```text
-Program Size: Code=19302 RO-data=1386 RW-data=24 ZI-data=3696
+Program Size: Code=26610 RO-data=2574 RW-data=60 ZI-data=5260
 0 Error(s), 0 Warning(s)
 ```
 
@@ -44,6 +44,7 @@ Program Size: Code=19302 RO-data=1386 RW-data=24 ZI-data=3696
 - USART3 交叉连接 FPGA UART，USART1 独立连接 USB-UART 日志终端。
 - CAN1 PD0/PD1 必须先接 SN65HVD230，不能直连 CANH/CANL。
 - TEST_SYNC PC6 可接 FPGA 的一个 3.3 V 输入。
+- SSD1306 7 针 OLED 接 PB12/PB13/PB15、PC4/PC5；菜单说明见 `../../docs/hardware/stm32_fault_menu_oled.md`。
 
 ## CubeMX 再生成
 

@@ -1,5 +1,5 @@
 schema_version: 1
-rules_version: "1.0.0-draft-repo-abi"
+rules_version: "1.1.1-draft-fault-menu"
 owner: "成员C"
 approval_status: "draft_member_c_owned"
 change_policy:
@@ -63,6 +63,11 @@ protocols:
       - name: "incomplete_byte"
         match_error: "incomplete_byte"
     cases:
+      - case_id: 1000
+        name: "mounted_flash_jedec_probe"
+        tx_hex: "9F000000"
+        expected: "reject_all_00_or_all_FF; record_actual_tx_and_rx"
+        note: "startup probe is separate from counted JEDEC test transactions"
       - case_id: 1001
         name: "w25q128_jedec_id"
         tx_hex: "9F000000"
@@ -78,6 +83,17 @@ protocols:
         name: "cs_incomplete_byte"
         fault: "emit_1_to_7_valid_bits_then_release_cs"
         acceptance_iterations: 100
+      - case_id: 1092
+        name: "jedec_short_transaction"
+        tx_hex: "9F00"
+        classification: "expected_transaction_mismatch_not_spi_line_error"
+      - case_id: 1093
+        name: "jedec_extra_byte"
+        tx_hex: "9F00000000"
+        classification: "expected_transaction_mismatch_not_spi_line_error"
+      - case_id: 1094
+        name: "miso_comparison"
+        classification: "observe_only_requires_external_fault_or_wrong_expected_value"
 
   uart:
     enabled: true
@@ -95,6 +111,23 @@ protocols:
         payload_rule: "incrementing bytes"
         smoke_iterations: 10
         acceptance_iterations: 1000
+      - case_id: 2091
+        name: "bad_stop_bit"
+        method: "PD8_GPIO_bitbang_one_0x55_frame_stop_low"
+      - case_id: 2092
+        name: "break"
+        method: "PD8_low_13_bit_times"
+      - case_id: 2093
+        name: "baud_mismatch"
+        method: "send_0x55_at_96000_then_restore_115200"
+        classification: "may_cause_decode_mismatch_or_framing_error"
+      - case_id: 2094
+        name: "missing_bytes"
+        method: "send_3_of_expected_8_bytes"
+        classification: "expected_transaction_timeout_not_bad_uart_frame"
+      - case_id: 2095
+        name: "parity_error"
+        availability: "not_in_8N1_baseline"
 
   i2c:
     enabled: true
@@ -123,6 +156,20 @@ protocols:
         name: "missing_address_nack"
         address_7bit: "0x51"
         expected: "nack"
+      - case_id: 3092
+        name: "write_cycle_busy_nack"
+        method: "write_one_byte_then_ack_poll"
+        note: "nack_count_is_measured_not_assumed"
+      - case_id: 3093
+        name: "sda_stuck_low"
+        availability: "requires_PC7_open_drain_jumper_to_SDA_and_build_option"
+      - case_id: 3094
+        name: "scl_stuck_low"
+        availability: "requires_PC8_open_drain_jumper_to_SCL_and_build_option"
+      - case_id: 3095
+        name: "delayed_stop"
+        method: "bitbang_address_then_hold_SCL_low_30ms_then_recover_with_STOP"
+        classification: "bounded_timeout_window_not_permanent_bus_fault"
 
   can:
     enabled: false
@@ -138,6 +185,25 @@ protocols:
         payload_rule: "incrementing bytes"
         smoke_iterations: 10
         acceptance_iterations: 1000
+      - case_id: 4091
+        name: "no_ack_probe"
+        availability: "requires_transceiver_and_no_acknowledging_peer"
+        method: "one_shot_NART_send_then_restore_auto_retransmission"
+      - case_id: 4092
+        name: "bit_error"
+        availability: "external_physical_injector_required"
+      - case_id: 4093
+        name: "stuff_error"
+        availability: "external_physical_injector_required"
+      - case_id: 4094
+        name: "crc_error"
+        availability: "external_physical_injector_required"
+      - case_id: 4095
+        name: "form_error"
+        availability: "external_physical_injector_required"
+      - case_id: 4096
+        name: "bus_off"
+        availability: "requires_repeated_external_bus_fault_and_recovery_plan"
 
 acceptance:
   event_missing: 0

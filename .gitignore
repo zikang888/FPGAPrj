@@ -76,3 +76,10 @@ xsim.dir/
 Thumbs.db
 *.swp
 *~
+
+# STM32 host and Keil build outputs
+/stm32_f407/build/
+/stm32_f407/firmware/Projects/MDK-ARM/sky_star_protocol_node/
+/stm32_f407/firmware/Projects/MDK-ARM/build.log
+*.uvguix.*
+*.lst

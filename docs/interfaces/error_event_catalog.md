@@ -11,6 +11,12 @@ UI 必须显示 `--`，不能显示“0/正常”。有真实来源且 count=0 �
 复位周期内的累计计数，再让 PS UI 刷新；不得把普通 DATA 的 flags、
 任意 ERROR 事件或 STM32 串口文本擅自映射成具体错误类别。
 
+STM32 2026-10-13 故障菜单的 JSONL 是独立执行证据，不是 PL 检测证据。
+当前 PC6 同步脉冲和 USART1 日志均未接入 Zynq 采集端，ERRORS 页分别标出
+“STM32 EXEC: EXTERNAL JSONL”和“PL DETECT: ONLY MEASURED COUNTERS”。
+只有新增经验证的物理/软件输入链路后，才能在 Zynq 上显示某个 STM32
+用例确实执行过；`result=0` 不能直接点亮某个 PL 错误类别。
+
 | 类别 | `ErrorCode` 范围 | 接入所需证据 | 当前状态 |
 | --- | --- | --- | --- |
 | SPI 半字节结束 | `ERROR_SPI_PARTIAL_BYTE` | PL `SPI_FRAME_ERROR_COUNT` (`0x004C`)；CS 上升时余 1–7 bit | **已接入**，ERRORS 显示真实计数 |
