@@ -33,7 +33,8 @@ int capture_demo_cache_snapshot(CaptureDemoCache *cache,
     u32 event_index;
     u32 word_index;
     if (cache == 0 || snapshot == 0 || snapshot->count == 0U ||
-        snapshot->count > CAPTURE_MAX_EVENTS) return XST_FAILURE;
+        snapshot->count > CAPTURE_MAX_EVENTS ||
+        snapshot->trigger_index >= snapshot->count) return XST_FAILURE;
     cache->valid = 0U;
     if ((Xil_In32(REG_CAPTURE_STATUS) & CAPTURE_STATUS_READY) == 0U ||
         Xil_In32(REG_SNAPSHOT_ID) != snapshot->snapshot_id) {
@@ -51,6 +52,7 @@ int capture_demo_cache_snapshot(CaptureDemoCache *cache,
     }
     cache->snapshot_id = snapshot->snapshot_id;
     cache->count = snapshot->count;
+    cache->trigger_index = snapshot->trigger_index;
     cache->valid = 1U;
     return XST_SUCCESS;
 }
@@ -132,11 +134,13 @@ int capture_demo_run(CaptureDemoSnapshot *snapshot)
         return XST_FAILURE;
     }
 
-    for (index = 0U; index < 8U; ++index) {
+    /* The PL freezes four events after the trigger. Put the demo trigger at
+     * index 20 so all 25 virtual events fit without inactive-event drops. */
+    for (index = 0U; index < 20U; ++index) {
         Xil_Out32(REG_VIRTUAL_EVENT, index);
     }
-    Xil_Out32(REG_VIRTUAL_EVENT, VIRTUAL_TRIGGER | 8U);
-    for (index = 9U; index < 25U; ++index) {
+    Xil_Out32(REG_VIRTUAL_EVENT, VIRTUAL_TRIGGER | 20U);
+    for (index = 21U; index < 25U; ++index) {
         Xil_Out32(REG_VIRTUAL_EVENT, index);
     }
 

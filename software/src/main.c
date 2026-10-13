@@ -8,6 +8,8 @@
 #include "xuartps.h"
 #include "sleep.h"
 #include "string.h"
+#include "xtime_l.h"
+#include "ui_counter_semantics.h"
 
 #define CORE_BASE       XPAR_MULTI_PROTOCOL_CORE_0_BASEADDR
 #define REG_SYS_ID      (CORE_BASE + 0x0000U)
@@ -17,6 +19,15 @@
 #define REG_LED_CTRL    (CORE_BASE + 0x0030U)
 #define REG_ARB_STATUS  (CORE_BASE + 0x0034U)
 #define REG_EXT_DROPPED (CORE_BASE + 0x0038U)
+#define REG_SPI_FRAME_ERRORS (CORE_BASE + 0x004CU)
+#define REG_SPI_BOUNDARY_ERRORS (CORE_BASE + 0x0050U)
+#define REG_SPI_DUPLICATES (CORE_BASE + 0x0054U)
+#define REG_SPI_SEQUENCE_ERRORS (CORE_BASE + 0x0058U)
+#define REG_SPI_SHORT_TRANSACTIONS (CORE_BASE + 0x0068U)
+#define REG_SPI_EXTRA_BYTES (CORE_BASE + 0x006CU)
+#define REG_SPI_RESPONSE_MISMATCHES (CORE_BASE + 0x0070U)
+#define REG_CORE_REJECTED (CORE_BASE + 0x1014U)
+#define COUNTER_POLL_TICKS ((uint64_t)COUNTS_PER_SECOND / 2U)
 
 #define EXPECTED_ID     0x4D505254U
 #define SCRATCH_TEST    0xA5A55A5AU
@@ -41,7 +52,6 @@ int main(void)
     u32 id;
     u32 version;
     u32 scratch;
-    u8 led_on = 0U;
     u8 touch_ok = 0U;
     u8 capture_ok = 0U;
     CaptureDemoSnapshot capture_snapshot;
@@ -51,10 +61,23 @@ int main(void)
     PlatformUiStatus ui_status;
     PlatformUiPage page = PLATFORM_UI_PAGE_HOME;
     PlatformUiAction action;
+    XTime last_counter_poll;
+    XTime now;
+    u32 core_rejected;
+    u32 external_loss;
+    u32 spi_frame_errors;
+    u32 spi_boundary_errors;
+    u32 spi_duplicates;
+    u32 spi_sequence_errors;
+    u32 spi_short_transactions;
+    u32 spi_extra_bytes;
+    u32 spi_response_mismatches;
 
     memset(&capture_snapshot, 0, sizeof(capture_snapshot));
     memset(&live_snapshot, 0, sizeof(live_snapshot));
     memset(&ui_status, 0, sizeof(ui_status));
+    error_model_init(&ui_status.error_model);
+    ui_status.selected_protocol = UI_PROTOCOL_SPI;
 
     if (uart_init() != XST_SUCCESS) {
         while (1) {
@@ -112,20 +135,93 @@ int main(void)
     ui_status.version = version;
     ui_status.capabilities = Xil_In32(REG_CAPABILITIES);
     ui_status.scratch = scratch;
-    ui_status.dropped_count = capture_snapshot.dropped_count;
-    ui_status.ext_dropped_count = Xil_In32(REG_EXT_DROPPED);
+    ui_status.core_rejected_count = Xil_In32(REG_CORE_REJECTED);
+    ui_status.external_loss_count = Xil_In32(REG_EXT_DROPPED);
+    ui_status.spi_frame_errors = Xil_In32(REG_SPI_FRAME_ERRORS);
+    (void)error_model_report(&ui_status.error_model,
+                             ERROR_SPI_PARTIAL_BYTE, ERROR_ORIGIN_PL,
+                             ui_status.spi_frame_errors);
+    ui_status.spi_boundary_errors = Xil_In32(REG_SPI_BOUNDARY_ERRORS);
+    ui_status.spi_duplicates = Xil_In32(REG_SPI_DUPLICATES);
+    ui_status.spi_sequence_errors = Xil_In32(REG_SPI_SEQUENCE_ERRORS);
+    ui_status.spi_short_transactions = Xil_In32(REG_SPI_SHORT_TRANSACTIONS);
+    ui_status.spi_extra_bytes = Xil_In32(REG_SPI_EXTRA_BYTES);
+    ui_status.spi_response_mismatches = Xil_In32(REG_SPI_RESPONSE_MISMATCHES);
+    (void)error_model_report(&ui_status.error_model,
+                             ERROR_SPI_SHORT_TRANSACTION, ERROR_ORIGIN_PL,
+                             ui_status.spi_short_transactions);
+    (void)error_model_report(&ui_status.error_model,
+                             ERROR_SPI_EXTRA_BYTES, ERROR_ORIGIN_PL,
+                             ui_status.spi_extra_bytes);
+    (void)error_model_report(&ui_status.error_model,
+                             ERROR_SPI_RESPONSE_MISMATCH, ERROR_ORIGIN_PL,
+                             ui_status.spi_response_mismatches);
     ui_status.arbitration_count = Xil_In32(REG_ARB_STATUS);
     ui_status.id_ok = (id == EXPECTED_ID) ? 1U : 0U;
     ui_status.version_ok = ((version & 0xFFFF0000U) == 0x00010000U) ? 1U : 0U;
     ui_status.scratch_ok = (scratch == SCRATCH_TEST) ? 1U : 0U;
     ui_status.touch_ok = touch_ok;
     ui_status.capture_ok = capture_ok;
-    ui_status.led_on = led_on;
     platform_ui_render_page(page, &ui_status,
                             capture_ok != 0U ? &capture_snapshot : 0);
     xil_printf("UI READY\r\n");
+    XTime_GetTime(&last_counter_poll);
 
     while (1) {
+        XTime_GetTime(&now);
+        if (ui_counter_poll_due((uint64_t)now, (uint64_t)last_counter_poll,
+                                COUNTER_POLL_TICKS)) {
+            last_counter_poll = now;
+            core_rejected = Xil_In32(REG_CORE_REJECTED);
+            external_loss = Xil_In32(REG_EXT_DROPPED);
+            spi_frame_errors = Xil_In32(REG_SPI_FRAME_ERRORS);
+            spi_boundary_errors = Xil_In32(REG_SPI_BOUNDARY_ERRORS);
+            spi_duplicates = Xil_In32(REG_SPI_DUPLICATES);
+            spi_sequence_errors = Xil_In32(REG_SPI_SEQUENCE_ERRORS);
+            spi_short_transactions = Xil_In32(REG_SPI_SHORT_TRANSACTIONS);
+            spi_extra_bytes = Xil_In32(REG_SPI_EXTRA_BYTES);
+            spi_response_mismatches = Xil_In32(REG_SPI_RESPONSE_MISMATCHES);
+            if (ui_counter_changed(ui_status.core_rejected_count,
+                                   ui_status.external_loss_count,
+                                   core_rejected, external_loss) ||
+                ui_status.spi_frame_errors != spi_frame_errors ||
+                ui_status.spi_boundary_errors != spi_boundary_errors ||
+                ui_status.spi_duplicates != spi_duplicates ||
+                ui_status.spi_sequence_errors != spi_sequence_errors ||
+                ui_status.spi_short_transactions != spi_short_transactions ||
+                ui_status.spi_extra_bytes != spi_extra_bytes ||
+                ui_status.spi_response_mismatches != spi_response_mismatches) {
+                ui_status.core_rejected_count = core_rejected;
+                ui_status.external_loss_count = external_loss;
+                ui_status.spi_frame_errors = spi_frame_errors;
+                (void)error_model_report(&ui_status.error_model,
+                                         ERROR_SPI_PARTIAL_BYTE,
+                                         ERROR_ORIGIN_PL, spi_frame_errors);
+                ui_status.spi_boundary_errors = spi_boundary_errors;
+                ui_status.spi_duplicates = spi_duplicates;
+                ui_status.spi_sequence_errors = spi_sequence_errors;
+                ui_status.spi_short_transactions = spi_short_transactions;
+                ui_status.spi_extra_bytes = spi_extra_bytes;
+                ui_status.spi_response_mismatches = spi_response_mismatches;
+                (void)error_model_report(&ui_status.error_model,
+                                         ERROR_SPI_SHORT_TRANSACTION,
+                                         ERROR_ORIGIN_PL,
+                                         spi_short_transactions);
+                (void)error_model_report(&ui_status.error_model,
+                                         ERROR_SPI_EXTRA_BYTES,
+                                         ERROR_ORIGIN_PL, spi_extra_bytes);
+                (void)error_model_report(&ui_status.error_model,
+                                         ERROR_SPI_RESPONSE_MISMATCH,
+                                         ERROR_ORIGIN_PL,
+                                         spi_response_mismatches);
+                xil_printf("SPI ERR partial=%lu short=%lu extra=%lu response=%lu\r\n",
+                           (unsigned long)spi_frame_errors,
+                           (unsigned long)spi_short_transactions,
+                           (unsigned long)spi_extra_bytes,
+                           (unsigned long)spi_response_mismatches);
+                platform_ui_update_counters(&ui_status);
+            }
+        }
         action = (touch_ok != 0U) ? platform_ui_poll_action() :
                  PLATFORM_UI_ACTION_NONE;
         if (action == PLATFORM_UI_ACTION_HOME) {
@@ -137,15 +233,24 @@ int main(void)
         } else if (action == PLATFORM_UI_ACTION_EVENTS) {
             page = PLATFORM_UI_PAGE_EVENTS;
             xil_printf("UI PAGE EVENTS\r\n");
-        } else if (action == PLATFORM_UI_ACTION_LED_TOGGLE) {
-            led_on ^= 1U;
-            Xil_Out32(REG_LED_CTRL, (u32)led_on);
-            ui_status.led_on = led_on;
-            xil_printf("LED %s\r\n", (led_on != 0U) ? "ON" : "OFF");
+        } else if (action == PLATFORM_UI_ACTION_ERRORS) {
+            page = PLATFORM_UI_PAGE_ERRORS;
+            xil_printf("UI PAGE ERRORS\r\n");
+        } else if (action >= PLATFORM_UI_ACTION_SELECT_SPI &&
+                   action <= PLATFORM_UI_ACTION_SELECT_CAN) {
+            ui_status.selected_protocol = (UiProtocol)
+                (action - PLATFORM_UI_ACTION_SELECT_SPI);
+            xil_printf("UI PROTOCOL %s: %s\r\n",
+                       ui_protocol_name(ui_status.selected_protocol),
+                       ui_protocol_live(ui_status.selected_protocol,
+                                        ui_status.capabilities) ?
+                       "PL LISTENER READY" : "PL LISTENER NOT CONNECTED");
         } else if (action == PLATFORM_UI_ACTION_CAPTURE_LIVE) {
-            if (ui_status.capture_source != 0U) {
+            if (!ui_protocol_live(ui_status.selected_protocol,
+                                  ui_status.capabilities)) {
+                xil_printf("CAPTURE DISABLED: SELECT LIVE SPI\r\n");
+            } else if (ui_status.capture_source != 0U) {
                 ui_status.capture_source = 0U;
-                ui_status.dropped_count = capture_snapshot.dropped_count;
                 platform_ui_set_event_cache(g_demo_cache.valid != 0U ?
                                             &g_demo_cache : 0);
                 xil_printf("EVENT SOURCE VIRTUAL\r\n");
@@ -163,7 +268,6 @@ int main(void)
                 if (capture_demo_cache_snapshot(&g_live_cache,
                                                 &live_snapshot) == XST_SUCCESS) {
                     ui_status.capture_source = 2U;
-                    ui_status.dropped_count = live_snapshot.dropped_count;
                     platform_ui_set_event_cache(&g_live_cache);
                     xil_printf("SPI SNAPSHOT READY: id=%lu count=%lu trigger=%lu\r\n",
                                (unsigned long)live_snapshot.snapshot_id,

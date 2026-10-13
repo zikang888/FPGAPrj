@@ -1,5 +1,9 @@
 #include "platform_ui.h"
 #include "pixel_scroll.h"
+#include "event_view.h"
+#include "event_audit.h"
+#include "spi_trace.h"
+#include "ui_counter_semantics.h"
 
 #include "font.h"
 #include "touch.h"
@@ -50,10 +54,13 @@ static PlatformUiStatus g_requested_status;
 static CaptureDemoSnapshot g_requested_snapshot;
 static u8 g_requested_snapshot_valid;
 static const CaptureDemoCache *g_event_cache;
+static EventAudit g_event_audit;
+static u8 g_event_audit_valid;
 static u32 g_scroll_px;
 static u32 g_scroll_snapshot_id;
 static u8 g_render_pending;
 static u8 g_render_full;
+static u8 g_counter_render_pending;
 static u8 g_frame_pending;
 static XTime g_frame_switched_at;
 static u16 g_dirty_y0;
@@ -305,29 +312,40 @@ static u8 all_checks_passed(const PlatformUiStatus *status)
 {
     return (status->id_ok != 0U && status->version_ok != 0U &&
             status->scratch_ok != 0U && status->touch_ok != 0U &&
-            status->capture_ok != 0U && status->dropped_count == 0U &&
-            status->ext_dropped_count == 0U) ? 1U : 0U;
-}
-
-static const char *protocol_name(u32 protocol)
-{
-    static const char *names[] = {"VIRT", "UART", "SPI", "I2C", "CAN"};
-    return protocol < 5U ? names[protocol] : "UNKN";
+            status->capture_ok != 0U &&
+            (g_event_audit_valid == 0U || g_event_audit.errors == 0U) &&
+            !error_model_has_fault(&status->error_model) &&
+            !ui_monitor_errors_present(status->external_loss_count,
+                                       status->spi_frame_errors,
+                                       status->spi_boundary_errors,
+                                       status->spi_duplicates,
+                                       status->spi_sequence_errors)) ? 1U : 0U;
 }
 
 static void draw_header(const char *title, const PlatformUiStatus *status,
                         const CaptureDemoSnapshot *snapshot)
 {
-    u32 state_bg = status->capture_ok != 0U ? C_ACTIVE : C_BUTTON;
+    u8 listener_live = (u8)ui_protocol_live(status->selected_protocol,
+                                             status->capabilities);
+    u32 state_bg = listener_live != 0U && status->capture_ok != 0U ?
+                   C_ACTIVE : C_BUTTON;
+    const char *state = listener_live == 0U ? "OFFLINE" :
+                        status->capture_ok == 0U ? "IDLE" :
+                        status->capture_source == 1U ? "ARMED" :
+                        status->capture_source == 2U ? "FROZEN" : "DEMO";
 
     fill(0U, 0U, 799U, 41U, C_HEADER);
     fill(0U, 40U, 799U, 41U, C_CYAN);
     text(18U, 13U, "MPA-7020", C_CYAN, C_HEADER);
     text(116U, 13U, title, C_TEXT, C_HEADER);
+    text(326U, 13U, "VIEW", C_MUTED, C_HEADER);
+    text(370U, 13U, ui_protocol_name(status->selected_protocol),
+         C_CYAN, C_HEADER);
 
     fill(582U, 7U, 670U, 34U, state_bg);
-    text(596U, 13U, status->capture_ok != 0U ? "TRIGGER" : "IDLE",
-         status->capture_ok != 0U ? C_GREEN : C_WARN, state_bg);
+    text(596U, 13U, state,
+         listener_live != 0U && status->capture_ok != 0U ?
+         C_GREEN : C_WARN, state_bg);
     text(690U, 13U, "SNAP", C_MUTED, C_HEADER);
     dec32(730U, 13U, snapshot != 0 ? snapshot->snapshot_id : 0U,
           C_TEXT, C_HEADER);
@@ -342,113 +360,140 @@ static void draw_nav_button(u16 x0, u16 x1, const char *label, u8 active)
     text((u16)(x0 + 18U), 440U, label, C_TEXT, bg);
 }
 
-static void draw_navigation(PlatformUiPage page, const PlatformUiStatus *status)
+static void draw_navigation(PlatformUiPage page)
 {
-    u32 led_bg = (status->led_on != 0U) ? C_ACTIVE : C_BUTTON;
-
     draw_nav_button(12U, 188U, "HOME", page == PLATFORM_UI_PAGE_HOME);
     draw_nav_button(196U, 384U, "SELF TEST",
                     page == PLATFORM_UI_PAGE_SELF_TEST);
     draw_nav_button(392U, 580U, "EVENTS",
                     page == PLATFORM_UI_PAGE_EVENTS);
-    fill(588U, 422U, 787U, 473U, led_bg);
-    outline(588U, 422U, 787U, 473U,
-            status->led_on != 0U ? C_GREEN : C_BORDER);
-    fill(588U, 422U, 787U, 425U,
-         status->led_on != 0U ? C_GREEN : C_BORDER);
-    text(622U, 440U,
-         status->led_on != 0U ? "D1 OUTPUT  ON" : "D1 OUTPUT OFF",
-         C_TEXT, led_bg);
+    draw_nav_button(588U, 787U, "ERRORS",
+                    page == PLATFORM_UI_PAGE_ERRORS);
 }
 
-static void draw_badge(u16 x0, u16 y0, u16 x1, u16 y1,
-                       const char *label, const char *value,
-                       u32 accent)
+static void hex8(u16 x, u16 y, u8 value, u32 fg, u32 bg)
 {
-    fill(x0, y0, x1, y1, C_PANEL);
-    outline(x0, y0, x1, y1, C_BORDER);
-    fill(x0, y0, (u16)(x0 + 4U), y1, accent);
-    text((u16)(x0 + 15U), (u16)(y0 + 9U), label, C_MUTED, C_PANEL);
-    text((u16)(x0 + 15U), (u16)(y0 + 29U), value, accent, C_PANEL);
+    static const char digits[] = "0123456789ABCDEF";
+    glyph(x, y, digits[(value >> 4) & 0xFU], fg, bg);
+    glyph((u16)(x + 8U), y, digits[value & 0xFU], fg, bg);
 }
 
-static void draw_value_badge(u16 x0, u16 y0, u16 x1, u16 y1,
-                             const char *label, u32 value, u32 accent)
+static void draw_home_status(const PlatformUiStatus *status)
 {
-    fill(x0, y0, x1, y1, C_PANEL);
-    outline(x0, y0, x1, y1, C_BORDER);
-    fill(x0, y0, (u16)(x0 + 4U), y1, accent);
-    text((u16)(x0 + 15U), (u16)(y0 + 9U), label, C_MUTED, C_PANEL);
-    dec32((u16)(x0 + 15U), (u16)(y0 + 29U), value, accent, C_PANEL);
+    const char *source = status->capture_source == 1U ? "WAIT SPI" :
+                         status->capture_source == 2U ? "REAL SPI" : "DEMO";
+    fill(14U, 52U, 786U, 100U, C_PANEL);
+    outline(14U, 52U, 786U, 100U, C_BORDER);
+    text(30U, 59U, "PLATFORM", C_MUTED, C_PANEL);
+    text(30U, 78U, all_checks_passed(status) != 0U ? "READY" : "CHECK",
+         all_checks_passed(status) != 0U ? C_GREEN : C_WARN, C_PANEL);
+    text(286U, 59U, "SPI CAPTURE", C_MUTED, C_PANEL);
+    text(286U, 78U, source, C_CYAN, C_PANEL);
+    text(574U, 59U, "EXTERNAL LOSS", C_MUTED, C_PANEL);
+    dec32(574U, 78U, status->external_loss_count,
+          status->external_loss_count == 0U ? C_GREEN : C_WARN, C_PANEL);
+}
+
+static void draw_protocol_tabs(const PlatformUiStatus *status)
+{
+    unsigned int i;
+    for (i = 0U; i < UI_PROTOCOL_COUNT; ++i) {
+        UiProtocol protocol = (UiProtocol)i;
+        u16 x0 = ui_protocol_tab_left(protocol);
+        u16 x1 = ui_protocol_tab_right(protocol);
+        u8 active = status->selected_protocol == protocol;
+        u8 live = (u8)ui_protocol_live(protocol, status->capabilities);
+        u32 bg = active != 0U ? C_ACTIVE : C_BUTTON;
+        fill(x0, 112U, x1, 166U, bg);
+        outline(x0, 112U, x1, 166U, active != 0U ? C_CYAN : C_BORDER);
+        fill(x0, 112U, x1, 115U, active != 0U ? C_CYAN : C_BORDER);
+        text((u16)(x0 + 14U), 123U, ui_protocol_name(protocol), C_TEXT, bg);
+        text((u16)(x0 + 14U), 145U,
+             live != 0U ? "PL READY" : "NOT WIRED",
+             live != 0U ? C_GREEN : C_MUTED, bg);
+    }
+}
+
+static void draw_spi_wave_lane(const u8 bytes[SPI_TRACE_BYTES], u16 high_y,
+                               u16 low_y, u32 color)
+{
+    u32 bit;
+    u8 previous = 0U;
+    for (bit = 0U; bit < SPI_TRACE_BYTES * 8U; ++bit) {
+        u8 level = (u8)((bytes[bit / 8U] >> (7U - bit % 8U)) & 1U);
+        u16 x = (u16)(196U + bit * 15U);
+        u16 y = level != 0U ? high_y : low_y;
+        if (bit != 0U && level != previous) vline(x, high_y, low_y, color);
+        hline(x, (u16)(x + 15U), y, color);
+        previous = level;
+    }
 }
 
 static void render_home_page(const PlatformUiStatus *status,
                              const CaptureDemoSnapshot *snapshot)
 {
-    u32 count = snapshot != 0 ? snapshot->count : 0U;
-    u32 trigger = snapshot != 0 ? snapshot->trigger_index : 0U;
-    u32 event;
-    u16 x;
-    u16 trigger_x = 66U;
+    SpiTrace trace;
+    u32 byte_index;
+    int have_trace = 0;
 
-    draw_header("CAPTURE OVERVIEW", status, snapshot);
-
-    fill(14U, 52U, 560U, 118U, C_PANEL);
-    outline(14U, 52U, 560U, 118U, C_BORDER);
-    text(30U, 63U, "DEVICE", C_MUTED, C_PANEL);
-    text(30U, 86U, "ZYNQ-7020 / PL", C_TEXT, C_PANEL);
-    text(210U, 63U, "SYSTEM ID", C_MUTED, C_PANEL);
-    hex32(210U, 86U, status->id,
-          status->id_ok != 0U ? C_GREEN : C_RED, C_PANEL);
-    text(382U, 63U, "VERSION", C_MUTED, C_PANEL);
-    hex32(382U, 86U, status->version, C_TEXT, C_PANEL);
-
-    fill(14U, 128U, 560U, 407U, C_PANEL);
-    outline(14U, 128U, 560U, 407U, C_BORDER);
-    text(30U, 142U, "EVENT RECORD", C_CYAN, C_PANEL);
-    text(410U, 142U, "PRE / TRG / POST", C_MUTED, C_PANEL);
-
-    for (event = 0U; event < 9U; ++event) {
-        x = (u16)(52U + event * 58U);
-        vline(x, 177U, 373U, C_GRID);
-    }
-    hline(52U, 522U, 274U, C_BORDER);
-    hline(52U, 522U, 222U, C_GRID);
-    hline(52U, 522U, 326U, C_GRID);
-    text(30U, 196U, "EVT", C_MUTED, C_PANEL);
-    text(30U, 300U, "SEQ", C_MUTED, C_PANEL);
-
-    if (count > 1U) {
-        trigger_x = (u16)(52U + (trigger * 470U) / (count - 1U));
-        if (trigger_x > 522U) trigger_x = 522U;
-    }
-    fill(trigger_x, 174U, (u16)(trigger_x + 3U), 375U, C_TRIGGER);
-    text((u16)(trigger_x > 28U ? trigger_x - 28U : trigger_x), 382U,
-         "TRIGGER", C_TRIGGER, C_PANEL);
-
-    if (snapshot != 0) {
-        for (event = 0U; event < snapshot->shown; ++event) {
-            u32 logical = snapshot->first_index + event;
-            u16 marker_x = count > 1U ?
-                (u16)(52U + (logical * 470U) / (count - 1U)) : 52U;
-            u32 marker_color = logical == trigger ? C_TRIGGER : C_CYAN;
-            fill((u16)(marker_x - 3U), 266U,
-                 (u16)(marker_x + 3U), 282U, marker_color);
-        }
+    if (status->selected_protocol == UI_PROTOCOL_SPI &&
+        status->capture_source == 2U && g_event_cache != 0 &&
+        g_event_cache->valid != 0U && snapshot != 0 &&
+        g_event_cache->snapshot_id == snapshot->snapshot_id) {
+        have_trace = spi_trace_extract(&g_event_cache->event_word[0][0],
+                                       g_event_cache->count, &trace);
     }
 
-    draw_value_badge(572U, 52U, 786U, 115U, "EVENTS", count, C_CYAN);
-    draw_value_badge(572U, 124U, 786U, 187U, "TRIGGER INDEX", trigger,
-                     C_TRIGGER);
-    draw_value_badge(572U, 196U, 786U, 259U, "CORE DROPS",
-                     status->dropped_count,
-                     status->dropped_count == 0U ? C_GREEN : C_WARN);
-    draw_value_badge(572U, 268U, 786U, 331U, "EXT DROPS",
-                     status->ext_dropped_count,
-                     status->ext_dropped_count == 0U ? C_GREEN : C_WARN);
-    draw_badge(572U, 340U, 786U, 407U, "PLATFORM",
-               all_checks_passed(status) != 0U ? "READY" : "ATTENTION",
-               all_checks_passed(status) != 0U ? C_GREEN : C_WARN);
+    draw_header("PROTOCOL MONITOR", status, snapshot);
+    draw_home_status(status);
+    draw_protocol_tabs(status);
+    fill(14U, 176U, 786U, 407U, C_PANEL);
+    outline(14U, 176U, 786U, 407U, C_BORDER);
+    if (status->selected_protocol != UI_PROTOCOL_SPI) {
+        text(30U, 190U, ui_protocol_name(status->selected_protocol),
+             C_CYAN, C_PANEL);
+        text(92U, 190U, "PROTOCOL VIEW", C_MUTED, C_PANEL);
+        hline(30U, 770U, 214U, C_BORDER);
+        text(246U, 248U, "PL LISTENER NOT CONNECTED", C_TEXT, C_PANEL);
+        text(226U, 278U, "SELECTION SAVED - NO LIVE INPUT", C_CYAN, C_PANEL);
+        text(218U, 310U, "EVENTS AND ERRORS: NO LIVE DATA", C_MUTED, C_PANEL);
+        return;
+    }
+    text(30U, 190U, "SPI BYTE TRACE", C_CYAN, C_PANEL);
+    text(302U, 190U, "DECODED - NOT SAMPLED", C_MUTED, C_PANEL);
+    hline(30U, 770U, 214U, C_BORDER);
+    if (have_trace == 0) {
+        text(274U, 244U,
+             status->capture_source == 1U ? "WAITING FOR SPI DATA" :
+             status->capture_source == 2U ? "NO COMPLETE SPI TXN" :
+             "NO REAL SPI CAPTURE", C_TEXT, C_PANEL);
+        text(250U, 274U,
+             status->capture_source == 1U ? "SEND ONE STM32 JEDEC" :
+             status->capture_source == 2U ? "CHECK EVENTS FOR DETAILS" :
+             "TAP HERE TO ARM SPI", C_CYAN, C_PANEL);
+        text(194U, 310U, "DEMO EVENTS ARE NOT BUS WAVEFORMS", C_MUTED, C_PANEL);
+        return;
+    }
+
+    text(30U, 232U, "MOSI", C_CYAN, C_PANEL);
+    text(30U, 300U, "MISO", C_GREEN, C_PANEL);
+    text(84U, 232U, "TX", C_MUTED, C_PANEL);
+    text(84U, 300U, "RX", C_MUTED, C_PANEL);
+    for (byte_index = 0U; byte_index <= SPI_TRACE_BYTES; ++byte_index) {
+        u16 x = (u16)(196U + byte_index * 120U);
+        vline(x, 224U, 340U, C_GRID);
+    }
+    draw_spi_wave_lane(trace.mosi, 231U, 255U, C_CYAN);
+    draw_spi_wave_lane(trace.miso, 299U, 323U, C_GREEN);
+    text(30U, 355U, "TX", C_CYAN, C_PANEL);
+    text(30U, 381U, "RX", C_GREEN, C_PANEL);
+    for (byte_index = 0U; byte_index < SPI_TRACE_BYTES; ++byte_index) {
+        u16 x = (u16)(242U + byte_index * 120U);
+        hex8(x, 355U, trace.mosi[byte_index], C_CYAN, C_PANEL);
+        hex8(x, 381U, trace.miso[byte_index], C_GREEN, C_PANEL);
+    }
+    text(692U, 355U, "HEX", C_MUTED, C_PANEL);
+    text(692U, 381U, "HEX", C_MUTED, C_PANEL);
 }
 
 static void draw_check_row(u16 y, const char *label, u32 value, u8 passed)
@@ -461,6 +506,16 @@ static void draw_check_row(u16 y, const char *label, u32 value, u8 passed)
     hex32(272U, (u16)(y + 12U), value, C_MUTED, bg);
     text(486U, (u16)(y + 12U), passed != 0U ? "PASS" : "FAIL",
          passed != 0U ? C_GREEN : C_RED, bg);
+}
+
+static void draw_info_row(u16 y, const char *label, u32 value)
+{
+    fill(22U, y, 548U, (u16)(y + 40U), C_PANEL);
+    outline(22U, y, 548U, (u16)(y + 40U), C_BORDER);
+    fill(22U, y, 27U, (u16)(y + 40U), C_CYAN);
+    text(40U, (u16)(y + 12U), label, C_TEXT, C_PANEL);
+    dec32(272U, (u16)(y + 12U), value, C_MUTED, C_PANEL);
+    text(486U, (u16)(y + 12U), "INFO", C_CYAN, C_PANEL);
 }
 
 static void render_self_test_page(const PlatformUiStatus *status,
@@ -476,14 +531,13 @@ static void render_self_test_page(const PlatformUiStatus *status,
                    status->touch_ok);
     draw_check_row(248U, "EVENT SNAPSHOT", (u32)status->capture_ok,
                    status->capture_ok);
-    draw_check_row(296U, "CORE DROP", status->dropped_count,
-                   status->dropped_count == 0U);
-    draw_check_row(344U, "EXTERNAL DROP", status->ext_dropped_count,
-                   status->ext_dropped_count == 0U);
+    draw_info_row(296U, "CORE REJECTED", status->core_rejected_count);
+    draw_check_row(344U, "EXTERNAL LOSS", status->external_loss_count,
+                   ui_counter_health_ok(status->external_loss_count));
 
     fill(560U, 56U, 786U, 392U, C_PANEL);
     outline(560U, 56U, 786U, 392U, passed != 0U ? C_GREEN : C_WARN);
-    text(582U, 76U, "OVERALL STATUS", C_MUTED, C_PANEL);
+    text(582U, 76U, "BOARD HEALTH", C_MUTED, C_PANEL);
     text(606U, 112U, passed != 0U ? "READY" : "CHECK",
          passed != 0U ? C_GREEN : C_WARN, C_PANEL);
     hline(582U, 764U, 150U, C_BORDER);
@@ -491,35 +545,197 @@ static void render_self_test_page(const PlatformUiStatus *status,
     hex32(582U, 197U, status->capabilities, C_TEXT, C_PANEL);
     text(582U, 238U, "ARBITRATION", C_MUTED, C_PANEL);
     dec32(582U, 263U, status->arbitration_count, C_TEXT, C_PANEL);
-    text(582U, 304U, "D1 OUTPUT", C_MUTED, C_PANEL);
-    text(582U, 329U, status->led_on != 0U ? "ON" : "OFF",
-         status->led_on != 0U ? C_GREEN : C_TEXT, C_PANEL);
-    text(582U, 365U, "TAP D1 BELOW", C_MUTED, C_PANEL);
+    text(582U, 304U, "SPI CAPTURE", C_MUTED, C_PANEL);
+    text(582U, 329U,
+         status->capture_source == 1U ? "ARMED" :
+         status->capture_source == 2U ? "FROZEN" : "DEMO",
+         C_CYAN, C_PANEL);
+    text(582U, 365U,
+         ui_protocol_live(status->selected_protocol, status->capabilities) ?
+         "SPI LISTENER READY" : "LISTENER NOT WIRED", C_MUTED, C_PANEL);
+}
+
+static void draw_error_metric(u16 x0, u16 x1, u16 y,
+                              const char *label, u32 value, u8 known)
+{
+    u32 accent = known == 0U ? C_MUTED :
+                 value == 0U ? C_GREEN : C_RED;
+    fill(x0, y, x1, (u16)(y + 69U), C_PANEL);
+    outline(x0, y, x1, (u16)(y + 69U), C_BORDER);
+    fill(x0, y, (u16)(x0 + 4U), (u16)(y + 69U), accent);
+    text((u16)(x0 + 14U), (u16)(y + 10U), label, C_MUTED, C_PANEL);
+    if (known != 0U)
+        dec32((u16)(x0 + 14U), (u16)(y + 36U), value, accent, C_PANEL);
+    else
+        text((u16)(x0 + 14U), (u16)(y + 36U), "--", accent, C_PANEL);
+    text((u16)(x1 - 90U), (u16)(y + 36U),
+         known == 0U ? "NO DATA" : value == 0U ? "OK" : "FAULT",
+         accent, C_PANEL);
+}
+
+static void draw_spi_checker_tile(const PlatformUiStatus *status)
+{
+    u8 fault = status->spi_boundary_errors != 0U ||
+               status->spi_duplicates != 0U ||
+               status->spi_sequence_errors != 0U;
+    u32 accent = fault != 0U ? C_RED : C_GREEN;
+    fill(14U, 207U, 390U, 276U, C_PANEL);
+    outline(14U, 207U, 390U, 276U, C_BORDER);
+    fill(14U, 207U, 18U, 276U, accent);
+    text(28U, 217U, "SPI EVENT CHECK", C_MUTED, C_PANEL);
+    text(28U, 243U, "BND", C_MUTED, C_PANEL);
+    dec32(65U, 243U, status->spi_boundary_errors, accent, C_PANEL);
+    text(129U, 243U, "DUP", C_MUTED, C_PANEL);
+    dec32(166U, 243U, status->spi_duplicates, accent, C_PANEL);
+    text(230U, 243U, "SEQ", C_MUTED, C_PANEL);
+    dec32(267U, 243U, status->spi_sequence_errors, accent, C_PANEL);
+}
+
+static void draw_planned_case(u16 x, u16 y, const char *label,
+                              const ErrorModel *model, ErrorCode code)
+{
+    ErrorObservation reading = error_model_get(model, code);
+    text(x, y, label, C_MUTED, C_PANEL);
+    if (reading.origin == ERROR_ORIGIN_NONE)
+        text((u16)(x + 265U), y, "--", C_MUTED, C_PANEL);
+    else
+        dec32((u16)(x + 265U), y, reading.count,
+              reading.count == 0U ? C_GREEN : C_RED, C_PANEL);
+}
+
+static void render_errors_page(const PlatformUiStatus *status,
+                               const CaptureDemoSnapshot *snapshot)
+{
+    ErrorObservation partial = error_model_get(&status->error_model,
+                                                ERROR_SPI_PARTIAL_BYTE);
+    u32 snapshot_errors = 0U;
+    u8 snapshot_known = 0U;
+    u8 fault;
+    /* Fault counters on this page are always read live from PL registers.
+     * The DEMO/REAL SPI selector controls the event snapshot pages only. */
+    const char *source = "PL LIVE";
+    if (snapshot != 0 && g_event_cache != 0 &&
+        g_event_cache->valid != 0U && g_event_audit_valid != 0U &&
+        g_event_cache->snapshot_id == snapshot->snapshot_id) {
+        snapshot_errors = g_event_audit.errors;
+        snapshot_known = 1U;
+    }
+    fault = (u8)(ui_monitor_errors_present(status->external_loss_count,
+                                           status->spi_frame_errors,
+                                           status->spi_boundary_errors,
+                                           status->spi_duplicates,
+                                           status->spi_sequence_errors) ||
+                 error_model_has_fault(&status->error_model) ||
+                 snapshot_errors != 0U);
+    draw_header("ERROR MONITOR", status, snapshot);
+    if (!ui_protocol_live(status->selected_protocol, status->capabilities)) {
+        fill(14U, 52U, 786U, 407U, C_PANEL);
+        outline(14U, 52U, 786U, 407U, C_BORDER);
+        text(30U, 66U, "SELECTED PROTOCOL", C_MUTED, C_PANEL);
+        text(30U, 96U, ui_protocol_name(status->selected_protocol),
+             C_CYAN, C_PANEL);
+        text(248U, 150U, "ERROR DETECTOR NOT CONNECTED", C_TEXT, C_PANEL);
+        text(207U, 185U, "NO RESULT IS NOT THE SAME AS ZERO ERRORS",
+             C_WARN, C_PANEL);
+        hline(30U, 770U, 234U, C_BORDER);
+        text(30U, 257U, "GLOBAL EXTERNAL LOSS", C_MUTED, C_PANEL);
+        dec32(30U, 285U, status->external_loss_count,
+              status->external_loss_count == 0U ? C_GREEN : C_RED, C_PANEL);
+        text(30U, 352U, "SELECT SPI FOR CONNECTED FAULT CHECKS",
+             C_CYAN, C_PANEL);
+        return;
+    }
+    fill(14U, 52U, 786U, 116U, C_PANEL);
+    outline(14U, 52U, 786U, 116U, fault != 0U ? C_RED : C_GREEN);
+    text(30U, 61U, "MONITOR STATUS", C_MUTED, C_PANEL);
+    text(30U, 86U, fault != 0U ? "ERROR DETECTED" : "NO DETECTED ERRORS",
+         fault != 0U ? C_RED : C_GREEN, C_PANEL);
+    text(592U, 61U, "SOURCE", C_MUTED, C_PANEL);
+    text(592U, 86U, source, C_CYAN, C_PANEL);
+
+    draw_error_metric(14U, 390U, 128U, "SPI PARTIAL BYTE",
+                      partial.count, partial.origin != ERROR_ORIGIN_NONE);
+    draw_error_metric(406U, 786U, 128U, "EXTERNAL EVENT LOSS",
+                      status->external_loss_count, 1U);
+    draw_spi_checker_tile(status);
+    draw_error_metric(406U, 786U, 207U, "SNAPSHOT ERROR EVENTS",
+                      snapshot_errors, snapshot_known);
+
+    fill(14U, 288U, 786U, 407U, C_PANEL);
+    outline(14U, 288U, 786U, 407U, C_BORDER);
+    text(28U, 297U, "W25Q128 JEDEC 9F SEMANTIC CHECKS", C_CYAN, C_PANEL);
+    draw_planned_case(28U, 323U, "SPI SHORT TXN", &status->error_model,
+                      ERROR_SPI_SHORT_TRANSACTION);
+    draw_planned_case(420U, 323U, "SPI EXTRA BYTE", &status->error_model,
+                      ERROR_SPI_EXTRA_BYTES);
+    draw_planned_case(28U, 346U, "SPI BAD RESPONSE", &status->error_model,
+                      ERROR_SPI_RESPONSE_MISMATCH);
+    text(420U, 346U, "EXPECT EF 40 18", C_MUTED, C_PANEL);
+    text(28U, 378U, "LIVE PL COUNTERS; ZERO = CHECKED AND PASSED",
+         C_MUTED, C_PANEL);
+}
+
+static u32 selected_event_count(const PlatformUiStatus *status,
+                                const CaptureDemoSnapshot *snapshot)
+{
+    u32 i;
+    u32 count = 0U;
+    if (status == 0 || snapshot == 0 || g_event_cache == 0 ||
+        g_event_cache->valid == 0U ||
+        g_event_cache->snapshot_id != snapshot->snapshot_id) return 0U;
+    for (i = 0U; i < g_event_cache->count; ++i) {
+        EventView event = event_view_decode(g_event_cache->event_word[i]);
+        if (ui_protocol_event_matches(status->selected_protocol,
+                                      event.protocol,
+                                      status->capture_source != 2U)) ++count;
+    }
+    return count;
 }
 
 static void draw_events_chrome(const PlatformUiStatus *status,
                                const CaptureDemoSnapshot *snapshot)
 {
+    u32 selected_count = selected_event_count(status, snapshot);
     draw_header("PROTOCOL DECODE", status, snapshot);
+    if (status->selected_protocol == UI_PROTOCOL_SPI &&
+        snapshot != 0 && g_event_cache != 0 &&
+        g_event_cache->valid != 0U &&
+        g_event_cache->snapshot_id == snapshot->snapshot_id &&
+        g_event_audit_valid != 0U) {
+        text(422U, 13U, "ERR", C_MUTED, C_HEADER);
+        dec32(459U, 13U, g_event_audit.errors,
+              g_event_audit.errors != 0U ? C_RED : C_GREEN, C_HEADER);
+    }
     fill(14U, 50U, 786U, 84U, C_PANEL);
     outline(14U, 50U, 786U, 84U, C_BORDER);
     text(28U, 60U, "SNAP", C_MUTED, C_PANEL);
     dec32(72U, 60U, snapshot != 0 ? snapshot->snapshot_id : 0U,
           C_TEXT, C_PANEL);
-    text(150U, 60U, "EVENTS", C_MUTED, C_PANEL);
-    dec32(214U, 60U, snapshot != 0 ? snapshot->count : 0U,
-          C_TEXT, C_PANEL);
-    text(292U, 60U, "TRIGGER", C_MUTED, C_PANEL);
-    dec32(364U, 60U, snapshot != 0 ? snapshot->trigger_index : 0U,
-          C_TRIGGER, C_PANEL);
-    text(460U, 60U, "DROP", C_MUTED, C_PANEL);
-    dec32(504U, 60U, status->dropped_count, C_GREEN, C_PANEL);
+    text(150U, 60U,
+         status->selected_protocol == UI_PROTOCOL_SPI &&
+         status->capture_source != 2U ? "DEMO" : "MATCH",
+         C_MUTED, C_PANEL);
+    dec32(214U, 60U, selected_count, C_TEXT, C_PANEL);
+    if (status->selected_protocol == UI_PROTOCOL_SPI) {
+        text(292U, 60U, "TRIGGER", C_MUTED, C_PANEL);
+        dec32(364U, 60U, snapshot != 0 ? snapshot->trigger_index : 0U,
+              C_TRIGGER, C_PANEL);
+        text(448U, 60U, "REJ", C_MUTED, C_PANEL);
+        dec32(488U, 60U, status->core_rejected_count, C_CYAN, C_PANEL);
+    } else {
+        text(318U, 60U, "LISTENER OFF", C_WARN, C_PANEL);
+    }
     fill(580U, 53U, 781U, 81U, C_BUTTON);
-    outline(580U, 53U, 781U, 81U, C_CYAN);
+    outline(580U, 53U, 781U, 81U,
+            ui_protocol_live(status->selected_protocol,
+                             status->capabilities) ? C_CYAN : C_BORDER);
     text(616U, 60U,
+         !ui_protocol_live(status->selected_protocol,
+                           status->capabilities) ? "SELECT SPI" :
          status->capture_source == 1U ? "WAIT SPI" :
          (status->capture_source == 2U ? "SHOW DEMO" : "ARM SPI"),
-         C_CYAN, C_BUTTON);
+         ui_protocol_live(status->selected_protocol,
+                          status->capabilities) ? C_CYAN : C_MUTED, C_BUTTON);
 
     fill(14U, 92U, 786U, 120U, C_HEADER);
     text(28U, 99U, "MARK", C_MUTED, C_HEADER);
@@ -534,22 +750,16 @@ static void draw_events_chrome(const PlatformUiStatus *status,
 static void draw_event_row_at(const u32 *words, u32 event_index,
                               u32 trigger_index, int y_position)
 {
-    u32 word0;
-    u32 word1;
-    u32 protocol;
-    u32 event_type;
-    u32 flags;
+    EventView view;
+    char type_text[8];
     u32 row_bg;
     u16 y;
 
     if (words == 0 || y_position > 407 ||
         y_position + 32 < 122) return;
 
-    word0 = words[0];
-    word1 = words[1];
-    protocol = (word1 >> 28) & 0xFU;
-    event_type = (word1 >> 16) & 0x3FU;
-    flags = word1 & 0xFFFFU;
+    view = event_view_decode(words);
+    event_view_type_text(view.event_type, type_text);
     y = (u16)y_position;
     row_bg = event_index == trigger_index ? C_ACTIVE :
              ((event_index & 1U) != 0U ? C_BG : C_PANEL);
@@ -560,11 +770,13 @@ static void draw_event_row_at(const u32 *words, u32 event_index,
          event_index == trigger_index ? C_TRIGGER : C_MUTED,
          row_bg);
     dec32(100U, (u16)(y + 8U), event_index, C_TEXT, row_bg);
-    text(164U, (u16)(y + 8U), protocol_name(protocol),
-         protocol == 0U ? C_MUTED : C_CYAN, row_bg);
-    hex32(222U, (u16)(y + 8U), event_type, C_TEXT, row_bg);
-    hex32(294U, (u16)(y + 8U), flags, C_TEXT, row_bg);
-    hex32(406U, (u16)(y + 8U), word0 & 0x00FFFFFFU,
+    text(164U, (u16)(y + 8U), event_view_protocol_name(view.protocol),
+         view.protocol == 0U ? C_MUTED : C_CYAN, row_bg);
+    text(222U, (u16)(y + 8U), type_text,
+         event_view_is_error(&view) ? C_RED : C_TEXT, row_bg);
+    hex32(294U, (u16)(y + 8U), view.flags,
+          event_view_is_error(&view) ? C_RED : C_TEXT, row_bg);
+    hex32(406U, (u16)(y + 8U), view.transaction_id,
           C_TEXT, row_bg);
     hex32(542U, (u16)(y + 8U), words[2],
           C_MUTED, row_bg);
@@ -576,21 +788,36 @@ static u32 max_scroll_px(u32 count)
                             EVENTS_Y1 - EVENTS_Y0 + 1U);
 }
 
-static void draw_events_region(const CaptureDemoSnapshot *snapshot)
+static void draw_events_region(const PlatformUiStatus *status,
+                               const CaptureDemoSnapshot *snapshot)
 {
     u32 index;
+    u32 visible = 0U;
     int y;
     fill(14U, EVENTS_Y0, 786U, EVENTS_Y1, C_PANEL);
     if (snapshot == 0 || g_event_cache == 0 ||
         g_event_cache->valid == 0U ||
         g_event_cache->snapshot_id != snapshot->snapshot_id) return;
-    index = g_scroll_px / EVENT_ROW_PX;
+    if (selected_event_count(status, snapshot) == 0U) {
+        text(248U, 237U,
+             ui_protocol_live(status->selected_protocol,
+                              status->capabilities) ?
+             "NO MATCHING SPI EVENTS" : "NO LIVE PROTOCOL EVENTS",
+             C_MUTED, C_PANEL);
+        return;
+    }
+    index = 0U;
     y = (int)EVENTS_Y0 - (int)(g_scroll_px % EVENT_ROW_PX);
     set_clip(14U, EVENTS_Y0, 786U, EVENTS_Y1);
-    for (; index < g_event_cache->count && y <= (int)EVENTS_Y1;
-         ++index, y += (int)EVENT_ROW_PX) {
+    for (; index < g_event_cache->count && y <= (int)EVENTS_Y1; ++index) {
+        EventView event = event_view_decode(g_event_cache->event_word[index]);
+        if (!ui_protocol_event_matches(status->selected_protocol,
+                                       event.protocol,
+                                       status->capture_source != 2U)) continue;
+        if (visible++ < g_scroll_px / EVENT_ROW_PX) continue;
         draw_event_row_at(g_event_cache->event_word[index], index,
                           snapshot->trigger_index, y);
+        y += (int)EVENT_ROW_PX;
     }
     clear_clip();
 }
@@ -598,18 +825,19 @@ static void draw_events_region(const CaptureDemoSnapshot *snapshot)
 static void render_events_page(const PlatformUiStatus *status,
                                const CaptureDemoSnapshot *snapshot)
 {
-    u32 row;
-    CaptureDemoSnapshot view;
-
+    if (!ui_protocol_live(status->selected_protocol, status->capabilities)) {
+        draw_events_chrome(status, snapshot);
+        fill(14U, EVENTS_Y0, 786U, EVENTS_Y1, C_PANEL);
+        text(244U, 235U, "PL LISTENER NOT CONNECTED", C_TEXT, C_PANEL);
+        text(236U, 269U, "NO LIVE EVENTS FOR THIS PROTOCOL",
+             C_MUTED, C_PANEL);
+        return;
+    }
     if (snapshot != 0 && g_event_cache != 0 &&
         g_event_cache->valid != 0U &&
         g_event_cache->snapshot_id == snapshot->snapshot_id) {
-        view = *snapshot;
-        view.first_index = g_scroll_px / EVENT_ROW_PX;
-        view.shown = (u8)((snapshot->count - view.first_index) > 9U ?
-                          9U : (snapshot->count - view.first_index));
-        draw_events_chrome(status, &view);
-        draw_events_region(snapshot);
+        draw_events_chrome(status, snapshot);
+        draw_events_region(status, snapshot);
         return;
     }
 
@@ -622,17 +850,19 @@ static void render_events_page(const PlatformUiStatus *status,
         return;
     }
 
-    for (row = 0U; row < snapshot->shown; ++row) {
-        draw_event_row_at(snapshot->event_word[row],
-                          snapshot->first_index + row,
-                          snapshot->trigger_index,
-                          (int)(EVENTS_Y0 + row * EVENT_ROW_PX));
-    }
+    fill(14U, 122U, 786U, 407U, C_PANEL);
+    text(252U, 252U, "EVENT CACHE UNAVAILABLE", C_WARN, C_PANEL);
 }
 
 void platform_ui_set_event_cache(const CaptureDemoCache *cache)
 {
     g_event_cache = cache;
+    g_event_audit_valid = 0U;
+    if (cache != 0 && cache->valid != 0U &&
+        event_audit_snapshot(&cache->event_word[0][0], cache->count,
+                             cache->trigger_index, &g_event_audit) != 0) {
+        g_event_audit_valid = 1U;
+    }
 }
 
 void platform_ui_tick(void)
@@ -647,13 +877,43 @@ void platform_ui_tick(void)
             render_self_test_page(&g_requested_status, snapshot);
         } else if (g_requested_page == PLATFORM_UI_PAGE_EVENTS) {
             render_events_page(&g_requested_status, snapshot);
+        } else if (g_requested_page == PLATFORM_UI_PAGE_ERRORS) {
+            render_errors_page(&g_requested_status, snapshot);
         } else {
             render_home_page(&g_requested_status, snapshot);
         }
-        draw_navigation(g_requested_page, &g_requested_status);
+        draw_navigation(g_requested_page);
         present_frame_region(0U, FB_H - 1U);
+        g_counter_render_pending = 0U;
+    } else if (g_counter_render_pending != 0U) {
+        if (g_requested_page == PLATFORM_UI_PAGE_HOME) {
+            draw_home_status(&g_requested_status);
+            present_frame_region(52U, 100U);
+        } else if (g_requested_page == PLATFORM_UI_PAGE_SELF_TEST) {
+            draw_info_row(296U, "CORE REJECTED",
+                          g_requested_status.core_rejected_count);
+            draw_check_row(344U, "EXTERNAL LOSS",
+                           g_requested_status.external_loss_count,
+                           ui_counter_health_ok(g_requested_status.external_loss_count));
+            fill(560U, 56U, 786U, 150U, C_PANEL);
+            outline(560U, 56U, 786U, 150U,
+                    all_checks_passed(&g_requested_status) != 0U ? C_GREEN : C_WARN);
+            text(582U, 76U, "BOARD HEALTH", C_MUTED, C_PANEL);
+            text(606U, 112U,
+                 all_checks_passed(&g_requested_status) != 0U ? "READY" : "CHECK",
+                 all_checks_passed(&g_requested_status) != 0U ? C_GREEN : C_WARN,
+                 C_PANEL);
+            present_frame_region(56U, 392U);
+        } else if (g_requested_page == PLATFORM_UI_PAGE_EVENTS) {
+            draw_events_chrome(&g_requested_status, snapshot);
+            present_frame_region(0U, 120U);
+        } else {
+            render_errors_page(&g_requested_status, snapshot);
+            present_frame_region(52U, 407U);
+        }
+        g_counter_render_pending = 0U;
     } else if (g_requested_page == PLATFORM_UI_PAGE_EVENTS) {
-        draw_events_region(snapshot);
+        draw_events_region(&g_requested_status, snapshot);
         present_frame_region(EVENTS_Y0, EVENTS_Y1);
     }
     g_rendered_page = g_requested_page;
@@ -661,18 +921,49 @@ void platform_ui_tick(void)
     g_render_full = 0U;
 }
 
+void platform_ui_update_counters(const PlatformUiStatus *status)
+{
+    if (status == 0) return;
+    if (g_requested_status.core_rejected_count == status->core_rejected_count &&
+        g_requested_status.external_loss_count == status->external_loss_count &&
+        g_requested_status.spi_frame_errors == status->spi_frame_errors &&
+        g_requested_status.spi_boundary_errors == status->spi_boundary_errors &&
+        g_requested_status.spi_duplicates == status->spi_duplicates &&
+        g_requested_status.spi_sequence_errors == status->spi_sequence_errors &&
+        g_requested_status.spi_short_transactions ==
+            status->spi_short_transactions &&
+        g_requested_status.spi_extra_bytes == status->spi_extra_bytes &&
+        g_requested_status.spi_response_mismatches ==
+            status->spi_response_mismatches &&
+        error_model_equal(&g_requested_status.error_model,
+                          &status->error_model))
+        return;
+    g_requested_status.core_rejected_count = status->core_rejected_count;
+    g_requested_status.external_loss_count = status->external_loss_count;
+    g_requested_status.spi_frame_errors = status->spi_frame_errors;
+    g_requested_status.spi_boundary_errors = status->spi_boundary_errors;
+    g_requested_status.spi_duplicates = status->spi_duplicates;
+    g_requested_status.spi_sequence_errors = status->spi_sequence_errors;
+    g_requested_status.spi_short_transactions = status->spi_short_transactions;
+    g_requested_status.spi_extra_bytes = status->spi_extra_bytes;
+    g_requested_status.spi_response_mismatches =
+        status->spi_response_mismatches;
+    g_requested_status.error_model = status->error_model;
+    g_counter_render_pending = 1U;
+    g_render_pending = 1U;
+}
+
 void platform_ui_render_page(PlatformUiPage page,
                              const PlatformUiStatus *status,
                              const CaptureDemoSnapshot *snapshot)
 {
     if (status == 0) return;
+    if (status->selected_protocol != g_requested_status.selected_protocol)
+        g_scroll_px = 0U;
     if (page == PLATFORM_UI_PAGE_EVENTS && snapshot != 0 &&
         g_scroll_snapshot_id != snapshot->snapshot_id) {
         g_scroll_snapshot_id = snapshot->snapshot_id;
-        g_scroll_px = snapshot->first_index * EVENT_ROW_PX;
-        if (g_scroll_px > max_scroll_px(snapshot->count)) {
-            g_scroll_px = max_scroll_px(snapshot->count);
-        }
+        g_scroll_px = 0U;
     }
     g_requested_page = page;
     g_requested_status = *status;
@@ -693,6 +984,7 @@ PlatformUiAction platform_ui_poll_action(void)
     u16 y;
     u32 next_scroll;
     u32 maximum;
+    UiProtocol selected;
 
     gt911_scan(&TouchInfo);
     if (TouchInfo.Touch_Num == 0U) {
@@ -712,7 +1004,8 @@ PlatformUiAction platform_ui_poll_action(void)
     y = (u16)(((u32)TouchInfo.Tp_Y[0] * FB_H) / GT911_RAW_HEIGHT);
     if (tracking != 0U) {
         if (dragging_events != 0U) {
-            maximum = max_scroll_px(g_requested_snapshot.count);
+            maximum = max_scroll_px(selected_event_count(
+                &g_requested_status, &g_requested_snapshot));
             next_scroll = pixel_scroll_drag(g_scroll_px, (int)last_y,
                                             (int)y, maximum);
             if (next_scroll != g_scroll_px) {
@@ -733,17 +1026,30 @@ PlatformUiAction platform_ui_poll_action(void)
                        g_requested_snapshot_valid != 0U &&
                        g_event_cache != 0 && g_event_cache->valid != 0U &&
                        g_event_cache->snapshot_id ==
-                           g_requested_snapshot.snapshot_id) ? 1U : 0U;
+                           g_requested_snapshot.snapshot_id &&
+                       selected_event_count(&g_requested_status,
+                                            &g_requested_snapshot) != 0U) ? 1U : 0U;
     if (dragging_events != 0U) return PLATFORM_UI_ACTION_NONE;
 
+    if (g_requested_page == PLATFORM_UI_PAGE_HOME &&
+        ui_protocol_from_touch(x, y, &selected))
+        return (PlatformUiAction)(PLATFORM_UI_ACTION_SELECT_SPI + selected);
     if (g_requested_page == PLATFORM_UI_PAGE_EVENTS &&
+        ui_protocol_live(g_requested_status.selected_protocol,
+                         g_requested_status.capabilities) &&
         y >= 50U && y <= 84U && x >= 580U && x <= 786U)
+        return PLATFORM_UI_ACTION_CAPTURE_LIVE;
+    if (g_requested_page == PLATFORM_UI_PAGE_HOME &&
+        ui_protocol_live(g_requested_status.selected_protocol,
+                         g_requested_status.capabilities) &&
+        g_requested_status.capture_source == 0U &&
+        y >= 176U && y <= 407U && x >= 14U && x <= 786U)
         return PLATFORM_UI_ACTION_CAPTURE_LIVE;
     if (y < 414U || y > 479U) return PLATFORM_UI_ACTION_NONE;
     if (x >= 12U && x <= 188U) return PLATFORM_UI_ACTION_HOME;
     if (x >= 196U && x <= 384U) return PLATFORM_UI_ACTION_SELF_TEST;
     if (x >= 392U && x <= 580U) return PLATFORM_UI_ACTION_EVENTS;
-    if (x >= 588U && x <= 799U) return PLATFORM_UI_ACTION_LED_TOGGLE;
+    if (x >= 588U && x <= 799U) return PLATFORM_UI_ACTION_ERRORS;
     return PLATFORM_UI_ACTION_NONE;
 }
 
@@ -770,11 +1076,10 @@ void platform_ui_render_capture(const CaptureDemoSnapshot *snapshot,
     status.touch_ok = touch_ok;
     status.capture_ok = (snapshot != 0) ? 1U : 0U;
     status.led_on = led_on;
-    if (snapshot != 0) status.dropped_count = snapshot->dropped_count;
     platform_ui_render_page(PLATFORM_UI_PAGE_EVENTS, &status, snapshot);
 }
 
 u8 platform_ui_poll_led_button(void)
 {
-    return platform_ui_poll_action() == PLATFORM_UI_ACTION_LED_TOGGLE ? 1U : 0U;
+    return 0U;
 }

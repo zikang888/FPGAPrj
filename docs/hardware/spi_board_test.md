@@ -1,5 +1,20 @@
 # STM32F407 to Zynq SPI passive-monitor test
 
+## JTAG startup order for this integration build
+
+After a full AC820 power cycle, do not read the PL AXI window at
+`0x40000000` while the FPGA configuration status is `DONE=0`. In the
+2026-10-08 board session, that read timed out and subsequent PS DAP accesses
+failed; a controlled cold start without the early AXI read completed
+BIT -> `ps7_init` -> ELF successfully. This is a strong diagnosis of the
+failure sequence, not proof that no power/JTAG fault can produce the same
+symptom. Program the matching
+`Multi_protocol.sdk/platform_hw/multi_protocol_bd_wrapper.bit`, run
+`Multi_protocol.sdk/platform_hw/ps7_init.tcl`, and then download/run the PS
+ELF. Vivado's **Program Device** alone does not start the LCD application.
+If an AXI timeout has already occurred, first check `DONE` and enumerate
+JTAG without touching AXI; do not repeatedly download into a DAP error.
+
 ## Electrical connection
 
 The Zynq PL pins are passive 3.3 V inputs. Connect a common ground before
@@ -17,11 +32,12 @@ Do not mix its BIT with the wiring below.
 | SPI1 MOSI / PA7 | SPI_MOSI / P7-3 | U10 | input |
 | SPI1 MISO / PA6 (same net as flash DO) | SPI_MISO / P7-4 | U9 | input |
 
-The FPGA is a high-impedance listener connected in parallel with the STM32
-master and the external W25Q128 module; it never drives MISO. For a two-board
-smoke test without a real SPI slave, use a separate test output for MISO and
-never connect two push-pull outputs together. If a board-mounted flash shares
-the proposed CS GPIO, select another GPIO or isolate that flash first.
+The current two-board setup uses the populated W25Q128 on the standalone
+SkyStar STM32F407VGT6 core board, not a second external Flash module. PA4 is
+the shared onboard Flash CS net. The FPGA is a high-impedance listener and
+never drives MISO. Both boards are powered independently and share only ground
+and the four SPI monitor signals; never tie their 3V3 rails together. An
+alternative external slave requires a separately reviewed wiring plan.
 
 The PL applies a four-sample CS stability filter after the two-flop
 synchronizer. This rejects short ringing/crosstalk pulses on the board-to-board
@@ -81,6 +97,12 @@ The acceptance result is `SPI_ACCEPTANCE_PASS`, with `events=600`,
 `starts=100`, `data=400`, `ends=100`, and every error/drop counter equal to
 zero. Save the STM32 UART log and the logic-analyzer export from this same run;
 do not compare results from different runs.
+
+The SPI statistics `dropped` field is the external-event loss counter. The
+snapshot register `DROPPED_COUNT` has different semantics: it also counts
+events arriving after a one-transaction snapshot has already frozen. A
+multi-transaction command can therefore produce a nonzero snapshot drop count
+while the SPI global statistics still report all transactions with zero loss.
 
 Member A delivers the listener, unique event path, frozen pin map and these PL
 counters. Rendering the live transaction on the LCD is the PS/UI integration
