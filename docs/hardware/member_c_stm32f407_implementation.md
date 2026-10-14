@@ -1,7 +1,7 @@
 # 成员 C 实施规划：STM32F407 真值节点、Zynq PS 事件解析与系统验证
 
-版本：v1.0
-日期：2026-09-27
+版本：v1.1
+日期：2026-10-14（补充 MCU OLED 接线）
 目标平台：立创·天空星 STM32F407VGT6 + Zynq-7020 多协议通信分析平台
 
 ## 1. 结论与执行边界
@@ -99,8 +99,33 @@ FPGA 统一事件 ───┼→ 成员 C 比对与报告
 | 日志 USART1 TX | PA9 | 输出 | USB-UART/DAP-Link RX | 115200 或更高 |
 | 日志 USART1 RX | PA10 | 输入 | USB-UART/DAP-Link TX | 可选命令输入 |
 | TEST_SYNC | PC6 | 输出 | FPGA_SYNC 输入 | 每批测试前脉冲 |
+| OLED SCLK / D0 | PB13 | 输出 | OLED 时钟输入 | GPIO 软件 SPI |
+| OLED SDA / DIN / D1 | PB15 | 输出 | OLED 数据输入 | GPIO 软件 SPI |
+| OLED CS | PB12 | 输出 | OLED 片选输入 | 低有效 |
+| OLED DC / D-C | PC4 | 输出 | OLED 命令/数据选择 | 低为命令，高为数据 |
+| OLED RES / RST | PC5 | 输出 | OLED 复位输入 | 低有效 |
 
 `TEST_SYNC` 不是协议数据线，而是可选的跨设备时间标记。若板上没有合适空闲管脚，可先用固定测试顺序和事务内容关联，不能伪造同步精度。
+
+### 4.1 MCU OLED 屏幕接线与菜单操作
+
+当前固件使用 **SSD1306、128×64、7 针、4 线 SPI OLED**，用于显示和选择 STM32 故障事件。它接到 STM32，不需要接到 FPGA。按模块信号丝印接线，不按排针位置猜测：
+
+| OLED 模块信号 | 接天空星 STM32F407 | 接线说明 |
+|---|---|---|
+| GND | GND | 与 STM32 共地 |
+| VCC | 3.3 V | 接线前确认模块支持 3.3 V 供电 |
+| SCLK / D0 / CLK | PB13 | 显示时钟 |
+| SDA / DIN / D1 | PB15 | 显示数据；此 SPI 模块的 SDA 是串行数据输入，不是 I²C SDA |
+| CS | PB12 | 片选，低有效 |
+| DC / D-C | PC4 | 命令/显示数据选择 |
+| RES / RST | PC5 | 复位，低有效 |
+
+OLED 使用独立 GPIO 软件 SPI，PB13/PB15/PB12 在驱动中配置为 GPIO 输出，不启用硬件 SPI2；不占用 W25Q128 和 FPGA 监听所使用的 PA4～PA7。OLED 无需 MISO，PB14 不接。当前驱动不能直接用于只有 VCC/GND/SCL/SDA 的 4 针 I²C OLED，也不能直接套用到其他控制器或分辨率的屏幕。
+
+引脚初始化和显示驱动位于 [mc_oled.c](../../stm32_f407/app/src/mc_oled.c)，由 [mc_board_app.c](../../stm32_f407/app/src/mc_board_app.c) 调用。接好屏幕后，使用板载 PA0 按键：短按（25～799 ms）切换事件，长按（至少 800 ms）执行当前事件一次；屏幕显示选择项和执行结果。也可通过 USART1 输入 `fault list`、`fault select N`、`fault run`，其中 N 为 0～19。
+
+屏幕显示的执行返回码只反映 STM32 侧结果；FPGA 检测结果仍需从 FPGA 事件或计数核对。菜单详细清单和故障连线见 [STM32 错误事件菜单与 OLED 接线](stm32_fault_menu_oled.md)。当前 OLED 已完成编译检查，显示效果仍需实板验收。
 
 ## 5. CAN 连接与配合
 
