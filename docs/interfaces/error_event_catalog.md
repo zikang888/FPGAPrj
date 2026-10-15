@@ -31,3 +31,9 @@ PL 或 PS 的实际证据来源及可重复注入；为 `ErrorCode` 报告累计
 来源；添加正常、故障、边界测试；最后才把 UI 的 `--` 变成数值。
 `error_model_has_fault()` 会让已接入且非零的故障影响总体状态；
 `ERROR_I2C_BUSY_NACK` 被明确排除，须另有超时规则才能升级为故障。
+
+STM32 最新 `mc_faults.c` 的 20 个 case ID 与 `ErrorCode` 的一一对应由
+`software/src/stm32_fault_bridge.h` 和主机测试锁定。映射只表示“发起了
+哪个用例”，**不表示 FPGA 检出故障**；STM32 JSONL 中 `result=0` 也可能
+仅说明注入动作成功。没有独立 PL/PS 证据时，不能据此向
+`error_model_report()` 写入非零计数或把 UI 的 `--` 改成 `0/PASS`。

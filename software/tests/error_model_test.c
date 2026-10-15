@@ -1,5 +1,6 @@
 #include <assert.h>
 #include "../src/error_model.h"
+#include "../src/stm32_fault_bridge.h"
 
 int main(void)
 {
@@ -37,5 +38,22 @@ int main(void)
     assert(error_model_report(&copy, ERROR_I2C_BUSY_NACK,
                               ERROR_ORIGIN_PS_RULE, 2U));
     assert(!error_model_has_fault(&copy));
+    {
+        static const uint32_t case_ids[ERROR_CODE_COUNT] = {
+            1091U, 1092U, 1093U, 1094U,
+            2091U, 2092U, 2093U, 2094U, 2095U,
+            3091U, 3092U, 3093U, 3094U, 3095U,
+            4091U, 4092U, 4093U, 4094U, 4095U, 4096U
+        };
+        unsigned int i;
+        ErrorCode code = ERROR_SPI_PARTIAL_BYTE;
+        for (i = 0U; i < ERROR_CODE_COUNT; ++i) {
+            assert(stm32_fault_case_to_error(case_ids[i], &code));
+            assert(code == (ErrorCode)i);
+        }
+        assert(!stm32_fault_case_to_error(1001U, &code));
+        assert(!stm32_fault_case_to_error(1091U, 0));
+        assert(code == ERROR_CAN_BUS_OFF);
+    }
     return 0;
 }
