@@ -1,24 +1,43 @@
 # Volatile JTAG smoke test for the Zynq-7020 build. Does not write boot media.
+proc fail {message} {
+    puts stderr "ERROR: $message"
+    exit 1
+}
 set script_dir [file dirname [file normalize [info script]]]
 set repo_dir [file normalize [file join $script_dir .. ..]]
-set bit_file [file join $repo_dir Multi_protocol.runs impl_1 multi_protocol_bd_wrapper.bit]
+set platform_dir [file join $repo_dir Multi_protocol.sdk platform_hw]
+set default_bit [file join $platform_dir multi_protocol_bd_wrapper.bit]
+set bit_file $default_bit
 if {[info exists ::env(ZYNQ_TEST_BIT)] && $::env(ZYNQ_TEST_BIT) ne ""} {
     set bit_file [file normalize $::env(ZYNQ_TEST_BIT)]
 }
+set init_file [file join $platform_dir ps7_init.tcl]
+if {[info exists ::env(ZYNQ_TEST_INIT)] && $::env(ZYNQ_TEST_INIT) ne ""} {
+    set init_file [file normalize $::env(ZYNQ_TEST_INIT)]
+} elseif {[file normalize $bit_file] ne [file normalize $default_bit]} {
+    fail "Custom ZYNQ_TEST_BIT requires its matching ZYNQ_TEST_INIT"
+}
 if {![info exists ::env(ZYNQ_TEST_ELF)] || $::env(ZYNQ_TEST_ELF) eq ""} {
-    error "Set ZYNQ_TEST_ELF to a freshly built ELF; the existing SDK ELF may be stale"
+    fail "Set ZYNQ_TEST_ELF to a freshly built ELF; the existing SDK ELF may be stale"
 }
 set elf_file [file normalize $::env(ZYNQ_TEST_ELF)]
-set init_file [file join $repo_dir Multi_protocol.sdk ps7_init.tcl]
 foreach path [list $bit_file $elf_file $init_file] {
-    if {![file isfile $path]} {error "Missing test input: $path"}
+    if {![file isfile $path]} {fail "Missing test input: $path"}
+}
+puts "PLATFORM_BIT $bit_file"
+puts "PLATFORM_INIT $init_file"
+puts "APP_ELF $elf_file"
+if {[info exists ::env(ZYNQ_PREFLIGHT_ONLY)] &&
+    $::env(ZYNQ_PREFLIGHT_ONLY) eq "1"} {
+    puts "ZYNQ_JTAG_PREFLIGHT_DONE"
+    exit 0
 }
 
 connect -url tcp:127.0.0.1:3121
 set available [targets]
 puts "TARGETS_BEGIN\n$available\nTARGETS_END"
 if {[string first "ARM Cortex-A9 MPCore #0" $available] < 0} {
-    error "ARM Cortex-A9 MPCore #0 not found"
+    fail "ARM Cortex-A9 MPCore #0 not found"
 }
 targets -set -nocase -filter {name =~ "ARM*#0"} -index 0
 puts "STOP_CPU0"

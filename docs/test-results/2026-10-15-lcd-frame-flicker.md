@@ -21,6 +21,6 @@
 - 已核对 SDK 驱动 `XAxiVdma_CurrFrameStore()` 读取 PARKPTR 的当前读帧字段，不是所请求的参考帧字段。
 - 已执行 `git diff --check`，无补丁空白错误。
 - 已用本机 Arm Compiler 6 对 `platform_ui.c` 执行 `-fsyntax-only -Wall -Wextra -Werror`，通过；此检查采用 Cortex-M4 解析模式，仅验证 C 语法／告警，不等同于 Cortex-A9 构建。
-- 本机 ARM 编译器启动时报 Windows 错误 623（无效的系统 DLL 重定位），因此**此时不能把旧 ELF 当作新版本交付**；待工具链恢复后必须重建。
-- 尝试只读 JTAG 显示路径探测时，XSCT 的 TCF 临时目录权限错误使连接未完成；没有把该尝试计作实板验证。
-- 实板尚未复测。重建后用新 ELF（原 PL bitstream 不变）至少执行两轮：连续切换 HOME／SELF TEST／EVENTS／ERRORS，EVENTS 连续拖动；同时从 STM32 连续发送 SPI 数据，观察状态局部刷新与页面切换期间是否出现旧区域闪烁、半帧或色块。记录 VDMA MM2S 状态错误位和当前读帧号，并与屏幕现象对应。
+- 旧 ARM GCC 在隔离进程内启动报 Windows 错误 623；在本机正常权限下启动成功。用现有 SDK BSP 对 `platform_ui.c` 重新编译、链接成功，新 ELF 为 `.sdk_ui_redesign_validation/platform_app/Debug/platform_app.elf`，SHA-256 `444CF4466D27F90738E9A204B896B4CA207F1F53A8AD0330DC5FEDD0782627B3`。
+- 正常权限下只读 XSCT 已连接到 JTAG，但 AXI 读报 AP transaction error；随后的同源 BIT＋PS 初始化＋新 ELF 一次性下载脚本在发现 PS DAP 不可用时**下载前停止**。所以没有把编译成功误记为已上板通过。
+- 实板仍需复测：下载新 ELF 后至少执行两轮连续切换 HOME／SELF TEST／EVENTS／ERRORS、EVENTS 拖动，并同时从 STM32 连续发送 SPI 数据，观察旧区域闪烁、半帧或色块。记录 VDMA MM2S 状态错误位和当前读帧号，并与屏幕现象对应。

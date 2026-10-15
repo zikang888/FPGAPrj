@@ -4,10 +4,17 @@ set sdk_dir [file join $proj_dir Multi_protocol.sdk]
 if {[info exists ::env(MULTI_PROTOCOL_HDF)] &&
     $::env(MULTI_PROTOCOL_HDF) ne ""} {
     set hdf_file [file normalize $::env(MULTI_PROTOCOL_HDF)]
+    set handoff_source custom
 } else {
-    # The normal GUI/headless flow uses the HDF exported by this project.
-    # A release HDF can still be selected explicitly with MULTI_PROTOCOL_HDF.
+    # Headless build exports to the SDK root; GUI Export Hardware places the
+    # same handoff under platform_hw/system.hdf instead.
     set hdf_file [file join $sdk_dir multi_protocol_bd_wrapper.hdf]
+    if {[file isfile $hdf_file]} {
+        set handoff_source implementation
+    } else {
+        set hdf_file [file join $sdk_dir platform_hw system.hdf]
+        set handoff_source platform_hw
+    }
 }
 if {[info exists ::env(MULTI_PROTOCOL_SDK_WS)] &&
     $::env(MULTI_PROTOCOL_SDK_WS) ne ""} {
@@ -22,6 +29,56 @@ if {![file exists $hdf_file]} {
     puts "ERROR: missing $hdf_file; build the bitstream first"
     exit 1
 }
+if {[info exists ::env(MULTI_PROTOCOL_BIT)] &&
+    $::env(MULTI_PROTOCOL_BIT) ne ""} {
+    set bit_file [file normalize $::env(MULTI_PROTOCOL_BIT)]
+} elseif {$handoff_source eq "implementation"} {
+    set bit_file [file join $proj_dir Multi_protocol.runs impl_1 \
+        multi_protocol_bd_wrapper.bit]
+} else {
+    set bit_file [file join $sdk_dir platform_hw \
+        multi_protocol_bd_wrapper.bit]
+}
+if {![file isfile $bit_file]} {
+    puts "ERROR: missing matching BIT; set MULTI_PROTOCOL_BIT explicitly"
+    exit 1
+}
+if {[info exists ::env(MULTI_PROTOCOL_HDF)] &&
+    $::env(MULTI_PROTOCOL_HDF) ne "" &&
+    (![info exists ::env(MULTI_PROTOCOL_BIT)] ||
+     $::env(MULTI_PROTOCOL_BIT) eq "")} {
+    puts "ERROR: custom HDF requires its matching MULTI_PROTOCOL_BIT"
+    exit 1
+}
+puts "PS_BUILD_SOURCE_HDF [file normalize $hdf_file]"
+puts "PS_BUILD_SOURCE_BIT [file normalize $bit_file]"
+puts "PS_BUILD_WORKSPACE [file normalize $ws_dir]"
+if {[info exists ::env(MULTI_PROTOCOL_PREFLIGHT_ONLY)] &&
+    $::env(MULTI_PROTOCOL_PREFLIGHT_ONLY) eq "1"} {
+    puts "PS_BUILD_PREFLIGHT_DONE"
+    exit 0
+}
+
+# The normal SDK workspace contains platform_hw. Stage both handoff inputs
+# before deleting generated projects, otherwise the GUI-exported HDF and BIT
+# would be deleted before createhw can read them.
+set stage_dir [file normalize [file join $proj_dir ".sdk_handoff_stage_[pid]"]]
+if {[file dirname $stage_dir] ne [file normalize $proj_dir]} {
+    puts "ERROR: handoff staging path escaped project directory"
+    exit 1
+}
+if {[file exists $stage_dir]} {
+    puts "ERROR: handoff staging directory already exists: $stage_dir"
+    exit 1
+}
+file mkdir $stage_dir
+set staged_hdf [file join $stage_dir system.hdf]
+set staged_bit [file join $stage_dir multi_protocol_bd_wrapper.bit]
+file copy $hdf_file $staged_hdf
+file copy $bit_file $staged_bit
+set hdf_file $staged_hdf
+puts "PS_BUILD_HANDOFF_HDF $hdf_file"
+puts "PS_BUILD_HANDOFF_BIT $staged_bit"
 
 setws $ws_dir
 catch {sdk setws $ws_dir}
@@ -38,15 +95,9 @@ foreach project_name $stale_projects {
 }
 
 createhw -name platform_hw -hwspec $hdf_file
-set implementation_bit [file join $proj_dir Multi_protocol.runs impl_1 \
-    multi_protocol_bd_wrapper.bit]
 set platform_bit [file join $ws_dir platform_hw \
     multi_protocol_bd_wrapper.bit]
-if {[file exists $implementation_bit]} {
-    # Keep SDK's conventional Program FPGA path synchronized with the
-    # implementation result even when the HDF was exported headlessly.
-    file copy -force $implementation_bit $platform_bit
-}
+file copy -force $staged_bit $platform_bit
 createbsp -name platform_bsp -hwproject platform_hw \
     -proc ps7_cortexa9_0 -os standalone
 createapp -name platform_app -hwproject platform_hw \
@@ -126,6 +177,7 @@ if {![file exists $elf_file]} {
     exit 1
 }
 
+file delete -force $stage_dir
 puts "PS_BUILD_DONE"
 puts "ELF: $elf_file"
 exit
