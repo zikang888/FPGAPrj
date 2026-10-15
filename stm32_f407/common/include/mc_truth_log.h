@@ -19,7 +19,7 @@ typedef struct {
     const char *direction;
     const uint8_t *data;
     size_t data_length;
-    /* Optional transmitted bytes. SPI records keep data as actual RX. */
+    /* For SPI, data is actual RX and tx_data is the transmitted sequence. */
     const uint8_t *tx_data;
     size_t tx_length;
     int result;

@@ -3,6 +3,9 @@
 #include "main.h"
 #include "mc_protocol_runner.h"
 #include "mc_stm32f407_hal_port.h"
+#include "mc_faults.h"
+#include "mc_oled.h"
+#include "mc_cli_rx.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,7 +25,19 @@ static mc_stm32f407_context_t g_port_context;
 static mc_runner_t g_runner;
 static char g_command[MC_COMMAND_CAPACITY];
 static size_t g_command_length;
+static mc_cli_rx_t g_console_rx;
+static uint8_t g_rx_byte;
+static volatile uint32_t g_uart_rx_errors;
+static uint32_t g_last_dropped;
+static int g_discard_line;
+static uint8_t g_jedec_id[3];
+static int g_jedec_id_valid;
 static GPIO_PinState g_previous_key_state;
+static uint32_t g_key_down_ms;
+static int g_long_press_ran;
+static mc_fault_id_t g_selected_fault;
+static int g_last_fault_result = MC_ERR_UNSUPPORTED;
+static int g_has_fault_result;
 
 static void console_write(const char *text)
 {
@@ -39,13 +54,103 @@ static void print_help(void)
     console_write(
         "\r\nCommands:\r\n"
         "  spi jedec [count]    Read W25Q128 JEDEC ID\r\n"
+        "  spi probe            Read mounted Flash ID again\r\n"
         "  spi pattern [count]  Send deterministic SPI bytes\r\n"
         "  uart loop [count]    USART3 FPGA echo test\r\n"
         "  i2c eeprom [count]   AT24C256 write/read test at 0x50\r\n"
         "  can loop [count]     CAN1 frame echo test, ID 0x321\r\n"
         "  all                  Run one smoke test per protocol\r\n"
+        "  fault list           List selectable fault cases\r\n"
+        "  fault select N       Select case index N (0..19)\r\n"
+        "  fault run [N]        Trigger selected/indexed case\r\n"
         "  help                 Show this help\r\n"
-        "USER_KEY also runs one SPI JEDEC test.\r\n> ");
+        "USER_KEY: short=next, hold 0.8s=run.\r\n> ");
+}
+
+static void display_fault_menu(void)
+{
+    char line[24];
+    unsigned int base = ((unsigned int)g_selected_fault / 4U) * 4U;
+    unsigned int i;
+    const mc_fault_info_t *selected = mc_fault_get(g_selected_fault);
+    mc_oled_clear();
+    mc_oled_text(0U, 0U, "FAULT SELECT");
+    for (i = 0U; i < 4U; ++i) {
+        const mc_fault_info_t *item = mc_fault_get((mc_fault_id_t)(base + i));
+        if (item != NULL) {
+            (void)snprintf(line, sizeof(line), "%c%02u %s",
+                           base + i == (unsigned int)g_selected_fault ? '>' : ' ',
+                           base + i, item->label);
+            mc_oled_text(0U, (uint8_t)(i + 1U), line);
+        }
+    }
+    mc_oled_text(0U, 5U, "TAP NEXT HOLD RUN");
+    if (g_has_fault_result) {
+        if (g_last_fault_result == MC_ERR_UNSUPPORTED) {
+            strcpy(line, "NEEDS EXTERNAL HW");
+        } else {
+        (void)snprintf(line, sizeof(line), "RESULT %d", g_last_fault_result);
+        }
+    } else if (selected != NULL) {
+        switch (selected->requirement) {
+        case MC_FAULT_LOCAL: strcpy(line, "READY"); break;
+        case MC_FAULT_NEEDS_WIRING: strcpy(line, "NEEDS LINK"); break;
+        case MC_FAULT_NEEDS_PEER: strcpy(line, "NEEDS PEER"); break;
+        case MC_FAULT_EXTERNAL_ONLY: strcpy(line, "EXTERNAL ONLY"); break;
+        default: strcpy(line, "NOT BASELINE"); break;
+        }
+    } else {
+        strcpy(line, "INVALID");
+    }
+    mc_oled_text(0U, 6U, line);
+    if (selected != NULL) {
+        (void)snprintf(line, sizeof(line), "CASE %lu", (unsigned long)selected->case_id);
+        mc_oled_text(0U, 7U, line);
+    }
+    mc_oled_flush();
+}
+
+static void print_fault_list(void)
+{
+    unsigned int i;
+    char line[100];
+    for (i = 0U; i < (unsigned int)MC_FAULT_COUNT; ++i) {
+        const mc_fault_info_t *item = mc_fault_get((mc_fault_id_t)i);
+        (void)snprintf(line, sizeof(line), "%2u case=%lu %-20s requirement=%d\r\n",
+                       i, (unsigned long)item->case_id, item->label, item->requirement);
+        console_write(line);
+    }
+    console_write("> ");
+}
+
+static void trigger_selected_fault(void)
+{
+    const mc_fault_info_t *item = mc_fault_get(g_selected_fault);
+    char line[110];
+    if (item == NULL) {
+        return;
+    }
+    (void)snprintf(line, sizeof(line), "\r\nFAULT case=%lu %s\r\n",
+                   (unsigned long)item->case_id, item->label);
+    console_write(line);
+    g_last_fault_result = mc_fault_run(&g_runner, g_selected_fault);
+    g_has_fault_result = 1;
+    (void)snprintf(line, sizeof(line), "FAULT result=%d\r\n> ", g_last_fault_result);
+    console_write(line);
+    HAL_GPIO_WritePin(USER_LED_GPIO_Port, USER_LED_Pin,
+                      g_last_fault_result == MC_OK ? GPIO_PIN_SET : GPIO_PIN_RESET);
+    display_fault_menu();
+}
+
+static void select_fault(unsigned int index)
+{
+    if (index >= (unsigned int)MC_FAULT_COUNT) {
+        console_write("Invalid fault index\r\n> ");
+        return;
+    }
+    g_selected_fault = (mc_fault_id_t)index;
+    g_has_fault_result = 0;
+    display_fault_menu();
 }
 
 static uint32_t parse_count(const char *command)
@@ -84,12 +189,38 @@ static void print_summary(const char *name, int result, const mc_run_summary_t *
                       result == MC_OK ? GPIO_PIN_SET : GPIO_PIN_RESET);
 }
 
+static int probe_jedec_id(void)
+{
+    uint32_t attempt;
+    int result = MC_ERR_VERIFY;
+    char line[96];
+    g_jedec_id_valid = 0;
+    for (attempt = 0U; attempt < 3U; ++attempt) {
+        result = mc_probe_spi_jedec(&g_runner, 1000U, g_jedec_id);
+        if (result == MC_OK) {
+            g_jedec_id_valid = 1;
+            (void)snprintf(line, sizeof(line),
+                           "Mounted JEDEC ID=%02X %02X %02X\r\n> ",
+                           g_jedec_id[0], g_jedec_id[1], g_jedec_id[2]);
+            console_write(line);
+            return MC_OK;
+        }
+        HAL_Delay(5U);
+    }
+    (void)snprintf(line, sizeof(line), "JEDEC probe failed after 3 tries, result=%d\r\n> ", result);
+    console_write(line);
+    HAL_GPIO_WritePin(USER_LED_GPIO_Port, USER_LED_Pin, GPIO_PIN_RESET);
+    return result;
+}
+
 static void run_spi_jedec(uint32_t iterations)
 {
-    /* W25Q128JV reference value. Replace after checking the mounted device. */
-    static const uint8_t expected_id[3] = {0xEFU, 0x40U, 0x18U};
     mc_run_summary_t summary;
-    int result = mc_run_spi_jedec(&g_runner, 1001U, iterations, expected_id, &summary);
+    int result;
+    if (!g_jedec_id_valid && probe_jedec_id() != MC_OK) {
+        return;
+    }
+    result = mc_run_spi_jedec(&g_runner, 1001U, iterations, g_jedec_id, &summary);
     print_summary("SPI_JEDEC", result, &summary);
 }
 
@@ -101,6 +232,31 @@ static void run_command(const char *command)
 
     if (strcmp(command, "help") == 0) {
         print_help();
+    } else if (strcmp(command, "fault list") == 0) {
+        print_fault_list();
+    } else if (strncmp(command, "fault select ", 13U) == 0) {
+        char *endptr;
+        unsigned long index = strtoul(command + 13, &endptr, 10);
+        if (endptr == command + 13 || *endptr != '\0') {
+            console_write("Invalid fault index\r\n");
+        } else {
+            select_fault((unsigned int)index);
+        }
+        console_write("> ");
+    } else if (strncmp(command, "fault run", 9U) == 0) {
+        if (command[9] == ' ') {
+            char *endptr;
+            unsigned long index = strtoul(command + 10, &endptr, 10);
+            if (endptr == command + 10 || *endptr != '\0' ||
+                index >= (unsigned long)MC_FAULT_COUNT) {
+                console_write("Invalid fault index\r\n> ");
+                return;
+            }
+            select_fault((unsigned int)index);
+        }
+        trigger_selected_fault();
+    } else if (strcmp(command, "spi probe") == 0) {
+        (void)probe_jedec_id();
     } else if (strncmp(command, "spi jedec", 9U) == 0) {
         run_spi_jedec(iterations);
     } else if (strncmp(command, "spi pattern", 11U) == 0) {
@@ -167,13 +323,29 @@ void mc_board_app_init(void)
 
     platform = mc_stm32f407_make_platform(&g_port_context);
     mc_runner_init(&g_runner, &platform);
+    mc_cli_rx_init(&g_console_rx);
     g_command_length = 0U;
+    g_discard_line = 0;
+    g_last_dropped = 0U;
+    g_uart_rx_errors = 0U;
+    g_jedec_id_valid = 0;
     g_previous_key_state = HAL_GPIO_ReadPin(USER_KEY_GPIO_Port, USER_KEY_Pin);
+    g_key_down_ms = HAL_GetTick();
+    g_long_press_ran = 0;
+    g_selected_fault = MC_FAULT_SPI_PARTIAL;
+    g_has_fault_result = 0;
     can_result = can_start_accept_all();
+    mc_oled_init();
+    display_fault_menu();
+
+    if (HAL_UART_Receive_IT(&huart1, &g_rx_byte, 1U) != HAL_OK) {
+        console_write("USART1 RX interrupt start failed\r\n");
+    }
 
     console_write("\r\nSkyStar STM32F407 protocol truth node\r\n");
     console_write("Clock=168MHz SPI1=1.3125MHz I2C1=100k UART1/UART3=115200 CAN1=500k\r\n");
     console_write(can_result == MC_OK ? "CAN started\r\n" : "CAN start failed; check transceiver\r\n");
+    (void)probe_jedec_id();
     print_help();
 }
 
@@ -181,17 +353,32 @@ void mc_board_app_poll(void)
 {
     uint8_t value;
     GPIO_PinState key_state;
+    unsigned int processed = 0U;
 
-    if (HAL_UART_Receive(&huart1, &value, 1U, 5U) == HAL_OK) {
+    if (g_console_rx.dropped != g_last_dropped || g_uart_rx_errors != 0U) {
+        g_last_dropped = g_console_rx.dropped;
+        g_discard_line = 1;
+        g_command_length = 0U;
+        g_uart_rx_errors = 0U;
+    }
+    if (huart1.RxState == HAL_UART_STATE_READY) {
+        (void)HAL_UART_Receive_IT(&huart1, &g_rx_byte, 1U);
+    }
+    while (processed++ < 64U && mc_cli_rx_pop(&g_console_rx, &value)) {
+        if (g_discard_line) {
+            if (value == '\r' || value == '\n') {
+                g_discard_line = 0;
+                console_write("\r\nUSART1 RX overflow; line discarded\r\n> ");
+            }
+            continue;
+        }
         if (value == '\r' || value == '\n') {
             if (g_command_length > 0U) {
                 g_command[g_command_length] = '\0';
-                /* Echo only the completed line. Blocking TX after every RX
-                 * byte lets back-to-back 115200-baud input overrun USART1. */
                 console_write(g_command);
                 console_write("\r\n");
-                run_command(g_command);
                 g_command_length = 0U;
+                run_command(g_command);
             }
         } else if (value == 0x08U || value == 0x7FU) {
             if (g_command_length > 0U) {
@@ -199,16 +386,41 @@ void mc_board_app_poll(void)
             }
         } else if (g_command_length + 1U < sizeof(g_command)) {
             g_command[g_command_length++] = (char)value;
+        } else {
+            g_command_length = 0U;
+            g_discard_line = 1;
         }
     }
 
     key_state = HAL_GPIO_ReadPin(USER_KEY_GPIO_Port, USER_KEY_Pin);
     if (key_state == GPIO_PIN_SET && g_previous_key_state == GPIO_PIN_RESET) {
-        HAL_Delay(20U);
-        if (HAL_GPIO_ReadPin(USER_KEY_GPIO_Port, USER_KEY_Pin) == GPIO_PIN_SET) {
-            console_write("\r\nUSER_KEY: SPI JEDEC smoke\r\n");
-            run_spi_jedec(1U);
-        }
+        g_key_down_ms = HAL_GetTick();
+        g_long_press_ran = 0;
+    } else if (key_state == GPIO_PIN_SET && !g_long_press_ran &&
+               (uint32_t)(HAL_GetTick() - g_key_down_ms) >= 800U) {
+        g_long_press_ran = 1;
+        trigger_selected_fault();
+    } else if (key_state == GPIO_PIN_RESET && g_previous_key_state == GPIO_PIN_SET &&
+               !g_long_press_ran && (uint32_t)(HAL_GetTick() - g_key_down_ms) >= 25U) {
+        select_fault((unsigned int)(g_selected_fault + 1U) % (unsigned int)MC_FAULT_COUNT);
     }
     g_previous_key_state = key_state;
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+    if (huart != NULL && huart->Instance == USART1) {
+        (void)mc_cli_rx_push(&g_console_rx, g_rx_byte);
+        if (HAL_UART_Receive_IT(&huart1, &g_rx_byte, 1U) != HAL_OK) {
+            ++g_uart_rx_errors;
+        }
+    }
+}
+
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
+{
+    if (huart != NULL && huart->Instance == USART1) {
+        ++g_uart_rx_errors;
+        (void)HAL_UART_Receive_IT(&huart1, &g_rx_byte, 1U);
+    }
 }

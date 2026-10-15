@@ -79,7 +79,6 @@ static int write_spi_record(mc_runner_t *runner,
                             const char *detail)
 {
     mc_log_record_t record;
-
     memset(&record, 0, sizeof(record));
     record.sequence = runner->next_sequence++;
     record.case_id = case_id;
@@ -104,14 +103,12 @@ static int spi_transfer_once(mc_runner_t *runner,
 {
     int result = pulse_sync(runner, case_id);
     int deselect_result;
-
     if (result == MC_OK) {
         result = runner->platform.spi_select(runner->platform.context, 1);
     }
     if (result == MC_OK) {
         result = runner->platform.spi_transfer(runner->platform.context,
-                                               tx, rx, length,
-                                               MC_IO_TIMEOUT_MS);
+                                               tx, rx, length, MC_IO_TIMEOUT_MS);
     }
     deselect_result = runner->platform.spi_select(runner->platform.context, 0);
     if (result == MC_OK && deselect_result != MC_OK) {
@@ -131,9 +128,7 @@ void mc_runner_init(mc_runner_t *runner, const mc_platform_t *platform)
     runner->next_transaction_id = 1U;
 }
 
-int mc_probe_spi_jedec(mc_runner_t *runner,
-                       uint32_t case_id,
-                       uint8_t id_out[3])
+int mc_probe_spi_jedec(mc_runner_t *runner, uint32_t case_id, uint8_t id_out[3])
 {
     const uint8_t tx[4] = {0x9FU, 0x00U, 0x00U, 0x00U};
     uint8_t rx[4] = {0U, 0U, 0U, 0U};
@@ -141,8 +136,7 @@ int mc_probe_spi_jedec(mc_runner_t *runner,
     int result;
     int log_result;
 
-    if (runner == NULL || id_out == NULL ||
-        runner->platform.spi_select == NULL ||
+    if (runner == NULL || id_out == NULL || runner->platform.spi_select == NULL ||
         runner->platform.spi_transfer == NULL) {
         return MC_ERR_ARGUMENT;
     }
@@ -189,11 +183,12 @@ int mc_run_spi_jedec(mc_runner_t *runner,
         if (result == MC_OK && memcmp(&rx[1], expected_id, 3U) != 0) {
             result = MC_ERR_VERIFY;
         }
-
         log_result = write_spi_record(runner, case_id, transaction_id,
                                       "JEDEC_ID", tx, rx, sizeof(tx), result,
                                       result == MC_OK ? "matched" : "io_or_id_mismatch");
-        if (result == MC_OK && log_result != MC_OK) result = log_result;
+        if (result == MC_OK && log_result != MC_OK) {
+            result = log_result;
+        }
         summary_record(summary, iteration, result);
         if (result != MC_OK) {
             overall = result;
@@ -229,10 +224,11 @@ int mc_run_spi_patterns(mc_runner_t *runner,
         result = spi_transfer_once(runner, case_id, tx, rx, sizeof(tx));
         {
             int log_result = write_spi_record(runner, case_id, transaction_id,
-                                              "PATTERN", tx, rx, sizeof(tx),
-                                              result,
-                                              result == MC_OK ? "transferred" : "io_error");
-            if (result == MC_OK && log_result != MC_OK) result = log_result;
+                                              "PATTERN", tx, rx, sizeof(tx), result,
+                                              result == MC_OK ? "sent" : "io_error");
+            if (result == MC_OK && log_result != MC_OK) {
+                result = log_result;
+            }
         }
         summary_record(summary, iteration, result);
         if (result != MC_OK) {
@@ -282,7 +278,9 @@ int mc_run_uart_loopback(mc_runner_t *runner,
                                           "UART", "LOOPBACK", "TXRX", rx,
                                           sizeof(rx), result,
                                           result == MC_OK ? "matched" : "timeout_or_mismatch");
-            if (result == MC_OK && log_result != MC_OK) result = log_result;
+            if (result == MC_OK && log_result != MC_OK) {
+                result = log_result;
+            }
         }
         summary_record(summary, iteration, result);
         if (result != MC_OK) {
@@ -349,7 +347,9 @@ int mc_run_i2c_eeprom(mc_runner_t *runner,
                                           "I2C", "EEPROM_RW", "TXRX", rx,
                                           sizeof(rx), result,
                                           result == MC_OK ? "matched" : "nack_or_mismatch");
-            if (result == MC_OK && log_result != MC_OK) result = log_result;
+            if (result == MC_OK && log_result != MC_OK) {
+                result = log_result;
+            }
         }
         summary_record(summary, iteration, result);
         if (result != MC_OK) {
@@ -405,7 +405,9 @@ int mc_run_can_loopback(mc_runner_t *runner,
                                           received_length <= sizeof(rx) ? received_length : sizeof(rx),
                                           result,
                                           result == MC_OK ? "matched" : "timeout_or_mismatch");
-            if (result == MC_OK && log_result != MC_OK) result = log_result;
+            if (result == MC_OK && log_result != MC_OK) {
+                result = log_result;
+            }
         }
         summary_record(summary, iteration, result);
         if (result != MC_OK) {
@@ -437,7 +439,9 @@ int mc_run_spi_incomplete_fault(mc_runner_t *runner,
                                       "SPI", "INCOMPLETE_BYTE", "TX", &value,
                                       1U, result,
                                       result == MC_OK ? "fault_emitted" : "fault_hook_failed");
-        if (result == MC_OK && log_result != MC_OK) result = log_result;
+        if (result == MC_OK && log_result != MC_OK) {
+            result = log_result;
+        }
     }
     return result;
 }
@@ -463,7 +467,9 @@ int mc_run_uart_bad_stop_fault(mc_runner_t *runner,
                                       "UART", "BAD_STOP", "TX", &value, 1U,
                                       result,
                                       result == MC_OK ? "fault_emitted" : "fault_hook_failed");
-        if (result == MC_OK && log_result != MC_OK) result = log_result;
+        if (result == MC_OK && log_result != MC_OK) {
+            result = log_result;
+        }
     }
     return result;
 }

@@ -29,12 +29,9 @@ static int append_hex(char *buffer, size_t capacity, size_t *used,
 {
     static const char digits[] = "0123456789ABCDEF";
     size_t index;
-
-    if (length != 0U && data == NULL) {
+    if ((length != 0U && data == NULL) || *used >= capacity ||
+        length > (capacity - *used - 1U) / 2U) {
         return MC_ERR_ARGUMENT;
-    }
-    if (*used >= capacity || length > (capacity - *used - 1U) / 2U) {
-        return MC_ERR_IO;
     }
     for (index = 0U; index < length; ++index) {
         buffer[(*used)++] = digits[data[index] >> 4];
@@ -80,14 +77,12 @@ int mc_truth_log_write(const mc_platform_t *platform, const mc_log_record_t *rec
     }
     used = (size_t)count;
 
-    if (append_hex(line, sizeof(line), &used, record->data,
-                   record->data_length) != MC_OK) {
+    if (append_hex(line, sizeof(line), &used, record->data, record->data_length) != MC_OK) {
         return MC_ERR_IO;
     }
     if (record->tx_data != NULL) {
         if (append_text(line, sizeof(line), &used, "\",\"tx\":\"") != MC_OK ||
-            append_hex(line, sizeof(line), &used, record->tx_data,
-                       record->tx_length) != MC_OK) {
+            append_hex(line, sizeof(line), &used, record->tx_data, record->tx_length) != MC_OK) {
             return MC_ERR_IO;
         }
     }

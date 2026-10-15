@@ -1,7 +1,6 @@
 # STM32F407 多协议真值节点（成员 C）
 
-本目录保存天空星 STM32F407VGT6 的完整多协议测试工程。它从
-`test/fpga_NumberC-A-full-integration` 建立，目标是给 Zynq 平台产生可重复的
+本目录保存天空星 STM32F407VGT6 的完整多协议测试工程，目标是给 Zynq 平台产生可重复的
 SPI、UART、I²C、CAN 流量和独立 JSONL 真值日志。
 
 ## 目录
@@ -14,8 +13,7 @@ stm32_f407/
 ├── firmware/     # CubeMX、HAL/CMSIS、Core 和 Keil MDK-ARM 完整工程
 ├── tests/        # 电脑端 fake-platform 单元测试
 ├── CMakeLists.txt
-├── STM32CubeMX_config.md  # 完整工程的配置说明
-└── STM32CubeMX配置.md     # 第一周的旧接入说明，保留供追溯
+└── STM32CubeMX配置.md
 ```
 
 协议规则的唯一真源不在代码目录，而在：
@@ -30,13 +28,18 @@ docs/protocol-rules/protocol_rules.yaml
 ## 当前支持
 
 - SPI `0x9F` JEDEC ID 读取；发送 `9F 00 00 00`，期望值由实物器件确认。
+- 上电先探测实物 JEDEC ID（用例 1000，最多重试 3 次），拒绝全 `00`/全 `FF`；正常 `spi jedec N` 用探测到的 ID 比对并执行恰好 N 笔测试事务。
 - SPI 固定字节模式。
 - UART 双向回环。
 - AT24C256 写入、ACK polling、读回比较。
 - CAN 标准帧回环。
 - JSONL 真值日志与本地事务号。
+- SPI JSONL 同时记录 `data`（实际 RX）和 `tx`（实际发送），日志失败会反馈到测试结果。
+- 20 项可选择错误事件菜单；PA0 短按切换、长按触发，USART1 也可用 `fault` 命令控制。
+- 128×64 SSD1306 4 线 SPI OLED 页面，使用 PB12/PB13/PB15、PC4/PC5。
+- USART1 使用中断接收缓冲，整行回显；连续快速发送不再逐字节阻塞发送。
 - 可选同步脉冲接口。
-- SPI 残帧、UART 错误停止位的板级扩展钩子；默认不绑定，防止误驱动。
+- SPI 残帧、UART 错误停止位/Break 的 GPIO 波形钩子已绑定；CAN 物理错误仍需外部注入。
 
 完整 Keil 工程入口：
 
@@ -50,9 +53,7 @@ CubeMX 配置入口：
 stm32_f407/firmware/sky_star_protocol_node.ioc
 ```
 
-整合工程已使用 Keil ARMCC 5.06 update 2 实际编译，结果为 0 error、0 warning。
-`examples/` 是第一周的旧接入示例；上板以 `firmware/` 和 `app/` 为准。
-SPI JSONL 日志同时保留实际 RX `data` 与发送字节 `tx`，供 FPGA 快照逐字节对账。
+工程已使用 Keil ARMCC 5.06 update 2 实际编译，结果为 0 error、0 warning。
 
 ## 电脑端测试
 
@@ -87,17 +88,24 @@ SPI 第一闭环固定为 STM32 主机、W25Q128 从机、FPGA 被动监听：
 | 外接 AT24C256 | PB6/PB7 | I²C1，100 kHz |
 | 外接 SN65HVD230 | PD0/PD1 | CAN1 RX/TX，500 kbit/s |
 | 用户 LED | PB2 | 成功点亮，失败熄灭 |
-| 用户按键 | PA0 | 按下执行一次 SPI JEDEC 测试 |
+| 用户按键 | PA0 | 短按切换错误事件，长按执行 |
 | 同步脉冲 | PC6 | 输出到 FPGA 可选同步输入 |
+| OLED | PB12/PB13/PB15、PC4/PC5 | 128×64 SSD1306 4 线 SPI |
+
+错误事件和 OLED 接线详见 `docs/hardware/stm32_fault_menu_oled.md`。
 
 USART1 命令：
 
 ```text
 spi jedec [count]
+spi probe
 spi pattern [count]
 uart loop [count]
 i2c eeprom [count]
 can loop [count]
 all
 help
+fault list
+fault select 0
+fault run
 ```

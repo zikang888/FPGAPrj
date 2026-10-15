@@ -5,8 +5,10 @@ set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 add_library(mc_protocol_common
+    common/src/mc_cli_rx.c
     common/src/mc_protocol_runner.c
     common/src/mc_truth_log.c
+    common/src/mc_faults.c
 )
 target_include_directories(mc_protocol_common PUBLIC common/include)
 
