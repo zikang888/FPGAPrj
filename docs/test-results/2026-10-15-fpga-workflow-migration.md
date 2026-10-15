@@ -29,4 +29,4 @@
 
 旧 ARM GCC 在隔离进程内报 DLL 重定位错误；以正常权限调用同一个本机 GCC 后，`software/src/platform_ui.c` 成功编译并链接到新的 `platform_app.elf`（SHA-256 `444CF4466D27F90738E9A204B896B4CA207F1F53A8AD0330DC5FEDD0782627B3`）。
 
-正常权限下 XSCT 可连接 JTAG；只读探测曾枚举到 APU 和两个 CPU，但 PS→PL AXI 读取报 AP transaction error。随后同源 BIT＋初始化＋新 ELF 的一次性测试脚本仅枚举到 `DAP (JTAG port open error)` 与 `xc7z020`，按安全检查在下载前停止，**没有烧录、没有声称 LCD 修复实板通过**。下一步是恢复 PS DAP 可访问性，再执行完整易失性下载与 LCD 两轮回归；不涉及 QSPI 写入。
+正常权限下 XSCT 可连接 JTAG；首次只读探测出现 PS DAP AP transaction error，同源 BIT＋初始化＋新 ELF 的测试脚本按安全检查在下载前停止。用户将 AC820/Zynq 单独重新上电后，低速只读 JTAG 探测显示 APU、两颗运行中的 Cortex-A9 与 `xc7z020`。随后同源 BIT＋`ps7_init.tcl`＋新 ELF 的易失性下载完成，XSCT 输出 `ZYNQ_JTAG_PL_FIRST_TEST_DONE`，PL 寄存器读得 `SYS_ID=4D505254`、`VERSION=00010004`、`CAPABILITIES=0000000F`。用户现场确认新版 HOME、EVENTS 滚动、ERRORS 切换均正常，无花屏或闪屏。未写 QSPI；STM32 连续传输压力与 VDMA 状态仍未复测。
