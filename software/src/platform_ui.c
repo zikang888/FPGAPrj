@@ -13,7 +13,6 @@
 #include "xvtc.h"
 #include "sleep.h"
 #include "string.h"
-#include "xtime_l.h"
 
 #define FB_ADDR      (XPAR_PS7_DDR_0_S_AXI_BASEADDR + 0x01000000U)
 #define FB_W         800U
@@ -40,7 +39,6 @@
 #define EVENTS_Y0    122U
 #define EVENTS_Y1    407U
 #define EVENT_ROW_PX 35U
-#define FRAME_SETTLE_US 34000U
 
 static XAxiVdma g_vdma;
 static XVtc g_vtc;
@@ -62,7 +60,6 @@ static u8 g_render_pending;
 static u8 g_render_full;
 static u8 g_counter_render_pending;
 static u8 g_frame_pending;
-static XTime g_frame_switched_at;
 static u16 g_dirty_y0;
 static u16 g_dirty_y1;
 static u8 g_clip_enabled;
@@ -182,34 +179,45 @@ static void outline(u16 x0, u16 y0, u16 x1, u16 y1, u32 color)
     vline(x1, y0, y1, color);
 }
 
-static void present_frame_region(u16 y0, u16 y1)
+static int present_frame_region(u16 y0, u16 y1)
 {
     u32 offset = (u32)y0 * FB_STRIDE;
     u32 length = ((u32)y1 - (u32)y0 + 1U) * FB_STRIDE;
+    int status;
+
     Xil_DCacheFlushRange(g_frame_addr[g_draw_frame] + offset, length);
-    (void)XAxiVdma_StartParking(&g_vdma, (int)g_draw_frame, XAXIVDMA_READ);
+    status = XAxiVdma_StartParking(&g_vdma, (int)g_draw_frame,
+                                   XAXIVDMA_READ);
+    if (status != XST_SUCCESS) return status;
+
+    /* A parking request does not mean that the requested frame is already
+     * being scanned. Keep the previous frame untouched until VDMA confirms
+     * the handover. */
     g_display_frame = g_draw_frame;
     g_draw_frame ^= 1U;
     g_fb = (u8 *)g_frame_addr[g_draw_frame];
     g_dirty_y0 = y0;
     g_dirty_y1 = y1;
-    XTime_GetTime(&g_frame_switched_at);
     g_frame_pending = 1U;
+    return XST_SUCCESS;
 }
 
 static u8 finish_frame_if_ready(void)
 {
-    XTime now;
     u32 offset;
     u32 length;
     if (g_frame_pending == 0U) return 1U;
-    XTime_GetTime(&now);
-    if (now - g_frame_switched_at <
-        (XTime)FRAME_SETTLE_US * (COUNTS_PER_SECOND / 1000000U)) return 0U;
+    if (XAxiVdma_CurrFrameStore(&g_vdma, XAXIVDMA_READ) !=
+        (u32)g_display_frame) return 0U;
+
+    /* The previous frame is now off-screen. Mirror the dirty region so that
+     * the next partial redraw cannot expose stale pixels from the other
+     * buffer. */
     offset = (u32)g_dirty_y0 * FB_STRIDE;
     length = ((u32)g_dirty_y1 - (u32)g_dirty_y0 + 1U) * FB_STRIDE;
     memcpy(g_fb + offset,
            (const u8 *)g_frame_addr[g_display_frame] + offset, length);
+    Xil_DCacheFlushRange(g_frame_addr[g_draw_frame] + offset, length);
     g_frame_pending = 0U;
     return 1U;
 }
@@ -244,6 +252,10 @@ static int video_init(void)
     status = XAxiVdma_DmaSetBufferAddr(&g_vdma, XAXIVDMA_READ,
                                        dma.FrameStoreStartAddr);
     if (status != XST_SUCCESS) return status;
+    memset((void *)g_frame_addr[0], 0, FB_SIZE);
+    memset((void *)g_frame_addr[1], 0, FB_SIZE);
+    Xil_DCacheFlushRange(g_frame_addr[0], FB_SIZE);
+    Xil_DCacheFlushRange(g_frame_addr[1], FB_SIZE);
     status = XAxiVdma_DmaStart(&g_vdma, XAXIVDMA_READ);
     if (status != XST_SUCCESS) return status;
     status = XAxiVdma_StartParking(&g_vdma, 0, XAXIVDMA_READ);
@@ -300,12 +312,16 @@ static int video_init(void)
 int platform_ui_init(void)
 {
     int status = video_init();
+    u32 wait_ms;
     if (status != XST_SUCCESS) return status;
     fill(0U, 0U, FB_W - 1U, FB_H - 1U, C_BG);
-    present_frame_region(0U, FB_H - 1U);
-    usleep(100000U);
-    (void)finish_frame_if_ready();
-    return XST_SUCCESS;
+    status = present_frame_region(0U, FB_H - 1U);
+    if (status != XST_SUCCESS) return status;
+    for (wait_ms = 0U; wait_ms < 500U; ++wait_ms) {
+        if (finish_frame_if_ready() != 0U) return XST_SUCCESS;
+        usleep(1000U);
+    }
+    return XST_FAILURE;
 }
 
 static u8 all_checks_passed(const PlatformUiStatus *status)
@@ -869,6 +885,7 @@ void platform_ui_tick(void)
 {
     const CaptureDemoSnapshot *snapshot =
         g_requested_snapshot_valid != 0U ? &g_requested_snapshot : 0;
+    int present_status = XST_SUCCESS;
     if (finish_frame_if_ready() == 0U || g_render_pending == 0U) return;
 
     if (g_render_full != 0U || g_requested_page != g_rendered_page) {
@@ -883,12 +900,11 @@ void platform_ui_tick(void)
             render_home_page(&g_requested_status, snapshot);
         }
         draw_navigation(g_requested_page);
-        present_frame_region(0U, FB_H - 1U);
-        g_counter_render_pending = 0U;
+        present_status = present_frame_region(0U, FB_H - 1U);
     } else if (g_counter_render_pending != 0U) {
         if (g_requested_page == PLATFORM_UI_PAGE_HOME) {
             draw_home_status(&g_requested_status);
-            present_frame_region(52U, 100U);
+            present_status = present_frame_region(52U, 100U);
         } else if (g_requested_page == PLATFORM_UI_PAGE_SELF_TEST) {
             draw_info_row(296U, "CORE REJECTED",
                           g_requested_status.core_rejected_count);
@@ -903,19 +919,20 @@ void platform_ui_tick(void)
                  all_checks_passed(&g_requested_status) != 0U ? "READY" : "CHECK",
                  all_checks_passed(&g_requested_status) != 0U ? C_GREEN : C_WARN,
                  C_PANEL);
-            present_frame_region(56U, 392U);
+            present_status = present_frame_region(56U, 392U);
         } else if (g_requested_page == PLATFORM_UI_PAGE_EVENTS) {
             draw_events_chrome(&g_requested_status, snapshot);
-            present_frame_region(0U, 120U);
+            present_status = present_frame_region(0U, 120U);
         } else {
             render_errors_page(&g_requested_status, snapshot);
-            present_frame_region(52U, 407U);
+            present_status = present_frame_region(52U, 407U);
         }
-        g_counter_render_pending = 0U;
     } else if (g_requested_page == PLATFORM_UI_PAGE_EVENTS) {
         draw_events_region(&g_requested_status, snapshot);
-        present_frame_region(EVENTS_Y0, EVENTS_Y1);
+        present_status = present_frame_region(EVENTS_Y0, EVENTS_Y1);
     }
+    if (present_status != XST_SUCCESS) return;
+    g_counter_render_pending = 0U;
     g_rendered_page = g_requested_page;
     g_render_pending = 0U;
     g_render_full = 0U;
