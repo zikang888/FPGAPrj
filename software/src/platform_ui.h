@@ -37,6 +37,9 @@ typedef struct {
     u32 spi_boundary_errors;
     u32 spi_duplicates;
     u32 spi_sequence_errors;
+    u32 spi_short_transactions;
+    u32 spi_extra_bytes;
+    u32 spi_response_mismatches;
     u32 arbitration_count;
     ErrorModel error_model;
     u8 id_ok;

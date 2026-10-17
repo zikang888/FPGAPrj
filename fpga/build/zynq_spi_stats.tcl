@@ -58,6 +58,9 @@ foreach {name offset} {
     sequence_errors 0x58
     last_txn       0x5C
     status         0x60
+    short_transactions 0x68
+    extra_bytes    0x6C
+    response_mismatches 0x70
 } {
     set stats($name) [read_word [expr {$base + $offset}]]
     puts [format "SPI_STATS %-16s %u" $name $stats($name)]
@@ -69,7 +72,12 @@ if {$stats(frame_errors) != 0} {incr failures}
 if {$stats(boundary_errors) != 0} {incr failures}
 if {$stats(duplicates) != 0} {incr failures}
 if {$stats(sequence_errors) != 0} {incr failures}
+if {$stats(short_transactions) != 0} {incr failures}
+if {$stats(extra_bytes) != 0} {incr failures}
+if {$stats(response_mismatches) != 0} {incr failures}
+# bit0 means a transaction was left open; bit3 is the aggregate error flag.
 if {($stats(status) & 1) != 0} {incr failures}
+if {($stats(status) & 8) != 0} {incr failures}
 if {$stats(starts) != $stats(ends)} {incr failures}
 if {$stats(events) !=
     ($stats(starts) + $stats(data) + $stats(ends) + $stats(frame_errors))} {

@@ -22,6 +22,15 @@ int main(void)
                               ERROR_ORIGIN_PL, 1U));
     assert(error_model_has_fault(&model));
     assert(!error_model_equal(&model, &copy));
+    assert(error_model_report(&model, ERROR_SPI_SHORT_TRANSACTION,
+                              ERROR_ORIGIN_PL, 2U));
+    assert(error_model_report(&model, ERROR_SPI_EXTRA_BYTES,
+                              ERROR_ORIGIN_PL, 3U));
+    assert(error_model_report(&model, ERROR_SPI_RESPONSE_MISMATCH,
+                              ERROR_ORIGIN_PL, 4U));
+    assert(error_model_get(&model, ERROR_SPI_SHORT_TRANSACTION).count == 2U);
+    assert(error_model_get(&model, ERROR_SPI_EXTRA_BYTES).count == 3U);
+    assert(error_model_get(&model, ERROR_SPI_RESPONSE_MISMATCH).count == 4U);
     assert(!error_model_report(&model, ERROR_UART_PARITY,
                                ERROR_ORIGIN_NONE, 0U));
     assert(!error_model_report(&model, ERROR_CODE_COUNT,

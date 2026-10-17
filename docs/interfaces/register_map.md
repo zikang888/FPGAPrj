@@ -5,9 +5,9 @@ Base address: `0x4000_0000`, aperture: 64 KiB.
 | Offset | Name | Access | Reset/value |
 |---:|---|---|---:|
 | `0x0000` | SYS_ID | RO | `0x4D505254` |
-| `0x0004` | VERSION | RO | `0x00010004` |
-| `0x0008` | BUILD_ID | RO | `0x20261005` |
-| `0x000C` | CAPABILITIES | RO | bit0=`event snapshot`, bit1=`external ready/valid ingress`, bit2=`SPI Mode-0 monitor`, bit3=`SPI acceptance statistics` |
+| `0x0004` | VERSION | RO | `0x00010005` |
+| `0x0008` | BUILD_ID | RO | `0x20261013` |
+| `0x000C` | CAPABILITIES | RO | bit0=`event snapshot`, bit1=`external ready/valid ingress`, bit2=`SPI Mode-0 monitor`, bit3=`SPI acceptance statistics`, bit4=`W25Q128 JEDEC semantic checks` |
 | `0x0010` | SYS_CTRL | RW | `0` |
 | `0x0014` | SYS_STATUS | RO | bit0=`ready` |
 | `0x0018` | IO_MODE | RW | `0` (`OBSERVE`) |
@@ -30,6 +30,9 @@ Base address: `0x4000_0000`, aperture: 64 KiB.
 | `0x005C` | SPI_LAST_TRANSACTION_ID | RO | most recent START transaction ID in bits `[23:0]` |
 | `0x0060` | SPI_STATS_STATUS | RO | bit0 transaction open, bit1 last event valid, bit2 last transaction valid, bit3 any parser/statistics error |
 | `0x0064` | SPI_STATS_CTRL | WO | write bit0=`1` to clear all SPI acceptance statistics and checker state |
+| `0x0068` | SPI_SHORT_TRANSACTION_COUNT | RO | completed `0x9F` transactions containing fewer than four DATA bytes |
+| `0x006C` | SPI_EXTRA_BYTE_COUNT | RO | completed `0x9F` transactions containing more than four DATA bytes |
+| `0x0070` | SPI_RESPONSE_MISMATCH_COUNT | RO | four-byte `0x9F` transactions whose MISO response bytes are not `EF 40 18` |
 | `0x1000` | CAPTURE_CTRL | WO | bit0=`ARM`, bit1=`ACK`, bit2=`SOFT_TRIGGER`; issue as separate commands |
 | `0x1004` | CAPTURE_STATUS | RO | bit0=`active`, bit1=`ready`, bit2=`overwritten`, bit3=`core or external dropped_count != 0` |
 | `0x1008` | SNAPSHOT_ID | RO | increments for each completed snapshot |
@@ -89,6 +92,13 @@ errors, boundary errors, duplicates and sequence errors must all remain zero.
 Repeated payload bytes are legal and are not considered duplicates because a
 real event carries a distinct timestamp; duplicate detection compares the full
 128-bit event.
+
+The JEDEC semantic checker is deliberately command-specific. It activates only
+when the first MOSI byte after START is `0x9F`, expects exactly four DATA events,
+and checks MISO bytes 1 through 3 against the W25Q128 identity `EF 40 18`.
+Short and extra-length transactions are counted only in their length category;
+response mismatch is evaluated only when the transaction length is exactly
+four bytes. Non-JEDEC SPI traffic does not affect these three counters.
 
 The core exposes one generic external producer port:
 `ext_evt_valid/ext_evt_ready/ext_evt_data[127:0]/ext_evt_trigger`, plus

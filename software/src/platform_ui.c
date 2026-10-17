@@ -627,8 +627,9 @@ static void render_errors_page(const PlatformUiStatus *status,
     u32 snapshot_errors = 0U;
     u8 snapshot_known = 0U;
     u8 fault;
-    const char *source = status->capture_source == 1U ? "ARMED" :
-                         status->capture_source == 2U ? "REAL SPI" : "DEMO";
+    /* Fault counters on this page are always read live from PL registers.
+     * The DEMO/REAL SPI selector controls the event snapshot pages only. */
+    const char *source = "PL LIVE";
     if (snapshot != 0 && g_event_cache != 0 &&
         g_event_cache->valid != 0U && g_event_audit_valid != 0U &&
         g_event_cache->snapshot_id == snapshot->snapshot_id) {
@@ -678,16 +679,15 @@ static void render_errors_page(const PlatformUiStatus *status,
 
     fill(14U, 288U, 786U, 407U, C_PANEL);
     outline(14U, 288U, 786U, 407U, C_BORDER);
-    text(28U, 297U, "MORE FAULT CASES  (-- = NOT MEASURED)", C_CYAN, C_PANEL);
+    text(28U, 297U, "W25Q128 JEDEC 9F SEMANTIC CHECKS", C_CYAN, C_PANEL);
     draw_planned_case(28U, 323U, "SPI SHORT TXN", &status->error_model,
                       ERROR_SPI_SHORT_TRANSACTION);
-    draw_planned_case(420U, 323U, "SPI BAD RESPONSE", &status->error_model,
+    draw_planned_case(420U, 323U, "SPI EXTRA BYTE", &status->error_model,
+                      ERROR_SPI_EXTRA_BYTES);
+    draw_planned_case(28U, 346U, "SPI BAD RESPONSE", &status->error_model,
                       ERROR_SPI_RESPONSE_MISMATCH);
-    draw_planned_case(28U, 346U, "UART STOP BIT", &status->error_model,
-                      ERROR_UART_STOP_BIT);
-    draw_planned_case(420U, 346U, "I2C ADDRESS NACK", &status->error_model,
-                      ERROR_I2C_ADDRESS_NACK);
-    text(28U, 378U, "OTHER SPI / UART / I2C / CAN CASES: INTERFACE READY",
+    text(420U, 346U, "EXPECT EF 40 18", C_MUTED, C_PANEL);
+    text(28U, 378U, "LIVE PL COUNTERS; ZERO = CHECKED AND PASSED",
          C_MUTED, C_PANEL);
 }
 
@@ -947,6 +947,11 @@ void platform_ui_update_counters(const PlatformUiStatus *status)
         g_requested_status.spi_boundary_errors == status->spi_boundary_errors &&
         g_requested_status.spi_duplicates == status->spi_duplicates &&
         g_requested_status.spi_sequence_errors == status->spi_sequence_errors &&
+        g_requested_status.spi_short_transactions ==
+            status->spi_short_transactions &&
+        g_requested_status.spi_extra_bytes == status->spi_extra_bytes &&
+        g_requested_status.spi_response_mismatches ==
+            status->spi_response_mismatches &&
         error_model_equal(&g_requested_status.error_model,
                           &status->error_model))
         return;
@@ -956,6 +961,10 @@ void platform_ui_update_counters(const PlatformUiStatus *status)
     g_requested_status.spi_boundary_errors = status->spi_boundary_errors;
     g_requested_status.spi_duplicates = status->spi_duplicates;
     g_requested_status.spi_sequence_errors = status->spi_sequence_errors;
+    g_requested_status.spi_short_transactions = status->spi_short_transactions;
+    g_requested_status.spi_extra_bytes = status->spi_extra_bytes;
+    g_requested_status.spi_response_mismatches =
+        status->spi_response_mismatches;
     g_requested_status.error_model = status->error_model;
     g_counter_render_pending = 1U;
     g_render_pending = 1U;

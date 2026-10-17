@@ -23,6 +23,9 @@
 #define REG_SPI_BOUNDARY_ERRORS (CORE_BASE + 0x0050U)
 #define REG_SPI_DUPLICATES (CORE_BASE + 0x0054U)
 #define REG_SPI_SEQUENCE_ERRORS (CORE_BASE + 0x0058U)
+#define REG_SPI_SHORT_TRANSACTIONS (CORE_BASE + 0x0068U)
+#define REG_SPI_EXTRA_BYTES (CORE_BASE + 0x006CU)
+#define REG_SPI_RESPONSE_MISMATCHES (CORE_BASE + 0x0070U)
 #define REG_CORE_REJECTED (CORE_BASE + 0x1014U)
 #define COUNTER_POLL_TICKS ((uint64_t)COUNTS_PER_SECOND / 2U)
 
@@ -66,6 +69,9 @@ int main(void)
     u32 spi_boundary_errors;
     u32 spi_duplicates;
     u32 spi_sequence_errors;
+    u32 spi_short_transactions;
+    u32 spi_extra_bytes;
+    u32 spi_response_mismatches;
 
     memset(&capture_snapshot, 0, sizeof(capture_snapshot));
     memset(&live_snapshot, 0, sizeof(live_snapshot));
@@ -132,14 +138,25 @@ int main(void)
     ui_status.core_rejected_count = Xil_In32(REG_CORE_REJECTED);
     ui_status.external_loss_count = Xil_In32(REG_EXT_DROPPED);
     ui_status.spi_frame_errors = Xil_In32(REG_SPI_FRAME_ERRORS);
-    /* The existing PL frame-error counter specifically means CS rose with
-     * 1..7 bits pending. No other listed protocol fault is wired yet. */
+    /* A partial-byte fault means CS rose with 1..7 bits pending. */
     (void)error_model_report(&ui_status.error_model,
                              ERROR_SPI_PARTIAL_BYTE, ERROR_ORIGIN_PL,
                              ui_status.spi_frame_errors);
     ui_status.spi_boundary_errors = Xil_In32(REG_SPI_BOUNDARY_ERRORS);
     ui_status.spi_duplicates = Xil_In32(REG_SPI_DUPLICATES);
     ui_status.spi_sequence_errors = Xil_In32(REG_SPI_SEQUENCE_ERRORS);
+    ui_status.spi_short_transactions = Xil_In32(REG_SPI_SHORT_TRANSACTIONS);
+    ui_status.spi_extra_bytes = Xil_In32(REG_SPI_EXTRA_BYTES);
+    ui_status.spi_response_mismatches = Xil_In32(REG_SPI_RESPONSE_MISMATCHES);
+    (void)error_model_report(&ui_status.error_model,
+                             ERROR_SPI_SHORT_TRANSACTION, ERROR_ORIGIN_PL,
+                             ui_status.spi_short_transactions);
+    (void)error_model_report(&ui_status.error_model,
+                             ERROR_SPI_EXTRA_BYTES, ERROR_ORIGIN_PL,
+                             ui_status.spi_extra_bytes);
+    (void)error_model_report(&ui_status.error_model,
+                             ERROR_SPI_RESPONSE_MISMATCH, ERROR_ORIGIN_PL,
+    ui_status.spi_response_mismatches);
     ui_status.arbitration_count = Xil_In32(REG_ARB_STATUS);
     ui_status.id_ok = (id == EXPECTED_ID) ? 1U : 0U;
     ui_status.version_ok = ((version & 0xFFFF0000U) == 0x00010000U) ? 1U : 0U;
@@ -162,13 +179,19 @@ int main(void)
             spi_boundary_errors = Xil_In32(REG_SPI_BOUNDARY_ERRORS);
             spi_duplicates = Xil_In32(REG_SPI_DUPLICATES);
             spi_sequence_errors = Xil_In32(REG_SPI_SEQUENCE_ERRORS);
+            spi_short_transactions = Xil_In32(REG_SPI_SHORT_TRANSACTIONS);
+            spi_extra_bytes = Xil_In32(REG_SPI_EXTRA_BYTES);
+            spi_response_mismatches = Xil_In32(REG_SPI_RESPONSE_MISMATCHES);
             if (ui_counter_changed(ui_status.core_rejected_count,
                                    ui_status.external_loss_count,
                                    core_rejected, external_loss) ||
                 ui_status.spi_frame_errors != spi_frame_errors ||
                 ui_status.spi_boundary_errors != spi_boundary_errors ||
                 ui_status.spi_duplicates != spi_duplicates ||
-                ui_status.spi_sequence_errors != spi_sequence_errors) {
+                ui_status.spi_sequence_errors != spi_sequence_errors ||
+                ui_status.spi_short_transactions != spi_short_transactions ||
+                ui_status.spi_extra_bytes != spi_extra_bytes ||
+                ui_status.spi_response_mismatches != spi_response_mismatches) {
                 ui_status.core_rejected_count = core_rejected;
                 ui_status.external_loss_count = external_loss;
                 ui_status.spi_frame_errors = spi_frame_errors;
@@ -178,6 +201,25 @@ int main(void)
                 ui_status.spi_boundary_errors = spi_boundary_errors;
                 ui_status.spi_duplicates = spi_duplicates;
                 ui_status.spi_sequence_errors = spi_sequence_errors;
+                ui_status.spi_short_transactions = spi_short_transactions;
+                ui_status.spi_extra_bytes = spi_extra_bytes;
+                ui_status.spi_response_mismatches = spi_response_mismatches;
+                (void)error_model_report(&ui_status.error_model,
+                                         ERROR_SPI_SHORT_TRANSACTION,
+                                         ERROR_ORIGIN_PL,
+                                         spi_short_transactions);
+                (void)error_model_report(&ui_status.error_model,
+                                         ERROR_SPI_EXTRA_BYTES,
+                                         ERROR_ORIGIN_PL, spi_extra_bytes);
+                (void)error_model_report(&ui_status.error_model,
+                                         ERROR_SPI_RESPONSE_MISMATCH,
+                                         ERROR_ORIGIN_PL,
+                                         spi_response_mismatches);
+                xil_printf("SPI ERR partial=%lu short=%lu extra=%lu response=%lu\r\n",
+                           (unsigned long)spi_frame_errors,
+                           (unsigned long)spi_short_transactions,
+                           (unsigned long)spi_extra_bytes,
+                           (unsigned long)spi_response_mismatches);
                 platform_ui_update_counters(&ui_status);
             }
         }
