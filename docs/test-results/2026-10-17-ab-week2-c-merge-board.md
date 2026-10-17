@@ -24,6 +24,10 @@
 - Exact tested artifacts are copied to `Multi_protocol.sdk/platform_hw` as a
   matched BIT/HDF/init set. The JTAG operation was volatile; QSPI was not
   programmed.
+- SHA-256: BIT `91D397B3B9151C3D6CA6E90066FFA2F185F20F2A82A6FC609944CF2F5841F303`,
+  HDF `785BA0A7D9AB183665F54B34D031C3DDE59B8CA52CB2B931294D4AFA0190D74B`,
+  `ps7_init.tcl` `47D35117FE590757D5F887986AE68B1E64F5CDCFC7EEB480825AF9543BF91399`,
+  ELF `98C9D10EA5FBF5CCDC9A5FB44BD59156C7BF5B370A8E47B81DE692689332CE83`.
 
 ## Board observations
 
@@ -47,6 +51,12 @@
 - Isolated `fault run 2` (case 1093): 1 START, 5 DATA, 1 END,
   `extra_bytes=1`, `short_transactions=0`, `response_mismatches=0`.
   `SPI_ACCEPTANCE_ATTENTION` is expected for deliberately injected faults.
+- Both 800x480 RGB888 frame buffers were dumped through JTAG after case 1093.
+  They both visibly show `ERROR DETECTED`, `SOURCE PL LIVE`,
+  `SPI EXTRA BYTE 1`, and zero for the other three SPI semantic/partial-byte
+  counters. This is LCD framebuffer evidence in addition to AXI evidence.
+
+  ![JTAG readback of live SPI extra-byte error page](2026-10-17-spi-extra-byte-ui.png)
 - Keep COM4 open across counter clear and injection: opening/closing the
   serial connection separately allowed other startup traffic into one early
   measurement window. The final two fault cases were each measured after
@@ -58,5 +68,5 @@
   user's wiring. Their UI status must remain `NOT WIRED`/`OFFLINE`.
 - The live `SPI BAD RESPONSE` counter has an RTL fault test and normal-board
   no-false-positive test, but no real bad-MISO injection in this run.
-- LCD pixel-level readback of the new fault counters is pending separately;
-  register and UART evidence must not be presented as screen evidence.
+- Touch responsiveness and other protocol pages were not re-accepted in this
+  run; the JTAG framebuffer readback establishes the error page pixels only.
