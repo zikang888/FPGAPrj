@@ -137,6 +137,27 @@ task send_spi_event;
     end
 endtask
 
+task send_uart_event;
+    input [5:0] event_type;
+    input [15:0] flags;
+    input [23:0] transaction;
+    begin
+        @(negedge clk);
+        ext_evt_data <= {
+            64'h1111_2222_3333_4444,
+            4'h1, 4'h0, 2'b00, event_type,
+            flags, (event_type == 6'h01 ? 8'd1 : 8'd0), transaction
+        };
+        ext_evt_trigger <= (event_type == 6'h3F);
+        ext_evt_valid <= 1'b1;
+        @(posedge clk);
+        while (!ext_evt_ready) @(posedge clk);
+        @(negedge clk);
+        ext_evt_valid <= 1'b0;
+        ext_evt_trigger <= 1'b0;
+    end
+endtask
+
 task axi_read;
     input [15:0] address;
     output [31:0] value;
@@ -172,12 +193,12 @@ initial begin
     end
 
     axi_read(16'h0004, value);
-    if (value !== 32'h0001_0005) begin
+    if (value !== 32'h0001_0006) begin
         $fatal(1, "FAIL: VERSION = %h", value);
     end
 
     axi_read(16'h000C, value);
-    if (value !== 32'h0000_001F) begin
+    if (value !== 32'h0000_003F) begin
         $fatal(1, "FAIL: CAPABILITIES = %h", value);
     end
 
@@ -449,6 +470,31 @@ initial begin
     if (value !== 32'd0) $fatal(1, "FAIL: SPI status clear = %h", value);
     axi_read(16'h0068, value);
     if (value !== 32'd0) $fatal(1, "FAIL: SPI semantic counters clear = %h", value);
+
+    // UART statistics consume the same external stream without affecting SPI.
+    axi_write(16'h0090, 32'h0000_0001, 4'hF);
+    send_uart_event(6'h00, 16'h0000, 24'd7);
+    send_uart_event(6'h01, 16'h0041, 24'd7);
+    send_uart_event(6'h3F, 16'h0141, 24'd7);
+    send_uart_event(6'h3F, 16'h0200, 24'd8);
+    send_uart_event(6'h3F, 16'h0403, 24'd9);
+    axi_read(16'h0074, value);
+    if (value !== 32'd5) $fatal(1, "FAIL: UART event count = %h", value);
+    axi_read(16'h0078, value);
+    if (value !== 32'd1) $fatal(1, "FAIL: UART data count = %h", value);
+    axi_read(16'h007C, value);
+    if (value !== 32'd1) $fatal(1, "FAIL: UART stop count = %h", value);
+    axi_read(16'h0080, value);
+    if (value !== 32'd1) $fatal(1, "FAIL: UART break count = %h", value);
+    axi_read(16'h0084, value);
+    if (value !== 32'd1) $fatal(1, "FAIL: UART short count = %h", value);
+    axi_read(16'h0088, value);
+    if (value !== 32'd9) $fatal(1, "FAIL: UART last transaction = %h", value);
+    axi_read(16'h008C, value);
+    if ((value & 32'h8) == 0) $fatal(1, "FAIL: UART error status = %h", value);
+    axi_write(16'h0090, 32'h0000_0001, 4'hF);
+    axi_read(16'h0074, value);
+    if (value !== 32'd0) $fatal(1, "FAIL: UART statistics clear = %h", value);
 
     $display("PASS: multi_protocol_core AXI, snapshots and SPI acceptance statistics");
     $finish;

@@ -40,6 +40,11 @@ typedef struct {
     u32 spi_short_transactions;
     u32 spi_extra_bytes;
     u32 spi_response_mismatches;
+    u32 uart_event_count;
+    u32 uart_data_count;
+    u32 uart_stop_errors;
+    u32 uart_break_errors;
+    u32 uart_short_transactions;
     u32 arbitration_count;
     ErrorModel error_model;
     u8 id_ok;

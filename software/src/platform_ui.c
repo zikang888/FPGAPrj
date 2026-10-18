@@ -396,14 +396,14 @@ static void hex8(u16 x, u16 y, u8 value, u32 fg, u32 bg)
 
 static void draw_home_status(const PlatformUiStatus *status)
 {
-    const char *source = status->capture_source == 1U ? "WAIT SPI" :
-                         status->capture_source == 2U ? "REAL SPI" : "DEMO";
+    const char *source = status->capture_source == 1U ? "WAIT DATA" :
+                         status->capture_source == 2U ? "REAL BUS" : "DEMO";
     fill(14U, 52U, 786U, 100U, C_PANEL);
     outline(14U, 52U, 786U, 100U, C_BORDER);
     text(30U, 59U, "PLATFORM", C_MUTED, C_PANEL);
     text(30U, 78U, all_checks_passed(status) != 0U ? "READY" : "CHECK",
          all_checks_passed(status) != 0U ? C_GREEN : C_WARN, C_PANEL);
-    text(286U, 59U, "SPI CAPTURE", C_MUTED, C_PANEL);
+    text(286U, 59U, "LIVE CAPTURE", C_MUTED, C_PANEL);
     text(286U, 78U, source, C_CYAN, C_PANEL);
     text(574U, 59U, "EXTERNAL LOSS", C_MUTED, C_PANEL);
     dec32(574U, 78U, status->external_loss_count,
@@ -480,13 +480,13 @@ static void render_home_page(const PlatformUiStatus *status,
     hline(30U, 770U, 214U, C_BORDER);
     if (have_trace == 0) {
         text(274U, 244U,
-             status->capture_source == 1U ? "WAITING FOR SPI DATA" :
-             status->capture_source == 2U ? "NO COMPLETE SPI TXN" :
-             "NO REAL SPI CAPTURE", C_TEXT, C_PANEL);
+             status->capture_source == 1U ? "WAITING FOR BUS DATA" :
+             status->capture_source == 2U ? "NO COMPLETE TRANSACTION" :
+             "NO REAL BUS CAPTURE", C_TEXT, C_PANEL);
         text(250U, 274U,
-             status->capture_source == 1U ? "SEND ONE STM32 JEDEC" :
+             status->capture_source == 1U ? "START ONE STM32 TEST" :
              status->capture_source == 2U ? "CHECK EVENTS FOR DETAILS" :
-             "TAP HERE TO ARM SPI", C_CYAN, C_PANEL);
+             "TAP HERE TO ARM LIVE CAPTURE", C_CYAN, C_PANEL);
         text(194U, 310U, "DEMO EVENTS ARE NOT BUS WAVEFORMS", C_MUTED, C_PANEL);
         return;
     }
@@ -561,7 +561,7 @@ static void render_self_test_page(const PlatformUiStatus *status,
     hex32(582U, 197U, status->capabilities, C_TEXT, C_PANEL);
     text(582U, 238U, "ARBITRATION", C_MUTED, C_PANEL);
     dec32(582U, 263U, status->arbitration_count, C_TEXT, C_PANEL);
-    text(582U, 304U, "SPI CAPTURE", C_MUTED, C_PANEL);
+    text(582U, 304U, "LIVE CAPTURE", C_MUTED, C_PANEL);
     text(582U, 329U,
          status->capture_source == 1U ? "ARMED" :
          status->capture_source == 2U ? "FROZEN" : "DEMO",
@@ -624,6 +624,12 @@ static void render_errors_page(const PlatformUiStatus *status,
 {
     ErrorObservation partial = error_model_get(&status->error_model,
                                                 ERROR_SPI_PARTIAL_BYTE);
+    ErrorObservation uart_stop = error_model_get(&status->error_model,
+                                                  ERROR_UART_STOP_BIT);
+    ErrorObservation uart_break = error_model_get(&status->error_model,
+                                                   ERROR_UART_BREAK);
+    ErrorObservation uart_short = error_model_get(&status->error_model,
+                                                   ERROR_UART_SHORT_TRANSACTION);
     u32 snapshot_errors = 0U;
     u8 snapshot_known = 0U;
     u8 fault;
@@ -659,6 +665,41 @@ static void render_errors_page(const PlatformUiStatus *status,
               status->external_loss_count == 0U ? C_GREEN : C_RED, C_PANEL);
         text(30U, 352U, "SELECT SPI FOR CONNECTED FAULT CHECKS",
              C_CYAN, C_PANEL);
+        return;
+    }
+    if (status->selected_protocol == UI_PROTOCOL_UART) {
+        fault = (u8)(status->external_loss_count != 0U ||
+                     uart_stop.count != 0U || uart_break.count != 0U ||
+                     uart_short.count != 0U);
+        fill(14U, 52U, 786U, 116U, C_PANEL);
+        outline(14U, 52U, 786U, 116U, fault != 0U ? C_RED : C_GREEN);
+        text(30U, 61U, "UART RX MONITOR", C_MUTED, C_PANEL);
+        text(30U, 86U, fault != 0U ? "ERROR DETECTED" : "NO DETECTED ERRORS",
+             fault != 0U ? C_RED : C_GREEN, C_PANEL);
+        text(592U, 61U, "115200 8N1", C_CYAN, C_PANEL);
+        draw_error_metric(14U, 390U, 128U, "UART STOP BIT",
+                          uart_stop.count,
+                          uart_stop.origin != ERROR_ORIGIN_NONE);
+        draw_error_metric(406U, 786U, 128U, "UART BREAK",
+                          uart_break.count,
+                          uart_break.origin != ERROR_ORIGIN_NONE);
+        draw_error_metric(14U, 390U, 207U, "UART SHORT TXN",
+                          uart_short.count,
+                          uart_short.origin != ERROR_ORIGIN_NONE);
+        draw_error_metric(406U, 786U, 207U, "EXTERNAL EVENT LOSS",
+                          status->external_loss_count, 1U);
+        fill(14U, 288U, 786U, 407U, C_PANEL);
+        outline(14U, 288U, 786U, 407U, C_BORDER);
+        text(28U, 297U, "PASSIVE RX: W5; RESERVED TX IDLE: AA9",
+             C_CYAN, C_PANEL);
+        text(28U, 328U, "EVENTS", C_MUTED, C_PANEL);
+        dec32(120U, 328U, status->uart_event_count, C_TEXT, C_PANEL);
+        text(250U, 328U, "DATA BYTES", C_MUTED, C_PANEL);
+        dec32(390U, 328U, status->uart_data_count, C_TEXT, C_PANEL);
+        text(28U, 364U, "BAUD MISMATCH MAY APPEAR AS DATA/STOP ERRORS",
+             C_MUTED, C_PANEL);
+        text(28U, 385U, "PARITY CHECK DISABLED FOR 8N1",
+             C_MUTED, C_PANEL);
         return;
     }
     fill(14U, 52U, 786U, 116U, C_PANEL);
@@ -747,9 +788,9 @@ static void draw_events_chrome(const PlatformUiStatus *status,
                              status->capabilities) ? C_CYAN : C_BORDER);
     text(616U, 60U,
          !ui_protocol_live(status->selected_protocol,
-                           status->capabilities) ? "SELECT SPI" :
-         status->capture_source == 1U ? "WAIT SPI" :
-         (status->capture_source == 2U ? "SHOW DEMO" : "ARM SPI"),
+                           status->capabilities) ? "NOT WIRED" :
+         status->capture_source == 1U ? "WAIT DATA" :
+         (status->capture_source == 2U ? "SHOW DEMO" : "ARM BUS"),
          ui_protocol_live(status->selected_protocol,
                           status->capabilities) ? C_CYAN : C_MUTED, C_BUTTON);
 

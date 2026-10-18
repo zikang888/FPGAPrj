@@ -53,10 +53,11 @@ module multi_protocol_core (
 );
 
 localparam [31:0] SYS_ID_VALUE       = 32'h4D50_5254; // "MPRT"
-localparam [31:0] VERSION_VALUE      = 32'h0001_0005; // event format v1, platform 5
-localparam [31:0] BUILD_ID_VALUE     = 32'h2026_1013;
-localparam [31:0] CAPABILITIES_VALUE = 32'h0000_001F; // + bit4: JEDEC semantic checks
+localparam [31:0] VERSION_VALUE      = 32'h0001_0006; // event format v1, platform 6
+localparam [31:0] BUILD_ID_VALUE     = 32'h2026_1017;
+localparam [31:0] CAPABILITIES_VALUE = 32'h0000_003F; // + bit5: UART RX monitor
 
+localparam [3:0] PROTOCOL_UART     = 4'h1;
 localparam [3:0] PROTOCOL_SPI      = 4'h2;
 localparam [5:0] EVENT_START       = 6'h00;
 localparam [5:0] EVENT_DATA        = 6'h01;
@@ -92,6 +93,14 @@ localparam [15:0] REG_SPI_STATS_CTRL = 16'h0064;
 localparam [15:0] REG_SPI_SHORT_TRANSACTION_COUNT = 16'h0068;
 localparam [15:0] REG_SPI_EXTRA_BYTE_COUNT = 16'h006C;
 localparam [15:0] REG_SPI_RESPONSE_MISMATCH_COUNT = 16'h0070;
+localparam [15:0] REG_UART_EVENT_COUNT = 16'h0074;
+localparam [15:0] REG_UART_DATA_COUNT = 16'h0078;
+localparam [15:0] REG_UART_STOP_ERROR_COUNT = 16'h007C;
+localparam [15:0] REG_UART_BREAK_COUNT = 16'h0080;
+localparam [15:0] REG_UART_SHORT_TRANSACTION_COUNT = 16'h0084;
+localparam [15:0] REG_UART_LAST_TRANSACTION_ID = 16'h0088;
+localparam [15:0] REG_UART_STATS_STATUS = 16'h008C;
+localparam [15:0] REG_UART_STATS_CTRL = 16'h0090;
 
 localparam [15:0] REG_CAPTURE_CTRL    = 16'h1000;
 localparam [15:0] REG_CAPTURE_STATUS  = 16'h1004;
@@ -130,6 +139,13 @@ reg         spi_last_event_valid;
 reg [7:0]   spi_transaction_byte_count;
 reg         spi_jedec_active;
 reg         spi_jedec_response_mismatch;
+
+reg [31:0] uart_event_count;
+reg [31:0] uart_data_count;
+reg [31:0] uart_stop_error_count;
+reg [31:0] uart_break_count;
+reg [31:0] uart_short_transaction_count;
+reg [23:0] uart_last_transaction_id;
 
 reg         capture_arm_pulse;
 reg         capture_ack_pulse;
@@ -190,6 +206,11 @@ wire [5:0] ext_spi_event_type;
 wire [23:0] ext_spi_transaction_id;
 wire [7:0] ext_spi_miso;
 wire [7:0] ext_spi_mosi;
+wire uart_stats_clear_command;
+wire ext_uart_event_accept;
+wire [5:0] ext_uart_event_type;
+wire [7:0] ext_uart_error_reason;
+wire [23:0] ext_uart_transaction_id;
 
 assign aw_hs = s_axi_awvalid && s_axi_awready;
 assign w_hs = s_axi_wvalid && s_axi_wready;
@@ -221,6 +242,14 @@ assign ext_spi_event_type = ext_evt_data[53:48];
 assign ext_spi_transaction_id = ext_evt_data[23:0];
 assign ext_spi_miso = ext_evt_data[47:40];
 assign ext_spi_mosi = ext_evt_data[39:32];
+assign uart_stats_clear_command = write_commit &&
+                                  write_addr == REG_UART_STATS_CTRL &&
+                                  write_strb[0] && write_data[0];
+assign ext_uart_event_accept = ext_evt_valid && ext_evt_ready &&
+                               ext_evt_data[63:60] == PROTOCOL_UART;
+assign ext_uart_event_type = ext_evt_data[53:48];
+assign ext_uart_error_reason = ext_evt_data[47:40];
+assign ext_uart_transaction_id = ext_evt_data[23:0];
 
 assign led_heartbeat = heartbeat_state;
 assign led_ps_active = led_ctrl_reg[0];
@@ -270,6 +299,19 @@ function [31:0] read_register;
             REG_SPI_SHORT_TRANSACTION_COUNT: read_register = spi_short_transaction_count;
             REG_SPI_EXTRA_BYTE_COUNT: read_register = spi_extra_byte_count;
             REG_SPI_RESPONSE_MISMATCH_COUNT: read_register = spi_response_mismatch_count;
+            REG_UART_EVENT_COUNT: read_register = uart_event_count;
+            REG_UART_DATA_COUNT: read_register = uart_data_count;
+            REG_UART_STOP_ERROR_COUNT: read_register = uart_stop_error_count;
+            REG_UART_BREAK_COUNT: read_register = uart_break_count;
+            REG_UART_SHORT_TRANSACTION_COUNT: read_register = uart_short_transaction_count;
+            REG_UART_LAST_TRANSACTION_ID: read_register = {8'd0, uart_last_transaction_id};
+            REG_UART_STATS_STATUS: read_register = {
+                28'd0,
+                ((uart_stop_error_count != 0) ||
+                 (uart_break_count != 0) ||
+                 (uart_short_transaction_count != 0)),
+                3'd0
+            };
             REG_SPI_STATS_STATUS: read_register = {
                 28'd0,
                 ((spi_frame_error_count != 0) ||
@@ -388,6 +430,12 @@ always @(posedge s_axi_aclk) begin
         spi_transaction_byte_count <= 8'd0;
         spi_jedec_active <= 1'b0;
         spi_jedec_response_mismatch <= 1'b0;
+        uart_event_count <= 32'd0;
+        uart_data_count <= 32'd0;
+        uart_stop_error_count <= 32'd0;
+        uart_break_count <= 32'd0;
+        uart_short_transaction_count <= 32'd0;
+        uart_last_transaction_id <= 24'd0;
         capture_arm_pulse <= 1'b0;
         capture_ack_pulse <= 1'b0;
         virtual_evt_valid <= 1'b0;
@@ -540,6 +588,31 @@ always @(posedge s_axi_aclk) begin
                         spi_boundary_error_count + 32'd1;
                 end
             endcase
+        end
+
+        if (uart_stats_clear_command) begin
+            uart_event_count <= 32'd0;
+            uart_data_count <= 32'd0;
+            uart_stop_error_count <= 32'd0;
+            uart_break_count <= 32'd0;
+            uart_short_transaction_count <= 32'd0;
+            uart_last_transaction_id <= 24'd0;
+        end else if (ext_uart_event_accept) begin
+            uart_event_count <= uart_event_count + 32'd1;
+            uart_last_transaction_id <= ext_uart_transaction_id;
+            if (ext_uart_event_type == EVENT_DATA) begin
+                uart_data_count <= uart_data_count + 32'd1;
+            end else if (ext_uart_event_type == EVENT_FRAME_ERROR) begin
+                case (ext_uart_error_reason)
+                    8'h01: uart_stop_error_count <=
+                                uart_stop_error_count + 32'd1;
+                    8'h02: uart_break_count <= uart_break_count + 32'd1;
+                    8'h04: uart_short_transaction_count <=
+                                uart_short_transaction_count + 32'd1;
+                    default: begin
+                    end
+                endcase
+            end
         end
 
         if (heartbeat_counter == 26'd49_999_999) begin

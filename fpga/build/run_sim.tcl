@@ -33,6 +33,14 @@ proc run_test {build_dir top_name pass_text} {
 }
 
 open_project $xpr
+# Existing projects do not discover a newly added testbench automatically.
+foreach extension [list v sv] {
+    foreach tb [glob -nocomplain [file join $source_dir fpga sim * *_tb.$extension]] {
+        if {[get_files -quiet $tb] eq ""} {
+            add_files -fileset sim_1 -norecurse $tb
+        }
+    }
+}
 run_test $build_dir event_snapshot_buffer_tb \
     "PASS: event snapshot wrap, trigger, post-count, ACK and re-arm"
 run_test $build_dir event_arbiter_2_tb \
@@ -43,6 +51,9 @@ run_test $build_dir spi_mode0_monitor_tb \
     "PASS: SPI Mode-0 ready/valid, golden corpus, pause, phase, error and stress test"
 run_test $build_dir spi_snapshot_path_tb \
     "PASS: SPI waveform through ready/valid arbiter to triggered snapshot"
+run_test $build_dir uart_rx_monitor_tb \
+    "PASS: UART 115200-style 8N1 data, end, bad stop, break, short transaction and backpressure"
+set_property top multi_protocol_core_tb [get_filesets sim_1]
 close_project
 puts "SIMULATION_COMPLETED"
 exit

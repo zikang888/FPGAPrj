@@ -56,11 +56,14 @@ write_hwdef -force -file $hdf_file
 set bit_file [file join $build_dir ${proj_name}.runs impl_1 ${top_name}.bit]
 set platform_hw_dir [file join $sdk_dir platform_hw]
 set platform_bit [file join $platform_hw_dir ${top_name}.bit]
+set platform_hdf [file join $platform_hw_dir system.hdf]
 file mkdir $platform_hw_dir
 file copy -force $bit_file $platform_bit
+file copy -force $hdf_file $platform_hdf
 puts "BUILD_DONE"
 puts "BITSTREAM: $bit_file"
 puts "SDK_BITSTREAM: $platform_bit"
 puts "HDF: $hdf_file"
+puts "SDK_HDF: $platform_hdf"
 close_project
 exit
