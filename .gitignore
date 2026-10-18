@@ -52,6 +52,8 @@ xsim.dir/
 /Multi_protocol.sdk/ps7_init_gpl.h
 
 # Temporary validation, migration, backup and duplicate-release directories
+/build/
+/_validation_build/
 /.sdk*/
 /.sim_*/
 /_sim_*/
