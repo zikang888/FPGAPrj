@@ -19,11 +19,17 @@ package require msgcat
 
 # Existing .xpr snapshots do not discover newly added sources automatically.
 # Keep the source-driven build reproducible for both old and fresh projects.
-set spi_bd_adapter [file join $source_dir fpga rtl top spi_mode0_monitor_bd.v]
-if {[get_files -quiet $spi_bd_adapter] eq ""} {
-    add_files -norecurse $spi_bd_adapter
-    update_compile_order -fileset sources_1
+foreach new_source [list \
+    [file join $source_dir fpga rtl protocol uart_rx_monitor.sv] \
+    [file join $source_dir fpga rtl top spi_mode0_monitor_bd.v] \
+    [file join $source_dir fpga rtl top uart_rx_monitor_bd.v] \
+    [file join $source_dir fpga rtl top protocol_event_mux_bd.v] \
+] {
+    if {[get_files -quiet $new_source] eq ""} {
+        add_files -norecurse $new_source
+    }
 }
+update_compile_order -fileset sources_1
 
 set_msg_config -id {Netlist 29-160} \
     -string {multi_protocol_bd_processing_system7_0_0.xdc} \
@@ -113,6 +119,8 @@ set_property -dict [list \
 set ps_reset [create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset:5.0 proc_sys_reset_0]
 set core [create_bd_cell -type module -reference multi_protocol_core multi_protocol_core_0]
 set spi_monitor [create_bd_cell -type module -reference spi_mode0_monitor_bd spi_mode0_monitor_0]
+set uart_monitor [create_bd_cell -type module -reference uart_rx_monitor_bd uart_rx_monitor_0]
+set event_mux [create_bd_cell -type module -reference protocol_event_mux_bd protocol_event_mux_0]
 
 set vdma [create_bd_cell -type ip -vlnv xilinx.com:ip:axi_vdma:6.3 axi_vdma_0]
 set_property -dict [list \
@@ -149,12 +157,23 @@ set_property -dict [list CONFIG.CONST_WIDTH {1} CONFIG.CONST_VAL {1}] $lcd_bl_co
 connect_bd_intf_net [get_bd_intf_pins processing_system7_0/M_AXI_GP0] [get_bd_intf_pins axi_protocol_converter_0/S_AXI]
 connect_bd_intf_net [get_bd_intf_pins axi_protocol_converter_0/M_AXI] [get_bd_intf_pins axi_interconnect_0/S00_AXI]
 connect_bd_intf_net [get_bd_intf_pins axi_interconnect_0/M00_AXI] [get_bd_intf_pins multi_protocol_core_0/S_AXI]
-connect_bd_net [get_bd_pins spi_mode0_monitor_0/evt_valid] [get_bd_pins multi_protocol_core_0/ext_evt_valid]
-connect_bd_net [get_bd_pins multi_protocol_core_0/ext_evt_ready] [get_bd_pins spi_mode0_monitor_0/evt_ready]
-connect_bd_net [get_bd_pins spi_mode0_monitor_0/evt_trigger] [get_bd_pins multi_protocol_core_0/ext_evt_trigger]
-connect_bd_net [get_bd_pins spi_mode0_monitor_0/evt_data] [get_bd_pins multi_protocol_core_0/ext_evt_data]
-connect_bd_net [get_bd_pins spi_mode0_monitor_0/dropped_event_count] [get_bd_pins multi_protocol_core_0/ext_evt_dropped_count]
+connect_bd_net [get_bd_pins spi_mode0_monitor_0/evt_valid] [get_bd_pins protocol_event_mux_0/spi_valid]
+connect_bd_net [get_bd_pins protocol_event_mux_0/spi_ready] [get_bd_pins spi_mode0_monitor_0/evt_ready]
+connect_bd_net [get_bd_pins spi_mode0_monitor_0/evt_trigger] [get_bd_pins protocol_event_mux_0/spi_trigger]
+connect_bd_net [get_bd_pins spi_mode0_monitor_0/evt_data] [get_bd_pins protocol_event_mux_0/spi_data]
+connect_bd_net [get_bd_pins spi_mode0_monitor_0/dropped_event_count] [get_bd_pins protocol_event_mux_0/spi_dropped]
+connect_bd_net [get_bd_pins uart_rx_monitor_0/evt_valid] [get_bd_pins protocol_event_mux_0/uart_valid]
+connect_bd_net [get_bd_pins protocol_event_mux_0/uart_ready] [get_bd_pins uart_rx_monitor_0/evt_ready]
+connect_bd_net [get_bd_pins uart_rx_monitor_0/evt_trigger] [get_bd_pins protocol_event_mux_0/uart_trigger]
+connect_bd_net [get_bd_pins uart_rx_monitor_0/evt_data] [get_bd_pins protocol_event_mux_0/uart_data]
+connect_bd_net [get_bd_pins uart_rx_monitor_0/dropped_event_count] [get_bd_pins protocol_event_mux_0/uart_dropped]
+connect_bd_net [get_bd_pins protocol_event_mux_0/evt_valid] [get_bd_pins multi_protocol_core_0/ext_evt_valid]
+connect_bd_net [get_bd_pins multi_protocol_core_0/ext_evt_ready] [get_bd_pins protocol_event_mux_0/evt_ready]
+connect_bd_net [get_bd_pins protocol_event_mux_0/evt_trigger] [get_bd_pins multi_protocol_core_0/ext_evt_trigger]
+connect_bd_net [get_bd_pins protocol_event_mux_0/evt_data] [get_bd_pins multi_protocol_core_0/ext_evt_data]
+connect_bd_net [get_bd_pins protocol_event_mux_0/dropped_event_count] [get_bd_pins multi_protocol_core_0/ext_evt_dropped_count]
 connect_bd_net [get_bd_pins multi_protocol_core_0/event_timestamp] [get_bd_pins spi_mode0_monitor_0/timestamp]
+connect_bd_net [get_bd_pins multi_protocol_core_0/event_timestamp] [get_bd_pins uart_rx_monitor_0/timestamp]
 connect_bd_intf_net [get_bd_intf_pins axi_interconnect_0/M01_AXI] [get_bd_intf_pins axi_vdma_0/S_AXI_LITE]
 connect_bd_intf_net [get_bd_intf_pins axi_interconnect_0/M02_AXI] [get_bd_intf_pins v_tc_0/ctrl]
 connect_bd_intf_net [get_bd_intf_pins axi_vdma_0/M_AXI_MM2S] [get_bd_intf_pins axi_smc_0/S00_AXI]
@@ -166,6 +185,8 @@ connect_bd_net [get_bd_pins v_tc_0/gen_clken] [get_bd_pins v_axi4s_vid_out_0/vtg
 foreach pin [list \
     multi_protocol_core_0/s_axi_aclk \
     spi_mode0_monitor_0/clk \
+    uart_rx_monitor_0/clk \
+    protocol_event_mux_0/clk \
     axi_vdma_0/s_axi_lite_aclk \
     axi_vdma_0/m_axi_mm2s_aclk \
     axi_vdma_0/m_axis_mm2s_aclk \
@@ -189,6 +210,8 @@ connect_bd_net [get_bd_pins processing_system7_0/FCLK_RESET0_N] [get_bd_pins pro
 foreach pin [list \
     multi_protocol_core_0/s_axi_aresetn \
     spi_mode0_monitor_0/rst_n \
+    uart_rx_monitor_0/rst_n \
+    protocol_event_mux_0/rst_n \
     axi_vdma_0/axi_resetn \
     axi_smc_0/aresetn \
     v_tc_0/s_axi_aresetn \
@@ -215,6 +238,10 @@ set spi_cs_n [create_bd_port -dir I SPI_CS_N]
 set spi_sclk [create_bd_port -dir I SPI_SCLK]
 set spi_mosi [create_bd_port -dir I SPI_MOSI]
 set spi_miso [create_bd_port -dir I SPI_MISO]
+set uart_rx [create_bd_port -dir I UART_RX]
+set uart_tx [create_bd_port -dir O UART_TX]
+set uart_tx_idle [create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 xlconstant_uart_tx]
+set_property -dict [list CONFIG.CONST_WIDTH {1} CONFIG.CONST_VAL {1}] $uart_tx_idle
 connect_bd_net $lcd_data [get_bd_pins rgb888torgb565_0/rgb565_data]
 connect_bd_net $lcd_hs [get_bd_pins v_axi4s_vid_out_0/vid_hsync]
 connect_bd_net $lcd_vs [get_bd_pins v_axi4s_vid_out_0/vid_vsync]
@@ -226,6 +253,8 @@ connect_bd_net $spi_cs_n [get_bd_pins spi_mode0_monitor_0/spi_cs_n]
 connect_bd_net $spi_sclk [get_bd_pins spi_mode0_monitor_0/spi_sclk]
 connect_bd_net $spi_mosi [get_bd_pins spi_mode0_monitor_0/spi_mosi]
 connect_bd_net $spi_miso [get_bd_pins spi_mode0_monitor_0/spi_miso]
+connect_bd_net $uart_rx [get_bd_pins uart_rx_monitor_0/uart_rx]
+connect_bd_net $uart_tx [get_bd_pins xlconstant_uart_tx/dout]
 
 make_bd_pins_external [get_bd_pins multi_protocol_core_0/led_heartbeat]
 make_bd_pins_external [get_bd_pins multi_protocol_core_0/led_ps_active]

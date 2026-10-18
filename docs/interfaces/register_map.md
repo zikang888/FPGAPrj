@@ -5,9 +5,9 @@ Base address: `0x4000_0000`, aperture: 64 KiB.
 | Offset | Name | Access | Reset/value |
 |---:|---|---|---:|
 | `0x0000` | SYS_ID | RO | `0x4D505254` |
-| `0x0004` | VERSION | RO | `0x00010005` |
-| `0x0008` | BUILD_ID | RO | `0x20261013` |
-| `0x000C` | CAPABILITIES | RO | bit0=`event snapshot`, bit1=`external ready/valid ingress`, bit2=`SPI Mode-0 monitor`, bit3=`SPI acceptance statistics`, bit4=`W25Q128 JEDEC semantic checks` |
+| `0x0004` | VERSION | RO | `0x00010006` |
+| `0x0008` | BUILD_ID | RO | `0x20261017` |
+| `0x000C` | CAPABILITIES | RO | bit0=`event snapshot`, bit1=`external ready/valid ingress`, bit2=`SPI Mode-0 monitor`, bit3=`SPI acceptance statistics`, bit4=`W25Q128 JEDEC semantic checks`, bit5=`UART RX monitor` |
 | `0x0010` | SYS_CTRL | RW | `0` |
 | `0x0014` | SYS_STATUS | RO | bit0=`ready` |
 | `0x0018` | IO_MODE | RW | `0` (`OBSERVE`) |
@@ -33,6 +33,14 @@ Base address: `0x4000_0000`, aperture: 64 KiB.
 | `0x0068` | SPI_SHORT_TRANSACTION_COUNT | RO | completed `0x9F` transactions containing fewer than four DATA bytes |
 | `0x006C` | SPI_EXTRA_BYTE_COUNT | RO | completed `0x9F` transactions containing more than four DATA bytes |
 | `0x0070` | SPI_RESPONSE_MISMATCH_COUNT | RO | four-byte `0x9F` transactions whose MISO response bytes are not `EF 40 18` |
+| `0x0074` | UART_EVENT_COUNT | RO | accepted UART START + DATA + END + ERROR events |
+| `0x0078` | UART_DATA_COUNT | RO | accepted UART byte events |
+| `0x007C` | UART_STOP_ERROR_COUNT | RO | stop bit sampled low |
+| `0x0080` | UART_BREAK_COUNT | RO | RX continuously low for at least ten bit times |
+| `0x0084` | UART_SHORT_TRANSACTION_COUNT | RO | idle gap after 1..7 bytes of an expected eight-byte test transaction |
+| `0x0088` | UART_LAST_TRANSACTION_ID | RO | most recently accepted UART transaction ID in bits `[23:0]` |
+| `0x008C` | UART_STATS_STATUS | RO | bit3=`any UART error counter is non-zero` |
+| `0x0090` | UART_STATS_CTRL | WO | write bit0=`1` to clear UART statistics |
 | `0x1000` | CAPTURE_CTRL | WO | bit0=`ARM`, bit1=`ACK`, bit2=`SOFT_TRIGGER`; issue as separate commands |
 | `0x1004` | CAPTURE_STATUS | RO | bit0=`active`, bit1=`ready`, bit2=`overwritten`, bit3=`core or external dropped_count != 0` |
 | `0x1008` | SNAPSHOT_ID | RO | increments for each completed snapshot |
@@ -79,6 +87,14 @@ payload length is `2`, direction is `3`, and all events in one CS-low
 transaction share a transaction ID. On an incomplete byte, event type is
 `0x3F` and `flags[2:0]` is the number of sampled bits.
 
+For UART DATA, `flags[7:0]` is the received byte and payload length is `1`.
+UART ERROR uses `flags[15:8]` as the reason: `0x01` bad stop bit, `0x02`
+Break, `0x04` short transaction. For bad stop, `flags[7:0]` is the sampled
+byte; for short transaction it is the received byte count. UART is fixed to
+115200 baud, 8 data bits, no parity, one stop bit. A baud mismatch cannot be
+identified uniquely from a passive line and therefore appears as corrupted
+DATA and/or bad-stop events; parity error is deliberately unavailable in 8N1.
+
 Protocol listeners use ready/valid transfer semantics. An event is accepted only
 when `evt_valid && evt_ready` is true. A producer asserting `evt_valid` while
 `evt_ready` is low must keep `evt_data` and `evt_trigger` stable. Arbitration or
@@ -104,8 +120,10 @@ The core exposes one generic external producer port:
 `ext_evt_valid/ext_evt_ready/ext_evt_data[127:0]/ext_evt_trigger`, plus
 `ext_evt_dropped_count[31:0]` for producer-side loss observability. It and the
 AXI virtual self-test source feed the same round-robin arbiter and the same
-snapshot buffer. In this integration build the external port is connected to
-the passive SPI Mode-0 monitor. The legacy C candidate map is P7-38/35/36/33
+snapshot buffer. In this integration build the external port is fed by a fair
+two-source mux combining the passive SPI Mode-0 and UART RX monitors. The UART
+input is W5; AA9 is reserved as FPGA UART TX and is held at the idle-high level,
+with no frames transmitted. The legacy C candidate map is P7-38/35/36/33
 (CS/SCLK/MOSI/MISO, FPGA AA8/AB10/AB9/AA7) in the legacy candidate only.
 The current integration XDC follows A's P7-2/1/3/4 map (FPGA
 U11/U12/U10/U9). Check the selected BIT and actual wiring before programming.

@@ -16,3 +16,10 @@ set_property -dict {PACKAGE_PIN U9  IOSTANDARD LVCMOS33} [get_ports SPI_MISO]
 
 # All four pins enter two-stage synchronizers in spi_mode0_monitor.
 set_false_path -from [get_ports {SPI_CS_N SPI_SCLK SPI_MOSI SPI_MISO}]
+
+# Passive UART monitor, 115200 baud, 8N1. W5 receives STM32 TX. AA9 is the
+# reserved FPGA TX pin and stays at the UART idle level; PL sends no frames.
+set_property -dict {PACKAGE_PIN W5 IOSTANDARD LVCMOS33 PULLUP true} [get_ports UART_RX]
+set_property -dict {PACKAGE_PIN AA9 IOSTANDARD LVCMOS33} [get_ports UART_TX]
+set_false_path -from [get_ports UART_RX]
+set_false_path -to [get_ports UART_TX]

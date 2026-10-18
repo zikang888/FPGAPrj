@@ -8,6 +8,7 @@ int main(void)
     assert(ui_protocol_live(UI_PROTOCOL_SPI, 0xFU));
     assert(!ui_protocol_live(UI_PROTOCOL_SPI, 0U));
     assert(!ui_protocol_live(UI_PROTOCOL_UART, 0xFU));
+    assert(ui_protocol_live(UI_PROTOCOL_UART, 1U << 5));
     assert(!ui_protocol_live(UI_PROTOCOL_I2C, 0xFU));
     assert(!ui_protocol_live(UI_PROTOCOL_CAN, 0xFU));
     assert(strcmp(ui_protocol_name(UI_PROTOCOL_I2C), "I2C") == 0);

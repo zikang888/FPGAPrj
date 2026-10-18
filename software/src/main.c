@@ -26,6 +26,11 @@
 #define REG_SPI_SHORT_TRANSACTIONS (CORE_BASE + 0x0068U)
 #define REG_SPI_EXTRA_BYTES (CORE_BASE + 0x006CU)
 #define REG_SPI_RESPONSE_MISMATCHES (CORE_BASE + 0x0070U)
+#define REG_UART_EVENT_COUNT (CORE_BASE + 0x0074U)
+#define REG_UART_DATA_COUNT (CORE_BASE + 0x0078U)
+#define REG_UART_STOP_ERRORS (CORE_BASE + 0x007CU)
+#define REG_UART_BREAK_ERRORS (CORE_BASE + 0x0080U)
+#define REG_UART_SHORT_TRANSACTIONS (CORE_BASE + 0x0084U)
 #define REG_CORE_REJECTED (CORE_BASE + 0x1014U)
 #define COUNTER_POLL_TICKS ((uint64_t)COUNTS_PER_SECOND / 2U)
 
@@ -72,6 +77,11 @@ int main(void)
     u32 spi_short_transactions;
     u32 spi_extra_bytes;
     u32 spi_response_mismatches;
+    u32 uart_event_count;
+    u32 uart_data_count;
+    u32 uart_stop_errors;
+    u32 uart_break_errors;
+    u32 uart_short_transactions;
 
     memset(&capture_snapshot, 0, sizeof(capture_snapshot));
     memset(&live_snapshot, 0, sizeof(live_snapshot));
@@ -156,7 +166,21 @@ int main(void)
                              ui_status.spi_extra_bytes);
     (void)error_model_report(&ui_status.error_model,
                              ERROR_SPI_RESPONSE_MISMATCH, ERROR_ORIGIN_PL,
-    ui_status.spi_response_mismatches);
+                             ui_status.spi_response_mismatches);
+    ui_status.uart_event_count = Xil_In32(REG_UART_EVENT_COUNT);
+    ui_status.uart_data_count = Xil_In32(REG_UART_DATA_COUNT);
+    ui_status.uart_stop_errors = Xil_In32(REG_UART_STOP_ERRORS);
+    ui_status.uart_break_errors = Xil_In32(REG_UART_BREAK_ERRORS);
+    ui_status.uart_short_transactions = Xil_In32(REG_UART_SHORT_TRANSACTIONS);
+    (void)error_model_report(&ui_status.error_model,
+                             ERROR_UART_STOP_BIT, ERROR_ORIGIN_PL,
+                             ui_status.uart_stop_errors);
+    (void)error_model_report(&ui_status.error_model,
+                             ERROR_UART_BREAK, ERROR_ORIGIN_PL,
+                             ui_status.uart_break_errors);
+    (void)error_model_report(&ui_status.error_model,
+                             ERROR_UART_SHORT_TRANSACTION, ERROR_ORIGIN_PL,
+                             ui_status.uart_short_transactions);
     ui_status.arbitration_count = Xil_In32(REG_ARB_STATUS);
     ui_status.id_ok = (id == EXPECTED_ID) ? 1U : 0U;
     ui_status.version_ok = ((version & 0xFFFF0000U) == 0x00010000U) ? 1U : 0U;
@@ -182,6 +206,11 @@ int main(void)
             spi_short_transactions = Xil_In32(REG_SPI_SHORT_TRANSACTIONS);
             spi_extra_bytes = Xil_In32(REG_SPI_EXTRA_BYTES);
             spi_response_mismatches = Xil_In32(REG_SPI_RESPONSE_MISMATCHES);
+            uart_event_count = Xil_In32(REG_UART_EVENT_COUNT);
+            uart_data_count = Xil_In32(REG_UART_DATA_COUNT);
+            uart_stop_errors = Xil_In32(REG_UART_STOP_ERRORS);
+            uart_break_errors = Xil_In32(REG_UART_BREAK_ERRORS);
+            uart_short_transactions = Xil_In32(REG_UART_SHORT_TRANSACTIONS);
             if (ui_counter_changed(ui_status.core_rejected_count,
                                    ui_status.external_loss_count,
                                    core_rejected, external_loss) ||
@@ -191,7 +220,12 @@ int main(void)
                 ui_status.spi_sequence_errors != spi_sequence_errors ||
                 ui_status.spi_short_transactions != spi_short_transactions ||
                 ui_status.spi_extra_bytes != spi_extra_bytes ||
-                ui_status.spi_response_mismatches != spi_response_mismatches) {
+                ui_status.spi_response_mismatches != spi_response_mismatches ||
+                ui_status.uart_event_count != uart_event_count ||
+                ui_status.uart_data_count != uart_data_count ||
+                ui_status.uart_stop_errors != uart_stop_errors ||
+                ui_status.uart_break_errors != uart_break_errors ||
+                ui_status.uart_short_transactions != uart_short_transactions) {
                 ui_status.core_rejected_count = core_rejected;
                 ui_status.external_loss_count = external_loss;
                 ui_status.spi_frame_errors = spi_frame_errors;
@@ -215,11 +249,29 @@ int main(void)
                                          ERROR_SPI_RESPONSE_MISMATCH,
                                          ERROR_ORIGIN_PL,
                                          spi_response_mismatches);
-                xil_printf("SPI ERR partial=%lu short=%lu extra=%lu response=%lu\r\n",
+                ui_status.uart_event_count = uart_event_count;
+                ui_status.uart_data_count = uart_data_count;
+                ui_status.uart_stop_errors = uart_stop_errors;
+                ui_status.uart_break_errors = uart_break_errors;
+                ui_status.uart_short_transactions = uart_short_transactions;
+                (void)error_model_report(&ui_status.error_model,
+                                         ERROR_UART_STOP_BIT, ERROR_ORIGIN_PL,
+                                         uart_stop_errors);
+                (void)error_model_report(&ui_status.error_model,
+                                         ERROR_UART_BREAK, ERROR_ORIGIN_PL,
+                                         uart_break_errors);
+                (void)error_model_report(&ui_status.error_model,
+                                         ERROR_UART_SHORT_TRANSACTION,
+                                         ERROR_ORIGIN_PL,
+                                         uart_short_transactions);
+                xil_printf("ERR SPI partial=%lu short=%lu extra=%lu response=%lu; UART stop=%lu break=%lu short=%lu\r\n",
                            (unsigned long)spi_frame_errors,
                            (unsigned long)spi_short_transactions,
                            (unsigned long)spi_extra_bytes,
-                           (unsigned long)spi_response_mismatches);
+                           (unsigned long)spi_response_mismatches,
+                           (unsigned long)uart_stop_errors,
+                           (unsigned long)uart_break_errors,
+                           (unsigned long)uart_short_transactions);
                 platform_ui_update_counters(&ui_status);
             }
         }
@@ -249,7 +301,7 @@ int main(void)
         } else if (action == PLATFORM_UI_ACTION_CAPTURE_LIVE) {
             if (!ui_protocol_live(ui_status.selected_protocol,
                                   ui_status.capabilities)) {
-                xil_printf("CAPTURE DISABLED: SELECT LIVE SPI\r\n");
+                xil_printf("CAPTURE DISABLED: SELECT LIVE PROTOCOL\r\n");
             } else if (ui_status.capture_source != 0U) {
                 ui_status.capture_source = 0U;
                 platform_ui_set_event_cache(g_demo_cache.valid != 0U ?
@@ -258,9 +310,10 @@ int main(void)
             } else if (capture_live_arm() == XST_SUCCESS) {
                 ui_status.capture_source = 1U;
                 platform_ui_set_event_cache(0);
-                xil_printf("SPI CAPTURE ARMED; one JEDEC transaction is enough\r\n");
+                xil_printf("%s CAPTURE ARMED\r\n",
+                           ui_protocol_name(ui_status.selected_protocol));
             } else {
-                xil_printf("SPI CAPTURE ARM ERROR\r\n");
+                xil_printf("CAPTURE ARM ERROR\r\n");
             }
         }
         if (ui_status.capture_source == 1U) {
@@ -270,20 +323,20 @@ int main(void)
                                                 &live_snapshot) == XST_SUCCESS) {
                     ui_status.capture_source = 2U;
                     platform_ui_set_event_cache(&g_live_cache);
-                    xil_printf("SPI SNAPSHOT READY: id=%lu count=%lu trigger=%lu\r\n",
+                    xil_printf("SNAPSHOT READY: id=%lu count=%lu trigger=%lu\r\n",
                                (unsigned long)live_snapshot.snapshot_id,
                                (unsigned long)live_snapshot.count,
                                (unsigned long)live_snapshot.trigger_index);
                 } else {
                     ui_status.capture_source = 0U;
                     platform_ui_set_event_cache(&g_demo_cache);
-                    xil_printf("SPI SNAPSHOT CACHE ERROR\r\n");
+                    xil_printf("SNAPSHOT CACHE ERROR\r\n");
                 }
                 action = PLATFORM_UI_ACTION_CAPTURE_LIVE;
             } else if (live_result < 0) {
                 ui_status.capture_source = 0U;
                 platform_ui_set_event_cache(&g_demo_cache);
-                xil_printf("SPI CAPTURE STATUS ERROR\r\n");
+                xil_printf("CAPTURE STATUS ERROR\r\n");
                 action = PLATFORM_UI_ACTION_CAPTURE_LIVE;
             }
         }

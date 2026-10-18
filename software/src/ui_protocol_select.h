@@ -22,10 +22,14 @@ static inline const char *ui_protocol_name(UiProtocol protocol)
            name[protocol] : "UNKNOWN";
 }
 
-/* The current matched PL ABI has only the passive SPI listener (bit 2). */
+/* PL capability bits: passive SPI=2, passive UART RX=5. */
 static inline int ui_protocol_live(UiProtocol protocol, uint32_t capabilities)
 {
-    return protocol == UI_PROTOCOL_SPI && (capabilities & (1U << 2)) != 0U;
+    if (protocol == UI_PROTOCOL_SPI)
+        return (capabilities & (1U << 2)) != 0U;
+    if (protocol == UI_PROTOCOL_UART)
+        return (capabilities & (1U << 5)) != 0U;
+    return 0;
 }
 
 /* Event ABI IDs differ from UI order: UART=1, SPI=2, I2C=3, CAN=4.
