@@ -79,6 +79,7 @@ event_snapshot_buffer #(
     .POST_TRIGGER_EVENTS(4)
 ) snapshot_buffer (
     .clk(clk), .rst_n(rst_n), .arm(arm), .ack(ack),
+    .freeze(1'b0),
     .in_valid(arb_valid && arb_ready),
     .in_event(arb_event), .in_trigger(arb_trigger),
     .capture_active(capture_active),

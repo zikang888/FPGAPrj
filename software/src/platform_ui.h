@@ -5,12 +5,14 @@
 #include "capture_demo.h"
 #include "error_model.h"
 #include "ui_protocol_select.h"
+#include "test_history.h"
 
 typedef enum {
     PLATFORM_UI_PAGE_HOME = 0,
     PLATFORM_UI_PAGE_SELF_TEST = 1,
     PLATFORM_UI_PAGE_EVENTS = 2,
-    PLATFORM_UI_PAGE_ERRORS = 3
+    PLATFORM_UI_PAGE_ERRORS = 3,
+    PLATFORM_UI_PAGE_HISTORY = 4
 } PlatformUiPage;
 
 typedef enum {
@@ -20,6 +22,8 @@ typedef enum {
     PLATFORM_UI_ACTION_EVENTS,
     PLATFORM_UI_ACTION_ERRORS,
     PLATFORM_UI_ACTION_CAPTURE_LIVE,
+    PLATFORM_UI_ACTION_END_TEST,
+    PLATFORM_UI_ACTION_HISTORY,
     PLATFORM_UI_ACTION_SELECT_SPI,
     PLATFORM_UI_ACTION_SELECT_UART,
     PLATFORM_UI_ACTION_SELECT_I2C,
@@ -46,6 +50,12 @@ typedef struct {
     u32 uart_break_errors;
     u32 uart_short_transactions;
     u32 arbitration_count;
+    u32 test_id;
+    u32 test_events;
+    u32 test_errors;
+    u8 test_running;
+    u8 test_failed;
+    u8 retained_tail;
     ErrorModel error_model;
     u8 id_ok;
     u8 version_ok;
@@ -53,13 +63,14 @@ typedef struct {
     u8 touch_ok;
     u8 capture_ok;
     u8 led_on;
-    /* 0: virtual demo, 1: waiting for SPI, 2: frozen real SPI snapshot. */
+    /* 0: demo/no session, 1: recording, 2: saved real session. */
     u8 capture_source;
     UiProtocol selected_protocol;
 } PlatformUiStatus;
 
 int platform_ui_init(void);
 void platform_ui_set_event_cache(const CaptureDemoCache *cache);
+void platform_ui_set_history(const TestHistory *history);
 void platform_ui_tick(void);
 void platform_ui_update_counters(const PlatformUiStatus *status);
 void platform_ui_render_page(PlatformUiPage page,

@@ -53,9 +53,9 @@ module multi_protocol_core (
 );
 
 localparam [31:0] SYS_ID_VALUE       = 32'h4D50_5254; // "MPRT"
-localparam [31:0] VERSION_VALUE      = 32'h0001_0006; // event format v1, platform 6
-localparam [31:0] BUILD_ID_VALUE     = 32'h2026_1017;
-localparam [31:0] CAPABILITIES_VALUE = 32'h0000_003F; // + bit5: UART RX monitor
+localparam [31:0] VERSION_VALUE      = 32'h0001_0007; // event format v1, platform 7
+localparam [31:0] BUILD_ID_VALUE     = 32'h2026_1020;
+localparam [31:0] CAPABILITIES_VALUE = 32'h0000_007F; // bit6: manual session/filter/freeze
 
 localparam [3:0] PROTOCOL_UART     = 4'h1;
 localparam [3:0] PROTOCOL_SPI      = 4'h2;
@@ -193,6 +193,12 @@ wire ar_hs;
 wire snapshot_read_address;
 wire arm_command;
 wire soft_trigger_command;
+wire freeze_command;
+reg capture_manual_mode;
+reg [3:0] capture_protocol_filter;
+reg [31:0] capture_total;
+wire capture_protocol_match;
+wire snapshot_event_accept;
 wire virtual_event_command;
 wire virtual_enqueue_command;
 wire virtual_enqueue_ready;
@@ -226,18 +232,26 @@ assign arm_command = write_commit && write_addr == REG_CAPTURE_CTRL &&
                      write_strb[0] && write_data[0];
 assign soft_trigger_command = write_commit && write_addr == REG_CAPTURE_CTRL &&
                               write_strb[0] && write_data[2];
+assign freeze_command = write_commit && write_addr == REG_CAPTURE_CTRL &&
+                        write_strb[0] && write_data[3];
 assign virtual_event_command = write_commit && write_addr == REG_VIRTUAL_EVENT;
 assign virtual_enqueue_command = soft_trigger_command || virtual_event_command;
 assign virtual_enqueue_ready = !virtual_evt_valid || virtual_evt_ready;
 assign virtual_overflow = virtual_enqueue_command && !virtual_enqueue_ready;
 assign capture_input_ready = !arm_command && !capture_arm_pulse;
 assign capture_event_accept = capture_event_valid && capture_input_ready;
-assign inactive_event_drop = capture_event_accept && !capture_active;
+assign capture_protocol_match = capture_protocol_filter == 0 ||
+                                capture_event_data[63:60] == capture_protocol_filter;
+assign snapshot_event_accept = capture_event_accept && capture_protocol_match;
+assign inactive_event_drop = snapshot_event_accept && !capture_active;
 assign spi_stats_clear_command = write_commit &&
                                  write_addr == REG_SPI_STATS_CTRL &&
                                  write_strb[0] && write_data[0];
 assign ext_spi_event_accept = ext_evt_valid && ext_evt_ready &&
-                              ext_evt_data[63:60] == PROTOCOL_SPI;
+                              ext_evt_data[63:60] == PROTOCOL_SPI &&
+                              (!capture_manual_mode ||
+                               (capture_active && (capture_protocol_filter == 0 ||
+                                                   capture_protocol_filter == PROTOCOL_SPI)));
 assign ext_spi_event_type = ext_evt_data[53:48];
 assign ext_spi_transaction_id = ext_evt_data[23:0];
 assign ext_spi_miso = ext_evt_data[47:40];
@@ -246,7 +260,10 @@ assign uart_stats_clear_command = write_commit &&
                                   write_addr == REG_UART_STATS_CTRL &&
                                   write_strb[0] && write_data[0];
 assign ext_uart_event_accept = ext_evt_valid && ext_evt_ready &&
-                               ext_evt_data[63:60] == PROTOCOL_UART;
+                               ext_evt_data[63:60] == PROTOCOL_UART &&
+                               (!capture_manual_mode ||
+                                (capture_active && (capture_protocol_filter == 0 ||
+                                                    capture_protocol_filter == PROTOCOL_UART)));
 assign ext_uart_event_type = ext_evt_data[53:48];
 assign ext_uart_error_reason = ext_evt_data[47:40];
 assign ext_uart_transaction_id = ext_evt_data[23:0];
@@ -326,7 +343,7 @@ function [31:0] read_register;
                 spi_transaction_open
             };
             REG_CAPTURE_STATUS: read_register = {
-                28'd0,
+                27'd0, capture_manual_mode,
                 ((dropped_count_reg != 0) || (ext_evt_dropped_count != 0)),
                 snapshot_overwritten,
                 snapshot_ready,
@@ -334,7 +351,9 @@ function [31:0] read_register;
             };
             REG_SNAPSHOT_ID:    read_register = snapshot_id;
             REG_SNAPSHOT_COUNT: read_register = {23'd0, snapshot_count};
-            REG_TRIGGER_INDEX:  read_register = {24'd0, snapshot_trigger_index};
+            REG_TRIGGER_INDEX:  read_register = capture_manual_mode ? 32'hFFFFFFFF :
+                                               {24'd0, snapshot_trigger_index};
+            16'h101C:          read_register = capture_total;
             REG_DROPPED_COUNT:  read_register = dropped_count_reg;
             default:          read_register = 32'h0000_0000;
         endcase
@@ -373,9 +392,10 @@ event_snapshot_buffer #(
     .rst_n(s_axi_aresetn),
     .arm(capture_arm_pulse),
     .ack(capture_ack_pulse),
-    .in_valid(capture_event_valid),
+    .freeze(freeze_command),
+    .in_valid(snapshot_event_accept),
     .in_event(capture_event_data),
-    .in_trigger(capture_event_trigger),
+    .in_trigger(capture_event_trigger && !capture_manual_mode),
     .capture_active(capture_active),
     .snapshot_ready(snapshot_ready),
     .snapshot_id(snapshot_id),
@@ -437,6 +457,9 @@ always @(posedge s_axi_aclk) begin
         uart_short_transaction_count <= 32'd0;
         uart_last_transaction_id <= 24'd0;
         capture_arm_pulse <= 1'b0;
+        capture_manual_mode <= 1'b0;
+        capture_protocol_filter <= 4'd0;
+        capture_total <= 32'd0;
         capture_ack_pulse <= 1'b0;
         virtual_evt_valid <= 1'b0;
         virtual_evt_trigger <= 1'b0;
@@ -462,7 +485,11 @@ always @(posedge s_axi_aclk) begin
 
         if (arm_command) begin
             dropped_count_reg <= 32'd0;
+            capture_manual_mode <= write_data[4];
+            capture_protocol_filter <= write_data[4] && write_strb[2] ? write_data[19:16] : 4'd0;
+            capture_total <= 32'd0;
         end else begin
+            if (capture_active && snapshot_event_accept) capture_total <= capture_total + 32'd1;
             case ({inactive_event_drop, virtual_overflow})
                 2'b01, 2'b10: dropped_count_reg <= dropped_count_reg + 32'd1;
                 2'b11:        dropped_count_reg <= dropped_count_reg + 32'd2;

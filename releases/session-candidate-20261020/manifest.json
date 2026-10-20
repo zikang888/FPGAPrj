@@ -1,0 +1,12 @@
+{
+  "version": "0x00010007",
+  "capabilities": "0x0000007F",
+  "date": "2026-10-20",
+  "validation": "offline-verified-board-pending",
+  "files": [
+    { "name": "multi_protocol_bd_wrapper.bit", "sha256": "F78C50A97974BE861D3CD80430DB878D1116BA8F59ACDFE28CF146FBD97BFC3B" },
+    { "name": "system.hdf", "sha256": "D7A97F4C68D14E49FA5E4F0660D0AB33F8292C84F9985C9D15456586B9810249" },
+    { "name": "ps7_init.tcl", "sha256": "47D35117FE590757D5F887986AE68B1E64F5CDCFC7EEB480825AF9543BF91399" },
+    { "name": "platform_app.elf", "sha256": "10510B26896A31BD2705B976958B03758B42F3D22836488673F34A76844C345E" }
+  ]
+}

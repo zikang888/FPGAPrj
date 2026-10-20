@@ -13,6 +13,7 @@ module event_snapshot_buffer #(
     input  wire                     rst_n,
     input  wire                     arm,
     input  wire                     ack,
+    input  wire                     freeze,
     input  wire                     in_valid,
     input  wire [EVENT_WIDTH-1:0]   in_event,
     input  wire                     in_trigger,
@@ -92,16 +93,27 @@ always @(posedge clk) begin
                 snapshot_ready <= 1'b0;
             end
 
-            if (capture_active && in_valid) begin
-                memory[write_pointer] <= in_event;
-                write_pointer <= next_write_pointer;
-                capture_count <= next_capture_count;
+            if (capture_active && (in_valid || freeze)) begin
+                if (in_valid) begin
+                    memory[write_pointer] <= in_event;
+                    write_pointer <= next_write_pointer;
+                    capture_count <= next_capture_count;
+                end
 
-                if (capture_count == DEPTH_COUNT) begin
+                if (in_valid && capture_count == DEPTH_COUNT) begin
                     overwritten <= 1'b1;
                 end
 
-                if (!trigger_seen && in_trigger) begin
+                // Include a simultaneous accepted event; allow empty sessions.
+                if (freeze) begin
+                    capture_active <= 1'b0;
+                    snapshot_ready <= 1'b1;
+                    snapshot_id <= snapshot_id + 32'd1;
+                    snapshot_count <= in_valid ? next_capture_count : capture_count;
+                    snapshot_start <= in_valid ? next_snapshot_start :
+                        ((capture_count == DEPTH_COUNT) ? write_pointer : {PTR_WIDTH{1'b0}});
+                    snapshot_trigger_index <= {PTR_WIDTH{1'b0}};
+                end else if (!trigger_seen && in_trigger) begin
                     trigger_seen <= 1'b1;
                     trigger_physical_index <= write_pointer;
                     if (POST_TRIGGER_EVENTS == 0) begin

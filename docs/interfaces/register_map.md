@@ -5,9 +5,9 @@ Base address: `0x4000_0000`, aperture: 64 KiB.
 | Offset | Name | Access | Reset/value |
 |---:|---|---|---:|
 | `0x0000` | SYS_ID | RO | `0x4D505254` |
-| `0x0004` | VERSION | RO | `0x00010006` |
-| `0x0008` | BUILD_ID | RO | `0x20261017` |
-| `0x000C` | CAPABILITIES | RO | bit0=`event snapshot`, bit1=`external ready/valid ingress`, bit2=`SPI Mode-0 monitor`, bit3=`SPI acceptance statistics`, bit4=`W25Q128 JEDEC semantic checks`, bit5=`UART RX monitor` |
+| `0x0004` | VERSION | RO | `0x00010007` |
+| `0x0008` | BUILD_ID | RO | `0x20261020` |
+| `0x000C` | CAPABILITIES | RO | bit0=`event snapshot`, bit1=`external ready/valid ingress`, bit2=`SPI Mode-0 monitor`, bit3=`SPI acceptance statistics`, bit4=`W25Q128 JEDEC semantic checks`, bit5=`UART RX monitor`, bit6=`manual test sessions/filter/freeze` |
 | `0x0010` | SYS_CTRL | RW | `0` |
 | `0x0014` | SYS_STATUS | RO | bit0=`ready` |
 | `0x0018` | IO_MODE | RW | `0` (`OBSERVE`) |
@@ -41,18 +41,26 @@ Base address: `0x4000_0000`, aperture: 64 KiB.
 | `0x0088` | UART_LAST_TRANSACTION_ID | RO | most recently accepted UART transaction ID in bits `[23:0]` |
 | `0x008C` | UART_STATS_STATUS | RO | bit3=`any UART error counter is non-zero` |
 | `0x0090` | UART_STATS_CTRL | WO | write bit0=`1` to clear UART statistics |
-| `0x1000` | CAPTURE_CTRL | WO | bit0=`ARM`, bit1=`ACK`, bit2=`SOFT_TRIGGER`; issue as separate commands |
-| `0x1004` | CAPTURE_STATUS | RO | bit0=`active`, bit1=`ready`, bit2=`overwritten`, bit3=`core or external dropped_count != 0` |
+| `0x1000` | CAPTURE_CTRL | WO | bit0=`ARM`, bit1=`ACK`, bit2=`SOFT_TRIGGER`, bit3=`FREEZE`; ARM bit4=`manual`, bits19:16=`protocol filter` (0 all, 1 UART, 2 SPI) |
+| `0x1004` | CAPTURE_STATUS | RO | bit0=`active`, bit1=`ready`, bit2=`overwritten`, bit3=`core or external dropped_count != 0`, bit4=`manual mode` |
 | `0x1008` | SNAPSHOT_ID | RO | increments for each completed snapshot |
 | `0x100C` | SNAPSHOT_COUNT | RO | valid event count, maximum 256 |
-| `0x1010` | TRIGGER_INDEX | RO | logical index of trigger event |
+| `0x1010` | TRIGGER_INDEX | RO | logical trigger index; `0xFFFFFFFF` for manual, untriggered sessions |
 | `0x1014` | DROPPED_COUNT | RO | events rejected outside active capture plus virtual-source queue overflow |
 | `0x1018` | VIRTUAL_EVENT | WO | write bit31=`trigger`, bits23:0=`transaction_id` |
+| `0x101C` | CAPTURE_TOTAL | RO | total matching events recorded in current session, including overwritten ring entries; ARM resets |
 
 Snapshot data window: `0x6000` through `0x6FFF`. Each event occupies 16 bytes;
 word offsets `+0`, `+4`, `+8`, `+12` return bits `[31:0]`, `[63:32]`,
 `[95:64]`, `[127:96]` respectively. Logical index 0 is the oldest retained
 event. Reads beyond `SNAPSHOT_COUNT` return zero.
+
+Manual mode records until FREEZE regardless of event trigger flags, including
+short/error-only traffic. FREEZE includes an accepted event on the same edge.
+An empty manual session is valid with count=0; no trigger index is claimed.
+Ring retention is limited to the newest 256 events, while CAPTURE_TOTAL keeps
+the full count. In manual mode protocol statistics stop at FREEZE and ignore
+other protocols. See `test_sessions.md` for the UI lifecycle and history scope.
 
 Event layout:
 

@@ -193,12 +193,12 @@ initial begin
     end
 
     axi_read(16'h0004, value);
-    if (value !== 32'h0001_0006) begin
+    if (value !== 32'h0001_0007) begin
         $fatal(1, "FAIL: VERSION = %h", value);
     end
 
     axi_read(16'h000C, value);
-    if (value !== 32'h0000_003F) begin
+    if (value !== 32'h0000_007F) begin
         $fatal(1, "FAIL: CAPABILITIES = %h", value);
     end
 
@@ -495,6 +495,37 @@ initial begin
     axi_write(16'h0090, 32'h0000_0001, 4'hF);
     axi_read(16'h0074, value);
     if (value !== 32'd0) $fatal(1, "FAIL: UART statistics clear = %h", value);
+
+    axi_write(16'h1000, 32'h0001_0011, 4'hF);
+    send_uart_event(6'h00, 16'h0000, 24'd10);
+    send_uart_event(6'h3F, 16'h0200, 24'd10);
+    send_spi_event(64'd800, 6'h00, 16'h0000, 8'd0, 24'd10, 1'b1);
+    for (index = 0; index < 8; index = index + 1)
+        send_uart_event(6'h3F, 16'h0403, 24'd11 + index);
+    axi_read(16'h1004, value);
+    if ((value & 32'h13) != 32'h11) $fatal(1, "FAIL: manual session froze automatically");
+    axi_read(16'h101C, value);
+    if (value != 10) $fatal(1, "FAIL: manual protocol filter total %h", value);
+    axi_write(16'h1000, 32'h8, 4'hF);
+    axi_read(16'h100C, value);
+    if (value != 10) $fatal(1, "FAIL: manual snapshot count %h", value);
+    axi_read(16'h1010, value);
+    if (value != 32'hFFFFFFFF) $fatal(1, "FAIL: manual no-trigger sentinel");
+    axi_read(16'h6014, value);
+    if (value[31:28] != 1 || value[21:16] != 6'h3F)
+        $fatal(1, "FAIL: UART error missing from manual snapshot");
+    axi_read(16'h0074, value);
+    if (value != 10) $fatal(1, "FAIL: manual UART statistics count");
+    send_uart_event(6'h3F, 16'h0200, 24'd99);
+    axi_read(16'h0074, value);
+    if (value != 10) $fatal(1, "FAIL: event after END altered saved counters");
+    axi_write(16'h0090, 32'h1, 4'hF);
+    axi_write(16'h1000, 32'h0001_0011, 4'hF);
+    axi_write(16'h1000, 32'h8, 4'hF);
+    axi_read(16'h007C, value);
+    if (value != 0) $fatal(1, "FAIL: next test inherited UART error");
+    axi_read(16'h100C, value);
+    if (value != 0) $fatal(1, "FAIL: empty next test inherited events");
 
     $display("PASS: multi_protocol_core AXI, snapshots and SPI acceptance statistics");
     $finish;

@@ -32,9 +32,10 @@ int capture_demo_cache_snapshot(CaptureDemoCache *cache,
 {
     u32 event_index;
     u32 word_index;
-    if (cache == 0 || snapshot == 0 || snapshot->count == 0U ||
+    if (cache == 0 || snapshot == 0 ||
         snapshot->count > CAPTURE_MAX_EVENTS ||
-        snapshot->trigger_index >= snapshot->count) return XST_FAILURE;
+        (snapshot->trigger_index != 0xFFFFFFFFU &&
+         snapshot->trigger_index >= snapshot->count)) return XST_FAILURE;
     cache->valid = 0U;
     if ((Xil_In32(REG_CAPTURE_STATUS) & CAPTURE_STATUS_READY) == 0U ||
         Xil_In32(REG_SNAPSHOT_ID) != snapshot->snapshot_id) {
@@ -105,15 +106,38 @@ int capture_live_poll(CaptureDemoSnapshot *snapshot)
     snapshot->count = Xil_In32(REG_SNAPSHOT_COUNT);
     snapshot->trigger_index = Xil_In32(REG_TRIGGER_INDEX);
     snapshot->dropped_count = Xil_In32(REG_DROPPED_COUNT);
-    if (snapshot->count == 0U || snapshot->count > CAPTURE_MAX_EVENTS ||
-        snapshot->trigger_index >= snapshot->count) return -1;
-    first = snapshot->trigger_index >= 3U ?
+    if (snapshot->count > CAPTURE_MAX_EVENTS ||
+        (snapshot->trigger_index != 0xFFFFFFFFU &&
+         snapshot->trigger_index >= snapshot->count)) return -1;
+    if (snapshot->count == 0U) { snapshot->shown = 0U; return 1; }
+    first = snapshot->trigger_index == 0xFFFFFFFFU ? 0U :
+            snapshot->trigger_index >= 3U ?
             snapshot->trigger_index - 3U : 0U;
     if (first + CAPTURE_DISPLAY_EVENTS > snapshot->count) {
         first = snapshot->count > CAPTURE_DISPLAY_EVENTS ?
                 snapshot->count - CAPTURE_DISPLAY_EVENTS : 0U;
     }
     return capture_demo_read_window(snapshot, first) == XST_SUCCESS ? 1 : -1;
+}
+
+int capture_session_arm(u8 protocol)
+{
+    if ((Xil_In32(CORE_BASE + 0xCU) & 0x40U) == 0U) return XST_FAILURE;
+    Xil_Out32(REG_CAPTURE_CTRL, CAPTURE_CTRL_ACK);
+    Xil_Out32(REG_CAPTURE_CTRL, 0x11U | ((u32)protocol << 16));
+    return (Xil_In32(REG_CAPTURE_STATUS) & CAPTURE_STATUS_ACTIVE) != 0U ?
+           XST_SUCCESS : XST_FAILURE;
+}
+
+int capture_session_freeze(CaptureDemoSnapshot *snapshot)
+{
+    u32 retry;
+    Xil_Out32(REG_CAPTURE_CTRL, 8U);
+    for (retry = 0U; retry < 1000U; ++retry) {
+        if ((Xil_In32(REG_CAPTURE_STATUS) & CAPTURE_STATUS_READY) != 0U)
+            return capture_live_poll(snapshot) == 1 ? XST_SUCCESS : XST_FAILURE;
+    }
+    return XST_FAILURE;
 }
 
 int capture_demo_run(CaptureDemoSnapshot *snapshot)

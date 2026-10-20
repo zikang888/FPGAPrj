@@ -35,7 +35,8 @@ static inline int event_audit_snapshot(const uint32_t *words,
     uint32_t p;
     uint64_t previous_timestamp = 0U;
     if (words == 0 || out == 0 || count == 0U ||
-        count > EVENT_AUDIT_MAX_EVENTS || trigger_index >= count) return 0;
+        count > EVENT_AUDIT_MAX_EVENTS ||
+        (trigger_index != UINT32_MAX && trigger_index >= count)) return 0;
 
     out->total = count;
     out->errors = 0U;

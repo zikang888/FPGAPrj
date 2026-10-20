@@ -11,6 +11,7 @@ reg clk = 1'b0;
 reg rst_n = 1'b0;
 reg arm = 1'b0;
 reg ack = 1'b0;
+reg freeze = 1'b0;
 reg in_valid = 1'b0;
 reg [EVENT_WIDTH-1:0] in_event = {EVENT_WIDTH{1'b0}};
 reg in_trigger = 1'b0;
@@ -39,6 +40,7 @@ event_snapshot_buffer #(
     .rst_n(rst_n),
     .arm(arm),
     .ack(ack),
+    .freeze(freeze),
     .in_valid(in_valid),
     .in_event(in_event),
     .in_trigger(in_trigger),
@@ -149,6 +151,19 @@ initial begin
     check_event(0, 20);
     check_event(1, 21);
     check_event(2, 22);
+
+    pulse_arm();
+    for (index = 30; index < 40; index = index + 1) send_event(index, 1'b0);
+    @(negedge clk); in_event = 128'd40; in_valid = 1'b1; freeze = 1'b1;
+    @(negedge clk); in_valid = 1'b0; freeze = 1'b0;
+    if (!snapshot_ready || capture_active || snapshot_count != 8 || !overwritten)
+        $fatal(1, "FAIL: manual wrapped freeze metadata");
+    for (index = 0; index < 8; index = index + 1) check_event(index, index + 33);
+    pulse_arm();
+    @(negedge clk); freeze = 1'b1;
+    @(negedge clk); freeze = 1'b0;
+    if (!snapshot_ready || capture_active || snapshot_count != 0)
+        $fatal(1, "FAIL: empty manual session");
 
     if (failures == 0) begin
         $display("PASS: event snapshot wrap, trigger, post-count, ACK and re-arm");

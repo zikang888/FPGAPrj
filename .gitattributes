@@ -1,0 +1,2 @@
+# Keep the SDK-exported release init byte-exact for manifest verification.
+releases/session-candidate-20261020/ps7_init.tcl -text -diff
