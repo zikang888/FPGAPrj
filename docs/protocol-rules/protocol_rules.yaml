@@ -1,5 +1,5 @@
 schema_version: 1
-rules_version: "1.1.1-draft-fault-menu"
+rules_version: "1.1.2-draft-fault-menu"
 owner: "成员C"
 approval_status: "draft_member_c_owned"
 change_policy:
@@ -48,7 +48,9 @@ protocols:
     role_under_test: "stm32_master_w25q128_slave_fpga_passive_monitor"
     mode: 0
     bit_order: "msb_first"
-    initial_sclk_hz: 1000000
+    # Normal hardware SPI1: APB2 84 MHz / prescaler 64 = 1.3125 MHz.
+    # GPIO-generated incomplete-byte fault uses its own approximately 100 kHz clock.
+    initial_sclk_hz: 1312500
     transaction_boundary: "CS falling edge to CS rising edge"
     data_event:
       flags_data_15_8: "MISO"
