@@ -45,11 +45,13 @@ OLED 使用独立 GPIO 软件 SPI，不占用连接板载 W25Q128 的 SPI1 PA4�
 | 12 | I2C SCL LOW | 需 PC8 经限流电阻接 SCL，并启用 `MC_ENABLE_I2C_FAULT_LINKS` |
 | 13 | I2C NO STOP | 开漏 GPIO 发地址后保持 SCL 低 30 ms，再发 STOP 恢复总线 |
 | 14 | CAN NO ACK | 需收发器且无其他节点应答；启用 `MC_ENABLE_CAN_FAULTS` 后单次发送并恢复重发设置 |
-| 15 | CAN BIT | 仍需同步的实时扰动与发送参考；本版不支持 |
+| 15 | CAN BIT | 新 LIVE 故障版：独立收发器＋PD1→PA1/PA2，同步叠加，单次检测真实发送位错误 |
 | 16～18 | CAN STUFF/CRC/FORM | 默认版仍不支持；新故障版由板级菜单转到 PD1 RAW 后端，单次 500 kbit/s |
-| 19 | CAN BUS OFF | 需要外部重复故障与恢复流程，当前不主动累积错误 |
+| 19 | CAN BUS OFF | 新 LIVE 故障版：最多 64 次、100 ms 间隔；只凭真实 BOFF 判目标达到，再恢复；默认/旧 RAW 版不支持 |
 
 RAW 的接线、串口命令和两个编译开关见 [GPIO 位流使用说明](can_gpio_bitstream_usage.md)。本版复用 PD1 和现有收发器，先暂停 bxCAN，再 GPIO 播放并恢复；不启用 PB0/PB1。`mc_faults.c` 和旧 case ID 不改，故障版板级菜单 16～18 改派到独立 `kind=can_raw` 会话，不能据其完成结果报告 PL 检出。
+
+LIVE 接线/第三个编译开关见 [LIVE 使用说明](can_live_injection_usage.md)。菜单 15/19 改派独立 LIVE 后端，要求增加收发器 I；不要照 RAW 仅一个收发器的接法使用。
 
 ## FPGA 配合
 

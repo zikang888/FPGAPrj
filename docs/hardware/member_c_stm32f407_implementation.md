@@ -169,7 +169,7 @@ PS CAN 经 EMIO RX ← 第二只 SN65HVD230 R/RXD
 
 ### 5.4 实际故障复现与检测规划
 
-新增的 [CAN 实际故障复现与检测实施规划](can_real_fault_reproduction_plan.md) 列出各故障制造方式、现象和场景。第一阶段 `can test` 见 [会话说明](can_session_firmware_usage.md)；第二阶段 [GPIO RAW 后端](can_gpio_bitstream_usage.md) 复用 PD1 与收发器，使用 TIM1/DMA，在故障版提供合法/CRC/填充/格式位流，菜单 16～18 可单次触发。PB0/PB1 和独立 I 是后续实时干扰方案，尚未启用；原 case ID/规则未改，CAN PL 检测仍待接入。
+新增的 [CAN 实际故障复现规划](can_real_fault_reproduction_plan.md) 列出故障场景。第一阶段 `can test` 见 [会话说明](can_session_firmware_usage.md)；[RAW](can_gpio_bitstream_usage.md) 复用 PD1/TIM1/DMA，菜单 16～18 播放预制错误；新 [LIVE](can_live_injection_usage.md) 通过 PD1→PA1 跳线、PA2/TIM2＋独立收发器 I 叠加脉冲，菜单 15/19 执行位错误/真实 BOFF 与恢复。PB0/PB1 不启用；原 case ID/规则未改，CAN PL 检测仍待接入。
 
 ## 6. I²C 连接与配合
 
@@ -423,6 +423,6 @@ UART 是推挽点对点连接，不需要上拉。双方都是 3.3 V CMOS 才能
 - 与仓库正式 128-bit 事件 ABI 对齐的协议规则。
 - STM32 日志与现有 Zynq 快照事件的对照流程。
 - 电脑端 fake platform 单元测试。
-- CAN 独立周期会话、停止/恢复和 OLED 进度；默认 normal/echo，故障版提供 noack/bitrate 与 PD1 GPIO 位流发生器；不含实时叠加干扰或自动 Bus-off 制造。
+- CAN 独立周期会话、停止/恢复和 OLED 进度；故障版含 noack/bitrate、PD1 RAW 和 PA1/PA2 LIVE；Bus-off 必须真实 BOFF 及恢复状态证明，未达目标就失败。
 
 已经完成 CubeMX 6.15.0、STM32CubeF4 v1.28.3 和 Keil MDK-ARM 完整工程，ARMCC 5.06 编译结果为 0 error、0 warning。尚需硬件后完成：天空星实板烧录、外接 AT24C256/SN65HVD230 联调、FPGA UART/CAN 回环、LCD 实时页面和三方实测。

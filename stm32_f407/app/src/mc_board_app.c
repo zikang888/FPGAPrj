@@ -8,6 +8,7 @@
 #include "mc_cli_rx.h"
 #include "mc_can_session_hal.h"
 #include "mc_can_raw_hal.h"
+#include "mc_can_live_hal.h"
 #include "mc_build_profile.h"
 
 #include <stdio.h>
@@ -46,14 +47,21 @@ static mc_can_session_t g_can_session;
 static mc_can_session_hal_t g_can_hal;
 static mc_can_session_t g_raw_session;
 static mc_can_raw_hal_t g_raw_hal;
-static int g_raw_view;
+static mc_can_session_t g_live_session;
+static mc_can_live_hal_t g_live_hal;
+static int g_can_backend; /* 0=bxCAN, 1=RAW, 2=LIVE */
 static int g_raw_from_menu;
+static int g_live_from_menu;
 static int g_can_view;
 static uint32_t g_can_display_ms;
 static void print_can_status(void);
 
 static mc_can_mode_t fault_raw_mode(mc_fault_id_t id)
 {
+#if MC_BUILD_CAN_LIVE
+    if (id == MC_FAULT_CAN_BIT) { return MC_CAN_LIVE_BIT; }
+    if (id == MC_FAULT_CAN_BUS_OFF) { return MC_CAN_LIVE_BUSOFF; }
+#endif
 #if MC_BUILD_CAN_RAW_GPIO
     if (id == MC_FAULT_CAN_STUFF) { return MC_CAN_RAW_STUFF; }
     if (id == MC_FAULT_CAN_CRC) { return MC_CAN_RAW_CRC; }
@@ -66,7 +74,7 @@ static mc_can_mode_t fault_raw_mode(mc_fault_id_t id)
 
 static mc_can_session_t *visible_can(void)
 {
-    return g_raw_view ? &g_raw_session : &g_can_session;
+    return g_can_backend == 2 ? &g_live_session : (g_can_backend == 1 ? &g_raw_session : &g_can_session);
 }
 
 static const char *can_state_name(const mc_can_session_t *session)
@@ -80,7 +88,7 @@ static void display_can_session(void)
     char line[24];
     const mc_can_session_t *session = visible_can();
     mc_oled_clear();
-    mc_oled_text(0U, 0U, g_raw_view ? "CAN RAW PD1" : "CAN SESSION");
+    mc_oled_text(0U, 0U, g_can_backend == 2 ? "CAN LIVE PA2" : (g_can_backend == 1 ? "CAN RAW PD1" : "CAN SESSION"));
     mc_oled_text(0U, 1U, can_state_name(session));
     (void)snprintf(line, sizeof(line), "RUN %lu REQ %lu",
                    (unsigned long)session->run, (unsigned long)session->submitted);
@@ -95,7 +103,8 @@ static void display_can_session(void)
                    (unsigned long)session->fault_slots, session->last_result);
     mc_oled_text(0U, 5U, line);
     mc_oled_text(0U, 6U, session->held && session->state != MC_CAN_RUNNING ?
-                 "RESTORE FAILED" : "PL NOT CONNECTED");
+                 "RESTORE FAILED" : (g_can_backend == 2 && g_live_hal.stats.busoff_seen ?
+                 (g_live_hal.stats.recovered ? "BOFF SEEN RECOVERED" : "BOFF SEEN") : "PL NOT CONNECTED"));
     mc_oled_text(0U, 7U, session->state == MC_CAN_RUNNING ? "HOLD STOP" :
                  (session->held ? "HOLD RETRY RESTORE" : "TAP BACK"));
     mc_oled_flush();
@@ -133,6 +142,9 @@ static void print_help(void)
         "    MODE: valid/crc/stuff/form; BITRATE: 125000/500000\r\n"
         "    RAW requires CAN_FAULTS + CAN_RAW_GPIO; uses PD1\r\n"
         "  can raw status|stop|recover\r\n"
+        "  can live start disturb|bit|busoff COUNT PERIOD [EVERY]\r\n"
+        "    LIVE: PD1->PA1 jumper; PA2->separate transceiver TXD\r\n"
+        "  can live status|stop|recover\r\n"
         "  help                 Show this help\r\n"
         "USER_KEY: short=next, hold 0.8s=run.\r\n> ");
 }
@@ -164,7 +176,7 @@ static void display_fault_menu(void)
         }
     } else if (selected != NULL) {
         if (fault_raw_mode(g_selected_fault) >= MC_CAN_RAW_VALID) {
-            strcpy(line, "RAW READY PD1");
+            strcpy(line, fault_raw_mode(g_selected_fault) >= MC_CAN_LIVE_DISTURB ? "LIVE READY PA1/2" : "RAW READY PD1");
         } else { switch (selected->requirement) {
         case MC_FAULT_LOCAL: strcpy(line, "READY"); break;
         case MC_FAULT_NEEDS_WIRING: strcpy(line, "NEEDS LINK"); break;
@@ -191,7 +203,8 @@ static void print_fault_list(void)
         const mc_fault_info_t *item = mc_fault_get((mc_fault_id_t)i);
         (void)snprintf(line, sizeof(line), "%2u case=%lu %-20s requirement=%d backend=%s\r\n",
                        i, (unsigned long)item->case_id, item->label, item->requirement,
-                       fault_raw_mode((mc_fault_id_t)i) >= MC_CAN_RAW_VALID ? "raw_pd1" : "legacy");
+                       fault_raw_mode((mc_fault_id_t)i) >= MC_CAN_LIVE_DISTURB ? "live_pa2" :
+                       (fault_raw_mode((mc_fault_id_t)i) >= MC_CAN_RAW_VALID ? "raw_pd1" : "legacy"));
         console_write(line);
     }
     console_write("> ");
@@ -204,7 +217,7 @@ static void trigger_selected_fault(void)
     if (item == NULL) {
         return;
     }
-    if (g_can_session.held || g_raw_session.held) {
+    if (g_can_session.held || g_raw_session.held || g_live_session.held) {
         console_write("CAN session owns peripherals; stop/recover first\r\n> ");
         return;
     }
@@ -218,11 +231,18 @@ static void trigger_selected_fault(void)
         config.mode = fault_raw_mode(g_selected_fault); config.bitrate = 500000U;
         config.count = 1U; config.period_ms = 100U;
         config.timeout_ms = 20U; config.every = 1U;
-        g_last_fault_result = mc_can_session_start(&g_raw_session, &config);
+        if (config.mode >= MC_CAN_LIVE_DISTURB) {
+            config.timeout_ms=40U;
+            if (config.mode==MC_CAN_LIVE_BUSOFF) { config.count=64U; }
+            g_last_fault_result=mc_can_session_start(&g_live_session,&config);
+            g_live_from_menu=1; g_can_backend=2;
+        } else {
+            g_last_fault_result=mc_can_session_start(&g_raw_session,&config);
+            g_raw_from_menu=1; g_can_backend=1;
+        }
         g_has_fault_result = 1;
-        g_raw_from_menu = 1;
-        g_can_view = 1; g_raw_view = 1;
-        console_write("CAN menu uses RAW output; see CAN_RAW state, not PL detection\r\n");
+        g_can_view = 1;
+        console_write("CAN menu uses isolated backend; see CAN state, not PL detection\r\n");
         print_can_status();
         display_can_session();
         return;
@@ -324,21 +344,30 @@ static void print_can_status(void)
     const mc_can_session_t *session = visible_can();
     (void)snprintf(line, sizeof(line),
         "%s state=%s run=%lu submitted=%lu completed=%lu pass=%lu fail=%lu "
-        "slots=%lu last=%d restore=%d held=%u\r\n> ", g_raw_view ? "CAN_RAW" : "CAN_SESSION",
+        "slots=%lu last=%d restore=%d held=%u\r\n> ", g_can_backend == 2 ? "CAN_LIVE" : (g_can_backend == 1 ? "CAN_RAW" : "CAN_SESSION"),
         can_state_name(session), (unsigned long)session->run, (unsigned long)session->submitted,
         (unsigned long)session->completed, (unsigned long)session->passed,
         (unsigned long)session->failed, (unsigned long)session->fault_slots,
         session->last_result, session->restore_result, (unsigned int)session->held);
     console_write(line);
+    if (g_can_backend==2) {
+        (void)snprintf(line,sizeof(line),"LIVE pulses=%lu bit_errors=%lu BOFF=%u recovered=%u ESR_before=%lu ESR_after=%lu restore=%d\r\n> ",
+            (unsigned long)g_live_hal.stats.pulses,(unsigned long)g_live_hal.stats.bit_errors,
+            (unsigned int)g_live_hal.stats.busoff_seen,(unsigned int)g_live_hal.stats.recovered,
+            (unsigned long)g_live_hal.stats.esr_before_recovery,(unsigned long)g_live_hal.stats.esr_after_recovery,
+            g_live_hal.stats.restore_result);
+        console_write(line);
+    }
 }
 
-static void run_can_command(const char *command, int raw)
+static void run_can_command(const char *command, int backend)
 {
     mc_can_config_t config;
-    mc_can_session_t *session = raw ? &g_raw_session : &g_can_session;
-    const char *args = command + (raw ? 7U : 8U);
+    mc_can_session_t *session = backend==2 ? &g_live_session : (backend==1 ? &g_raw_session : &g_can_session);
+    const char *args = command + (backend==1 ? 7U : 8U);
     int result = MC_OK;
-    if ((raw ? g_can_session.held : g_raw_session.held)) {
+    if ((backend!=0 && g_can_session.held) || (backend!=1 && g_raw_session.held) ||
+        (backend!=2 && g_live_session.held)) {
         console_write("Other CAN backend owns resources; stop/recover it first\r\n> ");
         return;
     }
@@ -349,7 +378,8 @@ static void run_can_command(const char *command, int raw)
     } else if (strcmp(args, " recover") == 0) {
         result = mc_can_session_recover(session);
     } else if (strncmp(args, " start ", 7U) == 0) {
-        result = raw ? mc_can_raw_parse(args + 7, &config) : mc_can_session_parse(args + 7, &config);
+        result = backend==2 ? mc_can_live_parse(args+7,&config) :
+                 (backend==1 ? mc_can_raw_parse(args+7,&config) : mc_can_session_parse(args+7,&config));
         if (result == MC_OK) { result = mc_can_session_start(session, &config); }
     } else {
         result = MC_ERR_ARGUMENT;
@@ -360,7 +390,7 @@ static void run_can_command(const char *command, int raw)
         console_write(line);
     }
     g_can_view = 1;
-    g_raw_view = raw;
+    g_can_backend = backend;
     print_can_status();
     display_can_session();
     g_can_display_ms = HAL_GetTick();
@@ -382,7 +412,11 @@ static void run_command(const char *command)
         run_can_command(command, 1);
         return;
     }
-    if (g_can_session.held || g_raw_session.held) {
+    if (strncmp(command,"can live",8U)==0 && (command[8]==' ' || command[8]=='\0')) {
+        run_can_command(command,2);
+        return;
+    }
+    if (g_can_session.held || g_raw_session.held || g_live_session.held) {
         console_write("CAN session active/restore pending; use can test stop|status|recover\r\n> ");
         return;
     }
@@ -488,8 +522,11 @@ void mc_board_app_init(void)
     mc_can_session_init(&g_can_session, &can_port);
     can_port = mc_can_raw_hal_port(&g_raw_hal, &hcan1, &huart1);
     mc_can_session_init(&g_raw_session, &can_port);
-    g_raw_view = 0;
+    can_port=mc_can_live_hal_port(&g_live_hal,&hcan1,&huart1);
+    mc_can_session_init(&g_live_session,&can_port);
+    g_can_backend = 0;
     g_raw_from_menu = 0;
+    g_live_from_menu = 0;
     g_can_view = 0;
     g_fault_runs = 0U;
     mc_cli_rx_init(&g_console_rx);
@@ -513,9 +550,9 @@ void mc_board_app_init(void)
 
     console_write("\r\nSkyStar STM32F407 protocol truth node\r\n");
     {
-        char build[100];
-        (void)snprintf(build, sizeof(build), "BUILD rev=%07lX CAN_FAULTS=%u CAN_RAW_GPIO=%u RAW_TX=PD1\r\n",
-                       (unsigned long)MC_BUILD_REV, MC_BUILD_CAN_FAULTS, MC_BUILD_CAN_RAW_GPIO);
+        char build[130];
+        (void)snprintf(build, sizeof(build), "BUILD rev=%07lX CAN_FAULTS=%u CAN_RAW_GPIO=%u CAN_LIVE=%u RAW_TX=PD1 LIVE_TX=PA2\r\n",
+                       (unsigned long)MC_BUILD_REV, MC_BUILD_CAN_FAULTS, MC_BUILD_CAN_RAW_GPIO,MC_BUILD_CAN_LIVE);
         console_write(build);
     }
     console_write("Clock=168MHz SPI1=1.3125MHz I2C1=100k UART1/UART3=115200 CAN1=500k\r\n");
@@ -592,7 +629,7 @@ void mc_board_app_poll(void)
         }
     } else if (key_state == GPIO_PIN_RESET && g_previous_key_state == GPIO_PIN_SET &&
                !g_long_press_ran && (uint32_t)(HAL_GetTick() - g_key_down_ms) >= 25U) {
-        if (!g_can_session.held && !g_raw_session.held) {
+        if (!g_can_session.held && !g_raw_session.held && !g_live_session.held) {
             if (g_can_view) {
                 g_can_view = 0;
                 display_fault_menu();
@@ -617,6 +654,10 @@ void mc_board_app_poll(void)
                               g_raw_session.last_result;
         g_has_fault_result = 1;
         g_raw_from_menu = 0;
+    }
+    if (g_live_from_menu && g_live_session.state!=MC_CAN_RUNNING) {
+        g_last_fault_result=g_live_session.state==MC_CAN_STOPPED ? MC_ERR_BUSY : g_live_session.last_result;
+        g_has_fault_result=1; g_live_from_menu=0;
     }
 }
 

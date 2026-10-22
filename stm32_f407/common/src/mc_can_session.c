@@ -28,14 +28,18 @@ int mc_can_session_start(mc_can_session_t *s, const mc_can_config_t *config)
     mc_can_session_port_t port;
     mc_can_config_t requested;
     uint32_t run;
-    if (s == NULL || config == NULL || (unsigned int)config->mode > MC_CAN_RAW_FORM ||
+    if (s == NULL || config == NULL || (unsigned int)config->mode > MC_CAN_LIVE_BUSOFF ||
         config->count == 0U || config->count > 10000U ||
         config->period_ms < 50U || config->period_ms > 60000U ||
         config->timeout_ms == 0U || config->timeout_ms > config->period_ms ||
         ((config->mode == MC_CAN_BITRATE || config->mode > MC_CAN_RAW_VALID) &&
          config->every == 0U) ||
-        (config->mode >= MC_CAN_RAW_VALID && config->bitrate != 125000U &&
-         config->bitrate != 500000U)) {
+        (config->mode >= MC_CAN_RAW_VALID && config->mode <= MC_CAN_RAW_FORM &&
+         config->bitrate != 125000U && config->bitrate != 500000U) ||
+        (config->mode >= MC_CAN_LIVE_DISTURB && config->bitrate != 500000U) ||
+        (config->mode == MC_CAN_LIVE_BUSOFF &&
+         (config->count < 32U || config->count > 128U || config->every != 1U ||
+          config->period_ms > 1000U))) {
         return MC_ERR_ARGUMENT;
     }
     if (s->held || s->state == MC_CAN_RUNNING) { return MC_ERR_BUSY; }
@@ -66,6 +70,9 @@ static void complete_frame(mc_can_session_t *s, int transport)
 {
     int log_result;
     int expected = transport;
+    int reached_busoff = s->config.mode == MC_CAN_LIVE_BUSOFF &&
+                        (s->frame.evidence.esr & 4U) != 0U &&
+                        s->frame.evidence.injected && s->frame.evidence.bit_error;
     s->frame.transport_result = transport;
     if (s->config.mode == MC_CAN_NO_ACK) {
         expected = s->frame.submitted && s->frame.cancel_result == MC_OK &&
@@ -74,10 +81,18 @@ static void complete_frame(mc_can_session_t *s, int transport)
     } else if (s->config.mode == MC_CAN_ECHO && transport == MC_OK) {
         expected = s->frame.rx_valid && memcmp(s->frame.tx, s->frame.rx, 8U) == 0 ?
                    MC_OK : MC_ERR_VERIFY;
+    } else if (s->frame.mode == MC_CAN_LIVE_DISTURB) {
+        expected = s->frame.evidence.injected ? MC_OK : MC_ERR_VERIFY;
+    } else if (s->frame.mode == MC_CAN_LIVE_BIT || s->frame.mode == MC_CAN_LIVE_BUSOFF) {
+        expected = s->frame.evidence.injected && s->frame.evidence.bit_error &&
+                   (s->frame.evidence.tx_error || reached_busoff) && transport != MC_OK ?
+                   MC_OK : MC_ERR_VERIFY;
     }
+    if (s->config.mode == MC_CAN_LIVE_BUSOFF && !reached_busoff &&
+        s->frame.frame >= s->config.count) { expected = MC_ERR_VERIFY; }
     if (s->frame.cancel_result != MC_OK) { expected = s->frame.cancel_result; }
     if (s->frame.evidence.backend_error != MC_OK) { expected = s->frame.evidence.backend_error; }
-    if ((s->frame.evidence.esr & 4U) != 0U) { expected = MC_ERR_IO; }
+    if ((s->frame.evidence.esr & 4U) != 0U && !reached_busoff) { expected = MC_ERR_IO; }
     s->frame.result = expected;
     s->last_result = expected;
     ++s->completed;
@@ -87,15 +102,16 @@ static void complete_frame(mc_can_session_t *s, int transport)
     log_result = s->port.record(s->port.context, &s->frame);
     if (log_result != MC_OK || !s->frame.submitted ||
         s->frame.cancel_result != MC_OK || s->frame.evidence.backend_error != MC_OK ||
-        (s->frame.evidence.esr & 4U) != 0U) {
+        ((s->frame.evidence.esr & 4U) != 0U && !reached_busoff)) {
         s->last_result = log_result != MC_OK ? log_result :
                          (s->frame.cancel_result != MC_OK ? s->frame.cancel_result :
                          (s->frame.evidence.backend_error != MC_OK ?
                           s->frame.evidence.backend_error :
                          (!s->frame.submitted ? transport : MC_ERR_IO)));
         (void)release_port(s, MC_CAN_ERROR);
-    } else if (s->completed >= s->config.count) {
-        (void)release_port(s, MC_CAN_DONE);
+    } else if (reached_busoff || s->completed >= s->config.count) {
+        (void)release_port(s, s->config.mode == MC_CAN_LIVE_BUSOFF && !reached_busoff ?
+                           MC_CAN_ERROR : MC_CAN_DONE);
     }
 }
 
@@ -113,7 +129,13 @@ void mc_can_session_tick(mc_can_session_t *s, uint32_t now_ms)
         s->frame.submitted_ms = now_ms;
         s->frame.bitrate = 500000U;
         s->frame.mode = s->config.mode;
-        if (s->config.mode >= MC_CAN_RAW_VALID) {
+        if (s->config.mode >= MC_CAN_LIVE_DISTURB) {
+            s->frame.mode = MC_CAN_NORMAL;
+            if (s->frame.frame % s->config.every == 0U) {
+                s->frame.mode = s->config.mode;
+                s->frame.fault_slot = 1U;
+            }
+        } else if (s->config.mode >= MC_CAN_RAW_VALID) {
             s->frame.bitrate = s->config.bitrate;
             s->frame.mode = MC_CAN_RAW_VALID;
             if (s->config.mode > MC_CAN_RAW_VALID &&

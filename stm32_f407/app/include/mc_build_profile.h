@@ -15,4 +15,10 @@
 #define MC_BUILD_CAN_RAW_GPIO 0U
 #endif
 
+#ifdef MC_ENABLE_CAN_LIVE
+#define MC_BUILD_CAN_LIVE 1U
+#else
+#define MC_BUILD_CAN_LIVE 0U
+#endif
+
 #endif

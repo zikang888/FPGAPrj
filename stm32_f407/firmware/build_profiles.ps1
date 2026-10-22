@@ -27,9 +27,9 @@ foreach ($taskProfile in $taskProfiles) {
     $taskCommon.ListingPath = './profile_' + $taskProfile + '/'
     $taskCommon.OutputName = $taskName
     $taskBaseDefines = @($taskTarget.TargetOption.TargetArmAds.Cads.VariousControls.Define.Split(',') |
-        Where-Object { $_ -notmatch '^MC_BUILD_REV=' -and $_ -ne 'MC_ENABLE_CAN_FAULTS' -and $_ -ne 'MC_ENABLE_CAN_RAW_GPIO' })
+        Where-Object { $_ -notmatch '^MC_BUILD_REV=' -and $_ -ne 'MC_ENABLE_CAN_FAULTS' -and $_ -ne 'MC_ENABLE_CAN_RAW_GPIO' -and $_ -ne 'MC_ENABLE_CAN_LIVE' })
     $taskDefines = ($taskBaseDefines -join ',') + ',MC_BUILD_REV=0x' + $taskRevision.Substring(0, 7)
-    if ($taskProfile -eq 'can_fault') { $taskDefines += ',MC_ENABLE_CAN_FAULTS,MC_ENABLE_CAN_RAW_GPIO' }
+    if ($taskProfile -eq 'can_fault') { $taskDefines += ',MC_ENABLE_CAN_FAULTS,MC_ENABLE_CAN_RAW_GPIO,MC_ENABLE_CAN_LIVE' }
     $taskTarget.TargetOption.TargetArmAds.Cads.VariousControls.Define = $taskDefines
     $taskGenerated = Join-Path $taskMdk ('sky_star_' + $taskProfile + '_generated.uvprojx')
     $taskLog = Join-Path $taskMdk ('profile_' + $taskProfile + '.log')

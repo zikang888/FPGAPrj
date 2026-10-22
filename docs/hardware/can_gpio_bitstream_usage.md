@@ -43,7 +43,7 @@ BUILD rev=源提交前7位 CAN_FAULTS=1 CAN_RAW_GPIO=1 RAW_TX=PD1
 
 标准 ID `0x321`、DLC 8；负载为大端 run（4 字节）＋frame（4 字节）。运行号/帧号能重建预期 TX，避免把不同帧混淆。先 125k、单帧采集，再 500k 和间歇播放。
 
-旧索引 15 位错误和 19 Bus-off 仍不由 RAW 实现；位错误要求发送参考/实时扰动，Bus-off 要读真实控制器状态。`mc_faults.c`、case ID 与 PS 20 项映射保持不变；板级菜单 16～18 仅在故障版改派到新 RAW 会话，日志仍为独立记录类型，不把它记成 PL 检测。
+索引 15 位错误和 19 Bus-off 不由 RAW 实现，新 LIVE 故障版已通过 [独立后端](can_live_injection_usage.md) 提供，需额外接线；旧 acfa7fe 不包含 LIVE。`mc_faults.c`、case ID 与 PS 20 项映射保持不变；板级菜单 16～18 使用 RAW，日志仍为独立记录类型，不把它记成 PL 检测。
 
 ## 4. 输出结果和互斥
 

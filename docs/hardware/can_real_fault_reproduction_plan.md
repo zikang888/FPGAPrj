@@ -2,7 +2,7 @@
 
 日期：2026-10-22；版本：调研草案 v0.1。适用：天空星 STM32F407VGT6、经典 CAN 2.0、FPGA 被动分析平台。
 
-本文承接当前 CAN 讨论，规划“正常通信中出现真实故障，并验证分析仪检测”的方案。阶段 1 的周期会话、停止/恢复和状态显示现已实现，使用方式见 [CAN 场景会话固件说明](can_session_firmware_usage.md)。阶段 2 的 RAW 位流已按 [GPIO 后端方案](can_gpio_bitstream_implementation.md) 实现，复用 PD1，不使用下文尚未核实的 PB0/PB1。实时 LIVE 叠加干扰和 CAN PL 解码器仍待完成；成员 C 尚未冻结的协议规则、case ID 和 `enabled` 未修改。
+本文承接当前 CAN 讨论，规划“正常通信中出现真实故障，并验证分析仪检测”的方案。阶段 1 见 [CAN 会话说明](can_session_firmware_usage.md)，阶段 2 的 RAW 见 [GPIO 后端方案](can_gpio_bitstream_implementation.md)。LIVE 叠加/位错误/Bus-off 已按 [新方案](can_live_injection_plan.md) 编写，使用 PA1/PA2 与独立 I，而不是下文旧候选 PB0/PB1。硬件效果与 CAN PL 检测仍待验收；成员 C 尚未冻结的协议规则、case ID 和 `enabled` 未修改。
 
 ## 1. 调研结论与方案选择
 

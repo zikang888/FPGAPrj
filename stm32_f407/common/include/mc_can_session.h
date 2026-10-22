@@ -6,7 +6,8 @@
 /* Experimental sessions do not allocate or redefine frozen protocol case IDs. */
 typedef enum {
     MC_CAN_NORMAL, MC_CAN_NO_ACK, MC_CAN_BITRATE, MC_CAN_ECHO,
-    MC_CAN_RAW_VALID, MC_CAN_RAW_CRC, MC_CAN_RAW_STUFF, MC_CAN_RAW_FORM
+    MC_CAN_RAW_VALID, MC_CAN_RAW_CRC, MC_CAN_RAW_STUFF, MC_CAN_RAW_FORM,
+    MC_CAN_LIVE_DISTURB, MC_CAN_LIVE_BIT, MC_CAN_LIVE_BUSOFF
 } mc_can_mode_t;
 
 typedef enum {
@@ -32,6 +33,9 @@ typedef struct {
     uint8_t first_lec; /* first error sampled by poll, not a complete error history */
     uint8_t fifo_overrun;
     int backend_error;
+    uint8_t injected;
+    uint8_t bit_error;
+    uint8_t tx_error;
 } mc_can_evidence_t;
 
 typedef struct {

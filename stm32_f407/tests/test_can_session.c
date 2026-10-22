@@ -15,6 +15,7 @@ typedef struct {
     mc_can_mode_t modes[16];
     uint8_t tx[8];
     uint8_t lec;
+    uint8_t injected, bit_error, tx_error;
     int bad_rx;
     uint32_t esr;
     mc_can_frame_t last;
@@ -41,6 +42,7 @@ static int poll_tx(void *p, mc_can_evidence_t *e)
     e->first_lec = f->lec;
     e->esr = f->esr;
     e->backend_error = f->backend_error;
+    e->injected=f->injected; e->bit_error=f->bit_error; e->tx_error=f->tx_error;
     return f->tx_result;
 }
 static int poll_rx(void *p, uint8_t rx[8], mc_can_evidence_t *e)
@@ -237,12 +239,51 @@ static int parsing(void)
     return 0;
 }
 
+static int live_goals(void)
+{
+    mc_can_session_t s;
+    fake_t f;
+    mc_can_config_t c=config(MC_CAN_LIVE_BIT,1U);
+    c.every=1U;
+    setup(&s,&f); f.tx_result=MC_ERR_IO; f.lec=3U; f.injected=1U; f.tx_error=1U;
+    CHECK(mc_can_session_start(&s,&c)==MC_OK);
+    mc_can_session_tick(&s,0U); mc_can_session_tick(&s,1U);
+    CHECK(s.failed==1U); /* missing ACK must never pass BIT */
+    setup(&s,&f); f.tx_result=MC_ERR_IO; f.injected=1U; f.tx_error=1U; f.bit_error=1U;
+    CHECK(mc_can_session_start(&s,&c)==MC_OK);
+    mc_can_session_tick(&s,0U); mc_can_session_tick(&s,1U);
+    CHECK(s.passed==1U && s.state==MC_CAN_DONE);
+    c=config(MC_CAN_LIVE_BUSOFF,32U); c.every=1U;
+    setup(&s,&f); f.tx_result=MC_ERR_IO; f.injected=1U; f.tx_error=1U; f.bit_error=1U;
+    CHECK(mc_can_session_start(&s,&c)==MC_OK);
+    mc_can_session_tick(&s,0U); mc_can_session_tick(&s,1U);
+    CHECK(s.state==MC_CAN_RUNNING && s.completed==1U);
+    f.esr=4U;
+    mc_can_session_tick(&s,50U); mc_can_session_tick(&s,51U);
+    CHECK(s.state==MC_CAN_DONE && s.last_result==MC_OK && f.restores==1U);
+    setup(&s,&f); f.tx_result=MC_ERR_IO; f.injected=1U; f.tx_error=1U; f.bit_error=1U;
+    CHECK(mc_can_session_start(&s,&c)==MC_OK);
+    {
+        unsigned int i;
+        for(i=0U;i<32U;++i) { mc_can_session_tick(&s,i*50U); mc_can_session_tick(&s,i*50U+1U); }
+    }
+    CHECK(s.state==MC_CAN_ERROR && s.last_result==MC_ERR_VERIFY && !s.held);
+    setup(&s,&f); f.esr=4U; /* unrelated BOFF without injection evidence */
+    CHECK(mc_can_session_start(&s,&c)==MC_OK);
+    mc_can_session_tick(&s,0U); mc_can_session_tick(&s,1U);
+    CHECK(s.state==MC_CAN_ERROR);
+    c.count=31U;
+    CHECK(mc_can_session_start(&s,&c)==MC_ERR_ARGUMENT);
+    return 0;
+}
+
 int main(void)
 {
     CHECK(scheduling() == 0);
     CHECK(ack_and_echo() == 0);
     CHECK(failures_and_cleanup() == 0);
     CHECK(parsing() == 0);
+    CHECK(live_goals()==0);
     puts("CAN session scheduling, evidence, ownership and cleanup tests passed");
     return 0;
 }

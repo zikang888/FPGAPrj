@@ -29,11 +29,12 @@
 - OLED：PB12/PB13/PB15、PC4/PC5；原菜单显示触发次数，CAN 会话显示进度。
 - CAN 周期会话：normal/echo 默认可用；noack/bitrate 需显式启用故障宏。
 - CAN GPIO 位流：故障版可播放合法/CRC/填充/格式语料，复用 PD1；接线与命令见 [RAW 说明](docs/hardware/can_gpio_bitstream_usage.md)。
+- CAN LIVE：故障版通过 PD1→PA1 同步、PA2＋独立收发器叠加脉冲，检查发送位错误和真实 BOFF/恢复，见 [使用说明](docs/hardware/can_live_injection_usage.md)。
 
 ## 验证状态
 
 - Keil ARMCC 5.06：0 error、0 warning。
-- 当前电脑端测试：6/6 passed（原协议回归、CAN 会话、HAL 默认/启用配置、RAW 位流和默认关闭检查）。
+- 当前电脑端测试：9/9 passed（原协议/RAW 回归，加 LIVE 定时、关闭检查和真实适配源寄存器模型）。
 - 尚未完成天空星、外设模块和 FPGA 的实板联调。
 
 ## 协作规则
