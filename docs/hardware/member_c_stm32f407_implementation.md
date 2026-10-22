@@ -165,6 +165,10 @@ PS CAN 经 EMIO RX ← 第二只 SN65HVD230 R/RXD
 - Zynq 收到后原样回发，STM32 对 ID、DLC、8 字节逐项比较。
 - 先做 10 次冒烟，再做 1000 次；记录超时、错误计数器和 bus-off。
 
+### 5.4 实际故障复现与检测规划
+
+新增的 [CAN 实际故障复现与检测实施规划](can_real_fault_reproduction_plan.md) 列出无 ACK、位率失配、间歇干扰、CRC/填充/格式、终端/断线和 Bus-off 的制造方式、现象、实际场景及 A/B/C/I 四角色接线。该文档是调研方案，GPIO 注入引脚与定时后端尚未冻结或实现；当前代码能力仍以现有菜单文档为准。
+
 ## 6. I²C 连接与配合
 
 ![I2C 并联总线连接](assets/member_c/i2c_bus.jpg)

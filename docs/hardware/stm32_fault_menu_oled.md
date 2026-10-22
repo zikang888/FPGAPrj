@@ -47,6 +47,8 @@ OLED 使用独立 GPIO 软件 SPI，不占用连接板载 W25Q128 的 SPI1 PA4�
 | 15～18 | CAN BIT/STUFF/CRC/FORM | bxCAN 自动生成合法帧，需要外部物理层注入设备 |
 | 19 | CAN BUS OFF | 需要外部重复故障与恢复流程，当前不主动累积错误 |
 
+后续 CAN 扩展方案见 [CAN 实际故障复现与检测实施规划](can_real_fault_reproduction_plan.md)：额外 GPIO 配合独立收发器可设计位流发生器或显性干扰器，因此上表“外部物理层注入设备”也可由 STM32 的新增发送后端承担。该后端当前尚未实现，现有菜单的可执行范围不变。
+
 ## FPGA 配合
 
 - 现有 SPI 监听器只对索引 0 的残帧有线级 `FRAME_ERROR` 触发。索引 1/2 要求对端知道测试用例的期望长度。
