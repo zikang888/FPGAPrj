@@ -1,8 +1,10 @@
 # 成员 C 实施规划：STM32F407 真值节点、Zynq PS 事件解析与系统验证
 
-版本：v1.1
-日期：2026-10-14（补充 MCU OLED 接线）
+版本：v1.2
+日期：2026-10-22（核对当前固件、CAN 会话与发布文件）
 目标平台：立创·天空星 STM32F407VGT6 + Zynq-7020 多协议通信分析平台
+
+当前规则文件仍为成员 C 所有的草案（`approval_status: draft_member_c_owned`）。文中冻结/验收条款是协作流程要求，不表示所有协议已经获批或通过实板验收。
 
 ## 1. 结论与执行边界
 
@@ -24,7 +26,7 @@ FPGA 统一事件 ───┼→ 成员 C 比对与报告
 逻辑分析仪波形 ──┘
 ```
 
-评审材料指定的正式工程 `D:\fpga_class\Multi_protocol` 当前不在本机，不能直接完成 BIT/HDF/ELF 合并。因此本交付包实现可单元测试的事件解析、快照访问、协议测试编排和 STM32 HAL 适配层；正式工程恢复后再按本文接口合入。
+本分支仅保存 STM32 工程及接口文档，不包含 Zynq PS、Vivado 或 BIT/HDF/ELF。FPGA 集成工作见仓库的 `codex/fpga-ab-week2-c-integration` 分支；本轮核对其 `8830069` 提交，正式 BIT 仍仅接入 SPI，UART/I²C/CAN 尚未完成实际接入。以下 PS/PL 内容为跨端接口和后续配合要求，不能理解为本分支已经实现。分支差异见 [检查记录](../test-results/2026-10-22-branch-doc-release-audit.md)。
 
 ## 2. 本阶段范围
 
@@ -98,7 +100,7 @@ FPGA 统一事件 ───┼→ 成员 C 比对与报告
 | CAN1 TX | PD1 | 输出 | STM32 侧 SN65HVD230 TXD | 500 kbit/s 起步 |
 | 日志 USART1 TX | PA9 | 输出 | USB-UART/DAP-Link RX | 115200 或更高 |
 | 日志 USART1 RX | PA10 | 输入 | USB-UART/DAP-Link TX | 可选命令输入 |
-| TEST_SYNC | PC6 | 输出 | FPGA_SYNC 输入 | 每批测试前脉冲 |
+| TEST_SYNC | PC6 | 输出 | 拟接 FPGA_SYNC；当前未接入 PL | 现有单次用例的前置脉冲 |
 | OLED SCLK / D0 | PB13 | 输出 | OLED 时钟输入 | GPIO 软件 SPI |
 | OLED SDA / DIN / D1 | PB15 | 输出 | OLED 数据输入 | GPIO 软件 SPI |
 | OLED CS | PB12 | 输出 | OLED 片选输入 | 低有效 |
@@ -167,7 +169,7 @@ PS CAN 经 EMIO RX ← 第二只 SN65HVD230 R/RXD
 
 ### 5.4 实际故障复现与检测规划
 
-新增的 [CAN 实际故障复现与检测实施规划](can_real_fault_reproduction_plan.md) 列出无 ACK、位率失配、间歇干扰、CRC/填充/格式、终端/断线和 Bus-off 的制造方式、现象、实际场景及 A/B/C/I 四角色接线。该文档是调研方案，GPIO 注入引脚与定时后端尚未冻结或实现；当前代码能力仍以现有菜单文档为准。
+新增的 [CAN 实际故障复现与检测实施规划](can_real_fault_reproduction_plan.md) 列出无 ACK、位率失配、间歇干扰、CRC/填充/格式、终端/断线和 Bus-off 的制造方式、现象、实际场景及 A/B/C/I 四角色接线。第一阶段已增加独立 `can test` 周期会话，使用方式见 [CAN 会话说明](can_session_firmware_usage.md)。GPIO 注入引脚与定时后端仍未冻结或实现；原 20 项单次菜单的能力和 case ID 保持原含义。
 
 ## 6. I²C 连接与配合
 
@@ -240,9 +242,9 @@ GND ───────────── 三方共地
 ```text
 START(txn=N)
 DATA(MOSI=9F, MISO=xx)
-DATA(MOSI=FF, MISO=EF)
-DATA(MOSI=FF, MISO=40)
-DATA(MOSI=FF, MISO=18)
+DATA(MOSI=00, MISO=EF)
+DATA(MOSI=00, MISO=40)
+DATA(MOSI=00, MISO=18)
 END(txn=N)
 ```
 
@@ -252,8 +254,8 @@ SPI DATA 事件的 `flags_data[15:8]=MISO`、`flags_data[7:0]=MOSI`，`data_leng
 
 - `CS` 在完整字节之间提前拉高：验证事务提前结束。
 - 板级专用 GPIO bit-bang 发 1～7 个时钟后释放 CS：验证 `INCOMPLETE_BYTE`。该功能只能在确认没有第二主机驱动时启用。
-- 每第 N 次触发，或使用固定种子决定触发位置；日志必须保存 N/种子。
-- 默认代码不启用危险 bit-bang 钩子，避免未确认管脚时误驱动总线。
+- 现有单次菜单可执行 4 bit 残帧、2 字节短事务、5 字节长事务；SPI 残帧 GPIO 钩子已绑定，不需要额外编译宏，但只有按钮长按或命令触发才执行。
+- SPI 的每第 N 次/固定 seed 自动注入仍为规划，未实现；不能将 CAN 的周期会话当作 SPI 的循环注入。
 
 ## 8. UART 连接与配合
 
@@ -279,7 +281,7 @@ UART 是推挽点对点连接，不需要上拉。双方都是 3.3 V CMOS 才能
 ### 8.3 故障用例
 
 - 固定发送 `00 FF 55 AA`、递增 8 字节、固定随机种子序列。
-- 错误停止位需要临时 GPIO 精确定时，只有示波器确认位宽后才启用。
+- 错误停止位/Break 的临时 GPIO 钩子已绑定，可从单次菜单触发；实际位宽和 FPGA 识别仍需采集验证。
 - 更安全的第一阶段错误是 FPGA 故意不回发或回发错误字节，由 STM32 报告超时/不一致。
 
 ## 9. 128-bit 事件 ABI 与 PS 配合
@@ -310,7 +312,7 @@ UART 是推挽点对点连接，不需要上拉。双方都是 3.3 V CMOS 才能
 | `[31:24]` | 当前事件数据字节数 |
 | `[23:0]` | FPGA 事务编号 |
 
-仓库现有 `software/src/capture_demo.c` 负责快照寄存器访问和事件读取。成员 C 的 STM32 代码不复制第二套 Zynq PS 驱动；后续实时 SPI 页面直接扩展现有 PS 正式路径。
+集成分支中的 `software/src/capture_demo.c` 负责快照寄存器访问和事件读取，本 STM32 分支没有 `software/` 目录。成员 C 的 STM32 代码不复制第二套 Zynq PS 驱动；后续实时页面扩展集成分支的 PS 正式路径。
 
 合入正式工程前，成员 A/C 必须用 `VIRTUAL_EVENT` 的 bit31 触发位和 bits23:0 事务号完成端到端自检，再用 SPI 仿真事件确认完整 128-bit word 顺序。当前正式窗口是低 32 位在低地址；不得绕过成员 C 修改 ABI 含义。
 
@@ -319,7 +321,7 @@ UART 是推挽点对点连接，不需要上拉。双方都是 3.3 V CMOS 才能
 每个事务输出一行 JSONL：
 
 ```json
-{"seq":1,"ms":1250,"case":1001,"txn":1,"protocol":"SPI","op":"JEDEC_ID","dir":"TXRX","data":"00EF4018","result":0,"detail":"matched"}
+{"seq":1,"ms":1250,"case":1001,"txn":1,"protocol":"SPI","op":"JEDEC_ID","dir":"TXRX","data":"00EF4018","tx":"9F000000","result":0,"detail":"matched"}
 ```
 
 字段说明：
@@ -327,9 +329,11 @@ UART 是推挽点对点连接，不需要上拉。双方都是 3.3 V CMOS 才能
 - `seq`：日志记录顺序号。
 - `case`：团队冻结的测试用例编号。
 - `txn`：STM32 本地事务号，不等同于 FPGA 事务号。
-- `data`：实际收发结果；不能只记期望值。
+- SPI 的 `data` 为实际 RX，`tx` 为实际发送；不能只记期望值。第一字节 RX 和实物 ID 均以实测为准。
 - `result=0` 表示本节点判定通过，负值表示参数、IO、超时或校验失败。
-- 固件提交号、编译时间、板号、协议速率在每批日志头部额外记录。
+- 当前启动文本包含工作时钟和协议速率，不自动输出完整提交号/板号。每批采集需操作人员额外记录 HEX 的来源提交、校验值和板号，详见 [固件发布说明](../../stm32_f407/firmware/releases/2026-10-22-5d788f8/README.md)。
+
+`can test` 输出独立 `kind=can_session` 记录，没有正式 `case` 字段，不能交给旧的 20 项 case 映射器直接计数；字段及通过含义见 [CAN 会话日志说明](can_session_firmware_usage.md#4-日志与结果含义)。
 
 ## 11. 成员 A/B/C 交接清单
 
@@ -409,6 +413,8 @@ UART 是推挽点对点连接，不需要上拉。双方都是 3.3 V CMOS 才能
 
 ## 15. 当前已实现代码
 
+本节与固件状态以 2026-10-22 为准，第 12 节日期表保留为原计划，不是已完成清单。
+
 - 协议无关回调接口和可移植测试编排。
 - SPI JEDEC ID、SPI 固定模式、UART 回环、I²C EEPROM 写读、CAN 回环用例。
 - JSONL 真值日志。
@@ -417,5 +423,6 @@ UART 是推挽点对点连接，不需要上拉。双方都是 3.3 V CMOS 才能
 - 与仓库正式 128-bit 事件 ABI 对齐的协议规则。
 - STM32 日志与现有 Zynq 快照事件的对照流程。
 - 电脑端 fake platform 单元测试。
+- CAN 独立周期会话、停止/恢复和 OLED 进度；默认 normal/echo，noack/bitrate 需显式故障宏；不含 GPIO CAN 位流发生器。
 
 已经完成 CubeMX 6.15.0、STM32CubeF4 v1.28.3 和 Keil MDK-ARM 完整工程，ARMCC 5.06 编译结果为 0 error、0 warning。尚需硬件后完成：天空星实板烧录、外接 AT24C256/SN65HVD230 联调、FPGA UART/CAN 回环、LCD 实时页面和三方实测。

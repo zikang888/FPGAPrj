@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "published_on": "2026-10-22",
+  "source_branch": "memberC/stm32-f407",
+  "source_commit": "5d788f8482698bfc2a4c2c5e44c2deb0fd6c572e",
+  "target": "STM32F407VGT6",
+  "toolchain": "Keil ARMCC 5.06 update 2",
+  "configuration": "default",
+  "defines": ["USE_HAL_DRIVER", "STM32F407xx"],
+  "MC_ENABLE_CAN_FAULTS": false,
+  "MC_ENABLE_I2C_FAULT_LINKS": false,
+  "hex": "sky_star_protocol_node-default-5d788f8.hex",
+  "file_size_bytes": 96576,
+  "sha256": "70BB21B652013607D09ADF9A70B48C2857047A6E81560F4F3153E7514D0224C3",
+  "flash_origin": "0x08000000",
+  "host_tests_passed": 4,
+  "host_tests_total": 4,
+  "target_build_errors": 0,
+  "target_build_warnings": 0,
+  "board_tested": false
+}

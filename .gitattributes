@@ -1,0 +1,2 @@
+# Preserve byte-for-byte release checksums; generated HEX must not be text-merged.
+/stm32_f407/firmware/releases/**/*.hex binary

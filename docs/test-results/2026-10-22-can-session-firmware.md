@@ -32,7 +32,7 @@ Code=30886 RO-data=3362 RW-data=72 ZI-data=5512
 
 本地生成文件：`stm32_f407/firmware/Projects/MDK-ARM/sky_star_protocol_node/sky_star_protocol_node.hex`。
 SHA-256：`70BB21B652013607D09ADF9A70B48C2857047A6E81560F4F3153E7514D0224C3`。
-HEX 属于忽略的构建输出，未提交仓库。链接器静态调用图报告最大已知栈 1432 字节，工程栈 2048 字节；报告含函数指针/未知项，不作为运行期栈水位实测。
+原构建路径属于忽略的输出目录。后续将同一 SHA-256 的 HEX 原样归档到 [版本发布目录](../../stm32_f407/firmware/releases/2026-10-22-5d788f8/README.md) 并提交，默认配置未改变。链接器静态调用图报告最大已知栈 1432 字节，工程栈 2048 字节；报告含函数指针/未知项，不作为运行期栈水位实测。
 
 另使用 ARMCC 对 `mc_can_session_hal.c` 和已有 `mc_stm32f407_hal_port.c` 定义 `MC_ENABLE_CAN_FAULTS` 编译，确认显式开启路径的真实 HAL 接口可编译。此项是源文件编译检查，不是该配置的完整链接或上板验证。
 

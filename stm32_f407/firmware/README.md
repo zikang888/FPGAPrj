@@ -22,6 +22,8 @@ Program Size: Code=30886 RO-data=3362 RW-data=72 ZI-data=5512
 0 Error(s), 0 Warning(s)
 ```
 
+直接下载固件：[2026-10-22 默认 HEX、来源提交和 SHA-256](releases/2026-10-22-5d788f8/README.md)。发布文件被 Git 跟踪，Keil 的原始输出目录仍保持忽略。
+
 ## 时钟与引脚依据
 
 - HSE：天空星板载 8 MHz 晶振，PLL 后 SYSCLK 168 MHz。

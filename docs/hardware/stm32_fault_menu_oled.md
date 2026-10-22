@@ -1,6 +1,6 @@
 # STM32F407 错误事件菜单与 SSD1306 OLED 接线
 
-状态：2026-10-12 本地实现，已编译和主机测试；尚未烧录或完成波形实测。协议规则由成员 C 维护，详见 `docs/protocol-rules/protocol_rules.yaml`。
+状态：初版实现于 2026-10-12；2026-10-22 更新执行计数和 CAN 会话入口，已编译和主机测试，尚未烧录或完成波形实测。协议规则由成员 C 维护，详见 `docs/protocol-rules/protocol_rules.yaml`。
 
 ## OLED 选择
 

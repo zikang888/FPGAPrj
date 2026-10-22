@@ -13,7 +13,7 @@ stm32_f407/
 ├── firmware/     # CubeMX、HAL/CMSIS、Core 和 Keil MDK-ARM 完整工程
 ├── tests/        # 电脑端 fake-platform 单元测试
 ├── CMakeLists.txt
-└── STM32CubeMX配置.md
+└── STM32CubeMX_config.md
 ```
 
 协议规则的唯一真源不在代码目录，而在：
@@ -65,6 +65,9 @@ ctest --test-dir stm32_f407/build --output-on-failure
 
 主机测试只验证协议编排、比较和日志逻辑，不等价于 HAL 编译或实板通过。
 
+可烧录文件见 [版本化 HEX 发布目录](firmware/releases/2026-10-22-5d788f8/README.md)，
+其中记录来源提交、默认配置和 SHA-256；不要把旧集成分支中的构建输出当成本版固件。
+
 ## 与当前 FPGA 候选连接
 
 SPI 第一闭环固定为 STM32 主机、W25Q128 从机、FPGA 被动监听：
@@ -89,10 +92,10 @@ SPI 第一闭环固定为 STM32 主机、W25Q128 从机、FPGA 被动监听：
 | 外接 SN65HVD230 | PD0/PD1 | CAN1 RX/TX，500 kbit/s |
 | 用户 LED | PB2 | 成功点亮，失败熄灭 |
 | 用户按键 | PA0 | 短按切换错误事件，长按执行 |
-| 同步脉冲 | PC6 | 输出到 FPGA 可选同步输入 |
+| 同步脉冲 | PC6 | 已配置输出；FPGA 侧输入尚未接入，不能当作已有同步链路 |
 | OLED | PB12/PB13/PB15、PC4/PC5 | 128×64 SSD1306 4 线 SPI |
 
-错误事件和 OLED 接线详见 `docs/hardware/stm32_fault_menu_oled.md`。
+错误事件和 OLED 接线详见 [菜单接线说明](../docs/hardware/stm32_fault_menu_oled.md)。
 
 USART1 命令：
 
