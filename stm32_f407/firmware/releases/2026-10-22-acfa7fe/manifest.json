@@ -1,0 +1,45 @@
+{
+  "schema_version": 2,
+  "published_on": "2026-10-22",
+  "source_branch": "memberC/stm32-f407",
+  "source_commit": "acfa7fe88f3df760dd1c43e527750615b98f9ccd",
+  "build_id": "ACFA7FE",
+  "target": "STM32F407VGT6",
+  "toolchain": "Keil ARMCC 5.06 update 2",
+  "flash_origin": "0x08000000",
+  "host_tests_passed": 6,
+  "host_tests_total": 6,
+  "board_tested": false,
+  "pl_can_verified": false,
+  "profiles": [
+    {
+      "name": "default",
+      "hex": "sky_star-default-acfa7fe.hex",
+      "defines": ["USE_HAL_DRIVER", "STM32F407xx", "MC_BUILD_REV=0xacfa7fe"],
+      "MC_ENABLE_CAN_FAULTS": false,
+      "MC_ENABLE_CAN_RAW_GPIO": false,
+      "MC_ENABLE_I2C_FAULT_LINKS": false,
+      "file_size_bytes": 99927,
+      "sha256": "E91A7CD8CACDC3AFE9FC731D8ABC62FA9A46CE729479F2082515D6F59379EA36",
+      "program_size": {"code": 31826, "ro_data": 3594, "rw_data": 88, "zi_data": 5688},
+      "build_errors": 0,
+      "build_warnings": 0
+    },
+    {
+      "name": "can_fault",
+      "hex": "sky_star-can-fault-acfa7fe.hex",
+      "defines": ["USE_HAL_DRIVER", "STM32F407xx", "MC_BUILD_REV=0xacfa7fe", "MC_ENABLE_CAN_FAULTS", "MC_ENABLE_CAN_RAW_GPIO"],
+      "MC_ENABLE_CAN_FAULTS": true,
+      "MC_ENABLE_CAN_RAW_GPIO": true,
+      "MC_ENABLE_I2C_FAULT_LINKS": false,
+      "raw_output_pin": "PD1",
+      "raw_bitrates": [125000, 500000],
+      "raw_modes": ["valid", "crc", "stuff", "form"],
+      "file_size_bytes": 114216,
+      "sha256": "C800BE737E333560BB1DC2742469195673B5DD31ABAF0E7EC8CE7A046382DAD5",
+      "program_size": {"code": 36582, "ro_data": 3926, "rw_data": 84, "zi_data": 6836},
+      "build_errors": 0,
+      "build_warnings": 0
+    }
+  ]
+}

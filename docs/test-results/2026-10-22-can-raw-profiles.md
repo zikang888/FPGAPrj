@@ -1,6 +1,6 @@
 # CAN GPIO 位流与双配置固件验证
 
-日期：2026-10-22。源码从 `6e85f49` 增量开发；最终发布目录记录已提交源码的精确版本和两种 HEX 校验值。
+日期：2026-10-22。源码从 `6e85f49` 增量开发，最终代码提交为 `acfa7fe88f3df760dd1c43e527750615b98f9ccd`；两个 Release 配置从该干净提交构建，详见 [发布说明](../../stm32_f407/firmware/releases/2026-10-22-acfa7fe/README.md)。
 
 ## 功能和兼容边界
 
@@ -37,6 +37,8 @@
 | can_fault | 原宏＋MC_BUILD_REV＋MC_ENABLE_CAN_FAULTS＋MC_ENABLE_CAN_RAW_GPIO | noack/bitrate、RAW 和菜单 16～18 |
 
 两个配置均要求 0 error / 0 warning；不是单个源文件编译。Release 模式要求固件源代码和构建脚本已提交；启动 BUILD 行包含源提交前七位与两个开关。具体 Program Size、HEX 长度和 SHA-256 以 [发布目录](../../stm32_f407/firmware/releases/README.md) 为准。
+
+实际完整 Release 构建结果：default Code/RO/RW/ZI=`31826/3594/88/5688`；can_fault=`36582/3926/84/6836`，均 0 error / 0 warning。故障版链接 map 中 `g_raw_hal` 位于 `0x2000062C`、大小 1144 字节；DMA2_Stream5 向量指向 `mc_can_raw_hal.o` 的强处理函数。
 
 链接器 map 已确认 RAW context 位于 DMA 可访问 SRAM，DMA2_Stream5 向量解析到新后端，而不是默认弱处理函数。静态栈报告带函数指针未知项，不作为运行期水位证明。原引脚和 TIM/IRQ 不在 default 启动时重新分配；RAW 会话显式接管后才配置。
 
