@@ -23,6 +23,7 @@ OLED 使用独立 GPIO 软件 SPI，不占用连接板载 W25Q128 的 SPI1 PA4�
 - PA0 短按（25 ms～799 ms）：选择下一个事件；20 项循环。
 - PA0 长按（至少 800 ms）：执行当前事件一次；OLED 显示结果码。
 - USART1 115200 8N1：`fault list`、`fault select N`、`fault run`、`fault run N`。N 为 0～19。
+- 菜单新增 `RUNS N` 显示本次开机的触发尝试次数。周期 CAN 测试使用独立会话，见 [CAN 会话使用说明](can_session_firmware_usage.md)；会话运行时长按停止，结束后可返回原菜单。
 - 每次执行输出一条 JSONL，含 case ID、协议、动作、STM32 返回码和说明。对发波形的用例，`0` 只表示 STM32 完成了动作；仍需 FPGA 事件或独立采集确认线上实际波形。I²C NACK 与 CAN ACK 探测则由 STM32 检查对应状态。`-5` 表示当前硬件路径不支持。
 
 ## 事件菜单

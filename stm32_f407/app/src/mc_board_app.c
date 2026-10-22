@@ -6,6 +6,7 @@
 #include "mc_faults.h"
 #include "mc_oled.h"
 #include "mc_cli_rx.h"
+#include "mc_can_session_hal.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -38,6 +39,42 @@ static int g_long_press_ran;
 static mc_fault_id_t g_selected_fault;
 static int g_last_fault_result = MC_ERR_UNSUPPORTED;
 static int g_has_fault_result;
+static uint32_t g_fault_runs;
+static mc_can_session_t g_can_session;
+static mc_can_session_hal_t g_can_hal;
+static int g_can_view;
+static uint32_t g_can_display_ms;
+
+static const char *can_state_name(void)
+{
+    static const char *const names[] = {"IDLE", "RUNNING", "DONE", "STOPPED", "ERROR"};
+    return names[(unsigned int)g_can_session.state];
+}
+
+static void display_can_session(void)
+{
+    char line[24];
+    mc_oled_clear();
+    mc_oled_text(0U, 0U, "CAN SESSION");
+    mc_oled_text(0U, 1U, can_state_name());
+    (void)snprintf(line, sizeof(line), "RUN %lu REQ %lu",
+                   (unsigned long)g_can_session.run, (unsigned long)g_can_session.submitted);
+    mc_oled_text(0U, 2U, line);
+    (void)snprintf(line, sizeof(line), "DONE %lu/%lu", (unsigned long)g_can_session.completed,
+                   (unsigned long)g_can_session.config.count);
+    mc_oled_text(0U, 3U, line);
+    (void)snprintf(line, sizeof(line), "PASS %lu FAIL %lu", (unsigned long)g_can_session.passed,
+                   (unsigned long)g_can_session.failed);
+    mc_oled_text(0U, 4U, line);
+    (void)snprintf(line, sizeof(line), "SLOTS %lu R %d",
+                   (unsigned long)g_can_session.fault_slots, g_can_session.last_result);
+    mc_oled_text(0U, 5U, line);
+    mc_oled_text(0U, 6U, g_can_session.held && g_can_session.state != MC_CAN_RUNNING ?
+                 "RESTORE FAILED" : "PL NOT CONNECTED");
+    mc_oled_text(0U, 7U, g_can_session.state == MC_CAN_RUNNING ? "HOLD STOP" :
+                 (g_can_session.held ? "HOLD RETRY RESTORE" : "TAP BACK"));
+    mc_oled_flush();
+}
 
 static void console_write(const char *text)
 {
@@ -63,6 +100,10 @@ static void print_help(void)
         "  fault list           List selectable fault cases\r\n"
         "  fault select N       Select case index N (0..19)\r\n"
         "  fault run [N]        Trigger selected/indexed case\r\n"
+        "  can test start MODE COUNT PERIOD [EVERY]\r\n"
+        "    MODE: normal/echo/noack/bitrate, period >=50ms\r\n"
+        "    noack/bitrate require MC_ENABLE_CAN_FAULTS\r\n"
+        "  can test status|stop|recover\r\n"
         "  help                 Show this help\r\n"
         "USER_KEY: short=next, hold 0.8s=run.\r\n> ");
 }
@@ -84,7 +125,8 @@ static void display_fault_menu(void)
             mc_oled_text(0U, (uint8_t)(i + 1U), line);
         }
     }
-    mc_oled_text(0U, 5U, "TAP NEXT HOLD RUN");
+    (void)snprintf(line, sizeof(line), "RUNS %lu HOLD RUN", (unsigned long)g_fault_runs);
+    mc_oled_text(0U, 5U, line);
     if (g_has_fault_result) {
         if (g_last_fault_result == MC_ERR_UNSUPPORTED) {
             strcpy(line, "NEEDS EXTERNAL HW");
@@ -130,8 +172,13 @@ static void trigger_selected_fault(void)
     if (item == NULL) {
         return;
     }
-    (void)snprintf(line, sizeof(line), "\r\nFAULT case=%lu %s\r\n",
-                   (unsigned long)item->case_id, item->label);
+    if (g_can_session.held) {
+        console_write("CAN session owns peripherals; stop/recover first\r\n> ");
+        return;
+    }
+    ++g_fault_runs;
+    (void)snprintf(line, sizeof(line), "\r\nFAULT run=%lu case=%lu %s\r\n",
+                   (unsigned long)g_fault_runs, (unsigned long)item->case_id, item->label);
     console_write(line);
     g_last_fault_result = mc_fault_run(&g_runner, g_selected_fault);
     g_has_fault_result = 1;
@@ -224,12 +271,65 @@ static void run_spi_jedec(uint32_t iterations)
     print_summary("SPI_JEDEC", result, &summary);
 }
 
+static void print_can_status(void)
+{
+    char line[230];
+    (void)snprintf(line, sizeof(line),
+        "CAN_SESSION state=%s run=%lu submitted=%lu completed=%lu pass=%lu fail=%lu "
+        "slots=%lu last=%d restore=%d held=%u\r\n> ", can_state_name(),
+        (unsigned long)g_can_session.run, (unsigned long)g_can_session.submitted,
+        (unsigned long)g_can_session.completed, (unsigned long)g_can_session.passed,
+        (unsigned long)g_can_session.failed, (unsigned long)g_can_session.fault_slots,
+        g_can_session.last_result, g_can_session.restore_result, (unsigned int)g_can_session.held);
+    console_write(line);
+}
+
+static void run_can_command(const char *command)
+{
+    mc_can_config_t config;
+    int result = MC_OK;
+    if (strcmp(command, "can test status") == 0) {
+        /* read-only */
+    } else if (strcmp(command, "can test stop") == 0) {
+        result = mc_can_session_stop(&g_can_session);
+    } else if (strcmp(command, "can test recover") == 0) {
+        result = mc_can_session_recover(&g_can_session);
+    } else if (strncmp(command, "can test start ", 15U) == 0) {
+        result = mc_can_session_parse(command + 15, &config);
+        if (result == MC_OK) { result = mc_can_session_start(&g_can_session, &config); }
+    } else {
+        result = MC_ERR_ARGUMENT;
+    }
+    if (result != MC_OK) {
+        char line[64];
+        (void)snprintf(line, sizeof(line), "CAN command result=%d\r\n", result);
+        console_write(line);
+    }
+    g_can_view = 1;
+    print_can_status();
+    display_can_session();
+    g_can_display_ms = HAL_GetTick();
+}
+
 static void run_command(const char *command)
 {
     mc_run_summary_t summary;
     uint32_t iterations = parse_count(command);
     int result;
 
+    if (strncmp(command, "can test", 8U) == 0 &&
+        (command[8] == ' ' || command[8] == '\0')) {
+        run_can_command(command);
+        return;
+    }
+    if (g_can_session.held) {
+        console_write("CAN session active/restore pending; use can test stop|status|recover\r\n> ");
+        return;
+    }
+    if (g_can_view) {
+        g_can_view = 0;
+        display_fault_menu();
+    }
     if (strcmp(command, "help") == 0) {
         print_help();
     } else if (strcmp(command, "fault list") == 0) {
@@ -308,6 +408,7 @@ static int can_start_accept_all(void)
 void mc_board_app_init(void)
 {
     mc_platform_t platform;
+    mc_can_session_port_t can_port;
     int can_result;
 
     memset(&g_port_context, 0, sizeof(g_port_context));
@@ -323,6 +424,10 @@ void mc_board_app_init(void)
 
     platform = mc_stm32f407_make_platform(&g_port_context);
     mc_runner_init(&g_runner, &platform);
+    can_port = mc_can_session_hal_port(&g_can_hal, &hcan1, &huart1);
+    mc_can_session_init(&g_can_session, &can_port);
+    g_can_view = 0;
+    g_fault_runs = 0U;
     mc_cli_rx_init(&g_console_rx);
     g_command_length = 0U;
     g_discard_line = 0;
@@ -399,12 +504,44 @@ void mc_board_app_poll(void)
     } else if (key_state == GPIO_PIN_SET && !g_long_press_ran &&
                (uint32_t)(HAL_GetTick() - g_key_down_ms) >= 800U) {
         g_long_press_ran = 1;
-        trigger_selected_fault();
+        if (g_can_session.state == MC_CAN_RUNNING) {
+            (void)mc_can_session_stop(&g_can_session);
+            print_can_status();
+            display_can_session();
+        } else if (g_can_view) {
+            if (g_can_session.held) {
+                (void)mc_can_session_recover(&g_can_session);
+                print_can_status();
+                display_can_session();
+            } else {
+                g_can_view = 0;
+                display_fault_menu();
+            }
+        } else {
+            trigger_selected_fault();
+        }
     } else if (key_state == GPIO_PIN_RESET && g_previous_key_state == GPIO_PIN_SET &&
                !g_long_press_ran && (uint32_t)(HAL_GetTick() - g_key_down_ms) >= 25U) {
-        select_fault((unsigned int)(g_selected_fault + 1U) % (unsigned int)MC_FAULT_COUNT);
+        if (g_can_session.state != MC_CAN_RUNNING && !g_can_session.held) {
+            if (g_can_view) {
+                g_can_view = 0;
+                display_fault_menu();
+            } else {
+                select_fault((unsigned int)(g_selected_fault + 1U) % (unsigned int)MC_FAULT_COUNT);
+            }
+        }
     }
     g_previous_key_state = key_state;
+    if (g_can_session.state == MC_CAN_RUNNING) {
+        mc_can_session_tick(&g_can_session, HAL_GetTick());
+        if (g_can_session.state != MC_CAN_RUNNING) { print_can_status(); }
+        if (g_can_session.state != MC_CAN_RUNNING ||
+            (!g_can_session.waiting &&
+             (uint32_t)(HAL_GetTick() - g_can_display_ms) >= 250U)) {
+            display_can_session();
+            g_can_display_ms = HAL_GetTick();
+        }
+    }
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)

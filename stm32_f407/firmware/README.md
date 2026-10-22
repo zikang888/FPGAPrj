@@ -15,10 +15,10 @@ sky_star_protocol_node.ioc
 ```
 
 本工程由 STM32CubeMX 6.15.0、STM32CubeF4 v1.28.3 生成，目标芯片为
-STM32F407VGT6。已在 Keil ARMCC 5.06 update 2 上构建：
+STM32F407VGT6。2026-10-22 已在 Keil ARMCC 5.06 update 2 上构建（默认故障宏关闭）：
 
 ```text
-Program Size: Code=26598 RO-data=2574 RW-data=60 ZI-data=5260
+Program Size: Code=30886 RO-data=3362 RW-data=72 ZI-data=5512
 0 Error(s), 0 Warning(s)
 ```
 
@@ -49,7 +49,9 @@ Program Size: Code=26598 RO-data=2574 RW-data=60 ZI-data=5260
 ## CubeMX 再生成
 
 `generate_cubemx.ps1` 是可移植的命令行生成脚本。当前 Keil 工程额外包含仓库上层的
-`common`、`hal`、`app` 源码。CubeMX 再生成后需检查这些手工分组仍在。
+`common`、`hal`、`app` 源码。CubeMX 再生成后需检查这些手工分组仍在，包含新增的
+`mc_can_session.c` 和 `mc_can_session_hal.c`。CAN 会话没有新增 `.ioc` 外设资源，
+操作说明见 [CAN 会话使用说明](../../docs/hardware/can_session_firmware_usage.md)。
 
 示例：
 

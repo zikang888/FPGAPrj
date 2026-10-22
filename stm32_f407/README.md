@@ -109,3 +109,10 @@ fault list
 fault select 0
 fault run
 ```
+
+## CAN 场景会话（2026-10-22）
+
+新增 `can test start normal|echo|noack|bitrate COUNT PERIOD_MS [EVERY]` 和
+`can test status|stop|recover`。默认仅 normal/echo 可用，故障场景沿用
+`MC_ENABLE_CAN_FAULTS` 显式开关。会话与旧命令互斥，结束恢复 CAN 配置；未占用新 GPIO/TIM/DMA。
+完整说明：[CAN 场景会话固件使用说明](../docs/hardware/can_session_firmware_usage.md)。

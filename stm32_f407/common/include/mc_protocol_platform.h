@@ -14,7 +14,8 @@ enum {
     MC_ERR_IO = -2,
     MC_ERR_TIMEOUT = -3,
     MC_ERR_VERIFY = -4,
-    MC_ERR_UNSUPPORTED = -5
+    MC_ERR_UNSUPPORTED = -5,
+    MC_ERR_BUSY = -6
 };
 
 typedef struct {
