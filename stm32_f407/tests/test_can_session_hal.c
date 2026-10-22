@@ -105,16 +105,16 @@ int main(void)
     CHECK(h.Init.AutoRetransmission == DISABLE && h.Init.AutoBusOff == DISABLE);
     for (i = 0U; i < 3U; ++i) {
         mailbox_index = i;
-        CHECK(p.submit(p.context, 500000U, tx) == MC_OK);
+        CHECK(p.submit(p.context, MC_CAN_NORMAL, 500000U, tx) == MC_OK);
         CHECK(p.poll_tx(p.context, &evidence) == MC_CAN_PENDING);
         regs.TSR = (CAN_TSR_RQCP0 | CAN_TSR_TXOK0) << (8U * i); pending = 0U;
         CHECK(p.poll_tx(p.context, &evidence) == MC_OK);
     }
 #ifdef MC_ENABLE_CAN_FAULTS
-    CHECK(p.submit(p.context, 250000U, tx) == MC_OK && h.Init.Prescaler == 12U);
+    CHECK(p.submit(p.context, MC_CAN_BITRATE, 250000U, tx) == MC_OK && h.Init.Prescaler == 12U);
 #else
-    CHECK(p.submit(p.context, 250000U, tx) == MC_ERR_UNSUPPORTED && h.Init.Prescaler == 6U);
-    CHECK(p.submit(p.context, 500000U, tx) == MC_OK);
+    CHECK(p.submit(p.context, MC_CAN_BITRATE, 250000U, tx) == MC_ERR_UNSUPPORTED && h.Init.Prescaler == 6U);
+    CHECK(p.submit(p.context, MC_CAN_NORMAL, 500000U, tx) == MC_OK);
 #endif
     regs.ESR = 3U << CAN_ESR_LEC_Pos;
     regs.TSR = CAN_TSR_RQCP2; pending = 0U;
@@ -131,14 +131,14 @@ int main(void)
     CHECK(p.restore(p.context) == MC_OK && !context.saved);
     setup(&h, &regs, &context, &p);
     CHECK(p.begin(p.context, MC_CAN_NORMAL) == MC_OK);
-    CHECK(p.submit(p.context, 500000U, tx) == MC_OK);
+    CHECK(p.submit(p.context, MC_CAN_NORMAL, 500000U, tx) == MC_OK);
     fail_abort = 1;
     CHECK(p.restore(p.context) == MC_ERR_IO && context.saved && pending);
     fail_abort = 0;
     CHECK(p.restore(p.context) == MC_OK && !context.saved && !pending);
     setup(&h, &regs, &context, &p);
     CHECK(p.begin(p.context, MC_CAN_NORMAL) == MC_OK);
-    CHECK(p.submit(p.context, 500000U, tx) == MC_OK);
+    CHECK(p.submit(p.context, MC_CAN_NORMAL, 500000U, tx) == MC_OK);
     stuck_abort = 1;
     CHECK(p.cancel(p.context, &evidence) == MC_ERR_TIMEOUT && tick < 20U);
     CHECK(context.saved && context.in_flight);

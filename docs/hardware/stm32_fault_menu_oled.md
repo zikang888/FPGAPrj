@@ -45,10 +45,11 @@ OLED 使用独立 GPIO 软件 SPI，不占用连接板载 W25Q128 的 SPI1 PA4�
 | 12 | I2C SCL LOW | 需 PC8 经限流电阻接 SCL，并启用 `MC_ENABLE_I2C_FAULT_LINKS` |
 | 13 | I2C NO STOP | 开漏 GPIO 发地址后保持 SCL 低 30 ms，再发 STOP 恢复总线 |
 | 14 | CAN NO ACK | 需收发器且无其他节点应答；启用 `MC_ENABLE_CAN_FAULTS` 后单次发送并恢复重发设置 |
-| 15～18 | CAN BIT/STUFF/CRC/FORM | bxCAN 自动生成合法帧，需要外部物理层注入设备 |
+| 15 | CAN BIT | 仍需同步的实时扰动与发送参考；本版不支持 |
+| 16～18 | CAN STUFF/CRC/FORM | 默认版仍不支持；新故障版由板级菜单转到 PD1 RAW 后端，单次 500 kbit/s |
 | 19 | CAN BUS OFF | 需要外部重复故障与恢复流程，当前不主动累积错误 |
 
-后续 CAN 扩展方案见 [CAN 实际故障复现与检测实施规划](can_real_fault_reproduction_plan.md)：额外 GPIO 配合独立收发器可设计位流发生器或显性干扰器，因此上表“外部物理层注入设备”也可由 STM32 的新增发送后端承担。该后端当前尚未实现，现有菜单的可执行范围不变。
+RAW 的接线、串口命令和两个编译开关见 [GPIO 位流使用说明](can_gpio_bitstream_usage.md)。本版复用 PD1 和现有收发器，先暂停 bxCAN，再 GPIO 播放并恢复；不启用 PB0/PB1。`mc_faults.c` 和旧 case ID 不改，故障版板级菜单 16～18 改派到独立 `kind=can_raw` 会话，不能据其完成结果报告 PL 检出。
 
 ## FPGA 配合
 

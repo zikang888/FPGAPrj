@@ -15,14 +15,14 @@ sky_star_protocol_node.ioc
 ```
 
 本工程由 STM32CubeMX 6.15.0、STM32CubeF4 v1.28.3 生成，目标芯片为
-STM32F407VGT6。2026-10-22 已在 Keil ARMCC 5.06 update 2 上构建（默认故障宏关闭）：
+STM32F407VGT6。下面为第一阶段 `5d788f8` 的历史构建大小；当前默认/故障双配置及各自大小见发布目录：
 
 ```text
 Program Size: Code=30886 RO-data=3362 RW-data=72 ZI-data=5512
 0 Error(s), 0 Warning(s)
 ```
 
-直接下载固件：[2026-10-22 默认 HEX、来源提交和 SHA-256](releases/2026-10-22-5d788f8/README.md)。发布文件被 Git 跟踪，Keil 的原始输出目录仍保持忽略。
+直接下载固件：[默认 / CAN 故障 HEX、来源提交和 SHA-256](releases/README.md)。发布文件被 Git 跟踪，Keil 的原始输出目录仍保持忽略。两个配置的完整 ARM 构建见 [验证记录](../../docs/test-results/2026-10-22-can-raw-profiles.md)。
 
 ## 时钟与引脚依据
 
@@ -54,6 +54,8 @@ Program Size: Code=30886 RO-data=3362 RW-data=72 ZI-data=5512
 `common`、`hal`、`app` 源码。CubeMX 再生成后需检查这些手工分组仍在，包含新增的
 `mc_can_session.c` 和 `mc_can_session_hal.c`。CAN 会话没有新增 `.ioc` 外设资源，
 操作说明见 [CAN 会话使用说明](../../docs/hardware/can_session_firmware_usage.md)。
+
+GPIO RAW 后端还需要 `mc_can_raw.c`、`mc_can_raw_hal.c`；其 TIM1/DMA2 由后端按需配置，未在 `.ioc` 中常驻启用。故障版定义 Stream5 IRQ；后续 CubeMX 若新增同一 IRQ 必须先处理重复定义/资源冲突。双配置构建：`./build_profiles.ps1 -Profile all -Release`，RAW 接线和命令见 [说明](../../docs/hardware/can_gpio_bitstream_usage.md)。
 
 示例：
 

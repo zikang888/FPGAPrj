@@ -454,6 +454,16 @@
               <FilePath>../../../hal/src/mc_can_session_hal.c</FilePath>
             </File>
             <File>
+              <FileName>mc_can_raw.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../../../common/src/mc_can_raw.c</FilePath>
+            </File>
+            <File>
+              <FileName>mc_can_raw_hal.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../../../hal/src/mc_can_raw_hal.c</FilePath>
+            </File>
+            <File>
               <FileName>mc_truth_log.c</FileName>
               <FileType>1</FileType>
               <FilePath>../../../common/src/mc_truth_log.c</FilePath>

@@ -1,6 +1,13 @@
 /stm32_f407/build/
 /stm32_f407/firmware/Projects/MDK-ARM/sky_star_protocol_node/
 /stm32_f407/firmware/Projects/MDK-ARM/build.log
+/stm32_f407/firmware/Projects/MDK-ARM/sky_star_protocol_node.*.generated.uvprojx
+/stm32_f407/firmware/Projects/MDK-ARM/sky_star_*_generated.uvprojx
+/stm32_f407/firmware/Projects/MDK-ARM/profile_default/
+/stm32_f407/firmware/Projects/MDK-ARM/profile_can_fault/
+/stm32_f407/firmware/Projects/MDK-ARM/profile_*.log
+/stm32_f407/firmware/Projects/MDK-ARM/DebugConfig/sky_star_default_*.dbgconf
+/stm32_f407/firmware/Projects/MDK-ARM/DebugConfig/sky_star_can_fault_*.dbgconf
 /stm32_f407/firmware/MXTmpFiles/
 *.uvguix.*
 *.lst

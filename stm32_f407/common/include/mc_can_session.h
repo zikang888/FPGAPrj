@@ -5,7 +5,8 @@
 
 /* Experimental sessions do not allocate or redefine frozen protocol case IDs. */
 typedef enum {
-    MC_CAN_NORMAL, MC_CAN_NO_ACK, MC_CAN_BITRATE, MC_CAN_ECHO
+    MC_CAN_NORMAL, MC_CAN_NO_ACK, MC_CAN_BITRATE, MC_CAN_ECHO,
+    MC_CAN_RAW_VALID, MC_CAN_RAW_CRC, MC_CAN_RAW_STUFF, MC_CAN_RAW_FORM
 } mc_can_mode_t;
 
 typedef enum {
@@ -20,6 +21,7 @@ typedef struct {
     uint32_t period_ms;
     uint32_t timeout_ms;
     uint32_t every; /* BITRATE: every Nth frame uses 250 kbit/s, otherwise 500k. */
+    uint32_t bitrate; /* RAW only: 125000 or 500000. */
 } mc_can_config_t;
 
 typedef struct {
@@ -52,7 +54,7 @@ typedef struct {
 typedef struct {
     void *context;
     int (*begin)(void *context, mc_can_mode_t mode);
-    int (*submit)(void *context, uint32_t bitrate, const uint8_t tx[8]);
+    int (*submit)(void *context, mc_can_mode_t mode, uint32_t bitrate, const uint8_t tx[8]);
     int (*poll_tx)(void *context, mc_can_evidence_t *evidence);
     int (*poll_rx)(void *context, uint8_t rx[8], mc_can_evidence_t *evidence);
     int (*cancel)(void *context, mc_can_evidence_t *evidence);

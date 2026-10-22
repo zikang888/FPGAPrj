@@ -10,6 +10,7 @@ add_library(mc_protocol_common
     common/src/mc_truth_log.c
     common/src/mc_faults.c
     common/src/mc_can_session.c
+    common/src/mc_can_raw.c
 )
 target_include_directories(mc_protocol_common PUBLIC common/include)
 
@@ -54,4 +55,18 @@ foreach(gate IN ITEMS default enabled)
         target_compile_options(mc_can_hal_${gate}_tests PRIVATE -Wall -Wextra -Wpedantic -Werror)
     endif()
     add_test(NAME mc_can_hal_${gate}_tests COMMAND mc_can_hal_${gate}_tests)
+endforeach()
+
+add_executable(mc_can_raw_tests tests/test_can_raw.c)
+target_link_libraries(mc_can_raw_tests PRIVATE mc_protocol_common)
+add_executable(mc_can_raw_disabled_tests tests/test_can_raw_disabled.c hal/src/mc_can_raw_hal.c)
+target_include_directories(mc_can_raw_disabled_tests PRIVATE tests/fake_hal hal/include)
+target_link_libraries(mc_can_raw_disabled_tests PRIVATE mc_protocol_common)
+foreach(test IN ITEMS mc_can_raw_tests mc_can_raw_disabled_tests)
+    if(MSVC)
+        target_compile_options(${test} PRIVATE /W4)
+    else()
+        target_compile_options(${test} PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    endif()
+    add_test(NAME ${test} COMMAND ${test})
 endforeach()

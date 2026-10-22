@@ -28,11 +28,14 @@ int mc_can_session_start(mc_can_session_t *s, const mc_can_config_t *config)
     mc_can_session_port_t port;
     mc_can_config_t requested;
     uint32_t run;
-    if (s == NULL || config == NULL || (unsigned int)config->mode > MC_CAN_ECHO ||
+    if (s == NULL || config == NULL || (unsigned int)config->mode > MC_CAN_RAW_FORM ||
         config->count == 0U || config->count > 10000U ||
         config->period_ms < 50U || config->period_ms > 60000U ||
         config->timeout_ms == 0U || config->timeout_ms > config->period_ms ||
-        (config->mode == MC_CAN_BITRATE && config->every == 0U)) {
+        ((config->mode == MC_CAN_BITRATE || config->mode > MC_CAN_RAW_VALID) &&
+         config->every == 0U) ||
+        (config->mode >= MC_CAN_RAW_VALID && config->bitrate != 125000U &&
+         config->bitrate != 500000U)) {
         return MC_ERR_ARGUMENT;
     }
     if (s->held || s->state == MC_CAN_RUNNING) { return MC_ERR_BUSY; }
@@ -110,7 +113,15 @@ void mc_can_session_tick(mc_can_session_t *s, uint32_t now_ms)
         s->frame.submitted_ms = now_ms;
         s->frame.bitrate = 500000U;
         s->frame.mode = s->config.mode;
-        if (s->config.mode == MC_CAN_BITRATE &&
+        if (s->config.mode >= MC_CAN_RAW_VALID) {
+            s->frame.bitrate = s->config.bitrate;
+            s->frame.mode = MC_CAN_RAW_VALID;
+            if (s->config.mode > MC_CAN_RAW_VALID &&
+                s->frame.frame % s->config.every == 0U) {
+                s->frame.mode = s->config.mode;
+                s->frame.fault_slot = 1U;
+            }
+        } else if (s->config.mode == MC_CAN_BITRATE &&
             s->frame.frame % s->config.every == 0U) {
             s->frame.bitrate = 250000U;
             s->frame.fault_slot = 1U;
@@ -124,7 +135,7 @@ void mc_can_session_tick(mc_can_session_t *s, uint32_t now_ms)
             s->frame.tx[i + 4U] = (uint8_t)(s->frame.frame >> (24U - i * 8U));
         }
         s->last_start_ms = now_ms;
-        result = s->port.submit(s->port.context, s->frame.bitrate, s->frame.tx);
+        result = s->port.submit(s->port.context, s->frame.mode, s->frame.bitrate, s->frame.tx);
         if (result != MC_OK) {
             s->frame.cancel_result = s->port.cancel(s->port.context, &s->frame.evidence);
             complete_frame(s, result);

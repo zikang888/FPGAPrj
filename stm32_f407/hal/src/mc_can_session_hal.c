@@ -59,6 +59,7 @@ static int set_bitrate(mc_can_session_hal_t *c, uint32_t bitrate)
 static int session_begin(void *opaque, mc_can_mode_t mode)
 {
     mc_can_session_hal_t *c = (mc_can_session_hal_t *)opaque;
+    if (mode >= MC_CAN_RAW_VALID) { return MC_ERR_UNSUPPORTED; }
 #ifndef MC_ENABLE_CAN_FAULTS
     if (mode == MC_CAN_NO_ACK || mode == MC_CAN_BITRATE) { return MC_ERR_UNSUPPORTED; }
 #else
@@ -83,11 +84,12 @@ static int session_begin(void *opaque, mc_can_mode_t mode)
     return set_bitrate(c, 500000U);
 }
 
-static int session_submit(void *opaque, uint32_t bitrate, const uint8_t tx[8])
+static int session_submit(void *opaque, mc_can_mode_t mode, uint32_t bitrate, const uint8_t tx[8])
 {
     mc_can_session_hal_t *c = (mc_can_session_hal_t *)opaque;
     CAN_TxHeaderTypeDef header;
     int result;
+    (void)mode;
     if (!c->saved || c->in_flight) { return MC_ERR_BUSY; }
 #ifndef MC_ENABLE_CAN_FAULTS
     if (bitrate != 500000U) { return MC_ERR_UNSUPPORTED; }

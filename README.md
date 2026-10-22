@@ -14,7 +14,7 @@
 - 协议规则：`docs/protocol-rules/protocol_rules.yaml`
 - 接线规划：`docs/hardware/member_c_stm32f407_implementation.md`
 - 构建记录：`docs/test-results/2026-09-28-stm32f407-full-project.md`
-- 当前固件：[2026-10-22 默认 HEX 与版本说明](stm32_f407/firmware/releases/2026-10-22-5d788f8/README.md)
+- 固件下载：[默认版 / CAN 故障版与版本说明](stm32_f407/firmware/releases/README.md)
 - CAN 会话：[命令、开关与停止恢复](docs/hardware/can_session_firmware_usage.md)
 - 分支检查：[兼容性与文档修订记录](docs/test-results/2026-10-22-branch-doc-release-audit.md)
 
@@ -28,11 +28,12 @@
 - 用户 LED：PB2；用户按键：PA0；同步脉冲：PC6。
 - OLED：PB12/PB13/PB15、PC4/PC5；原菜单显示触发次数，CAN 会话显示进度。
 - CAN 周期会话：normal/echo 默认可用；noack/bitrate 需显式启用故障宏。
+- CAN GPIO 位流：故障版可播放合法/CRC/填充/格式语料，复用 PD1；接线与命令见 [RAW 说明](docs/hardware/can_gpio_bitstream_usage.md)。
 
 ## 验证状态
 
 - Keil ARMCC 5.06：0 error、0 warning。
-- 当前电脑端测试：4/4 passed（原协议回归、CAN 会话、HAL 默认/启用配置）。
+- 当前电脑端测试：6/6 passed（原协议回归、CAN 会话、HAL 默认/启用配置、RAW 位流和默认关闭检查）。
 - 尚未完成天空星、外设模块和 FPGA 的实板联调。
 
 ## 协作规则

@@ -12,6 +12,7 @@ typedef struct {
     int begin_result, submit_result, tx_result, rx_result, restore_result, log_result;
     int cancel_result, backend_error;
     uint32_t bitrate[16];
+    mc_can_mode_t modes[16];
     uint8_t tx[8];
     uint8_t lec;
     int bad_rx;
@@ -26,10 +27,10 @@ static int begin(void *p, mc_can_mode_t mode)
     ++f->begins;
     return f->begin_result;
 }
-static int submit(void *p, uint32_t bitrate, const uint8_t tx[8])
+static int submit(void *p, mc_can_mode_t mode, uint32_t bitrate, const uint8_t tx[8])
 {
     fake_t *f = p;
-    if (f->sends < 16U) { f->bitrate[f->sends] = bitrate; }
+    if (f->sends < 16U) { f->bitrate[f->sends] = bitrate; f->modes[f->sends] = mode; }
     ++f->sends;
     memcpy(f->tx, tx, 8U);
     return f->submit_result;
@@ -86,6 +87,7 @@ static mc_can_config_t config(mc_can_mode_t mode, uint32_t count)
     mc_can_config_t c;
     c.mode = mode; c.count = count; c.period_ms = 50U;
     c.timeout_ms = 25U; c.every = 2U;
+    c.bitrate = 500000U;
     return c;
 }
 
@@ -115,6 +117,17 @@ static int scheduling(void)
     CHECK(mc_can_session_start(&s, &c) == MC_OK);
     CHECK(s.run == 2U && s.completed == 0U);
     CHECK(mc_can_session_stop(&s) == MC_OK && s.state == MC_CAN_STOPPED);
+    setup(&s, &f);
+    c = config(MC_CAN_RAW_CRC, 3U); c.bitrate = 125000U;
+    CHECK(mc_can_session_start(&s, &c) == MC_OK);
+    mc_can_session_tick(&s, 0U); mc_can_session_tick(&s, 1U);
+    mc_can_session_tick(&s, 50U); mc_can_session_tick(&s, 51U);
+    mc_can_session_tick(&s, 100U); mc_can_session_tick(&s, 101U);
+    CHECK(s.state == MC_CAN_DONE && s.fault_slots == 1U);
+    CHECK(f.modes[0] == MC_CAN_RAW_VALID && f.modes[1] == MC_CAN_RAW_CRC &&
+          f.modes[2] == MC_CAN_RAW_VALID && f.bitrate[1] == 125000U);
+    c.bitrate = 250000U;
+    CHECK(mc_can_session_start(&s, &c) == MC_ERR_ARGUMENT);
     return 0;
 }
 

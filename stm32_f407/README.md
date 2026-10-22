@@ -39,7 +39,7 @@ docs/protocol-rules/protocol_rules.yaml
 - 128×64 SSD1306 4 线 SPI OLED 页面，使用 PB12/PB13/PB15、PC4/PC5。
 - USART1 使用中断接收缓冲，整行回显；连续快速发送不再逐字节阻塞发送。
 - 可选同步脉冲接口。
-- SPI 残帧、UART 错误停止位/Break 的 GPIO 波形钩子已绑定；CAN 物理错误仍需外部注入。
+- SPI 残帧、UART 错误停止位/Break 的 GPIO 波形钩子已绑定；CAN 故障版提供 RAW 错误语料，实时位错误仍需独立同步注入。
 
 完整 Keil 工程入口：
 
@@ -65,7 +65,7 @@ ctest --test-dir stm32_f407/build --output-on-failure
 
 主机测试只验证协议编排、比较和日志逻辑，不等价于 HAL 编译或实板通过。
 
-可烧录文件见 [版本化 HEX 发布目录](firmware/releases/2026-10-22-5d788f8/README.md)，
+可烧录文件见 [版本化 HEX 发布目录](firmware/releases/README.md)，
 其中记录来源提交、默认配置和 SHA-256；不要把旧集成分支中的构建输出当成本版固件。
 
 ## 与当前 FPGA 候选连接
@@ -119,3 +119,11 @@ fault run
 `can test status|stop|recover`。默认仅 normal/echo 可用，故障场景沿用
 `MC_ENABLE_CAN_FAULTS` 显式开关。会话与旧命令互斥，结束恢复 CAN 配置；未占用新 GPIO/TIM/DMA。
 完整说明：[CAN 场景会话固件使用说明](../docs/hardware/can_session_firmware_usage.md)。
+
+## CAN GPIO 位流（故障配置）
+
+`can raw start valid|crc|stuff|form BITRATE COUNT PERIOD_MS [EVERY]` 支持 125k/500k，
+使用 TIM1＋DMA2 Stream5/Channel6，暂时复用 PD1，并与 bxCAN/旧测试互斥。
+故障版菜单 16/17/18 可单次播放；默认版禁用 RAW，不分配新硬件资源。
+构建：`firmware/build_profiles.ps1 -Profile all -Release`。
+详见 [接线和使用](../docs/hardware/can_gpio_bitstream_usage.md)、[资源实施方案](../docs/hardware/can_gpio_bitstream_implementation.md)。

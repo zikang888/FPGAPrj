@@ -2,9 +2,9 @@
 
 日期：2026-10-22。对应 `memberC/stm32-f407`，实现范围来自 [CAN 故障复现规划](can_real_fault_reproduction_plan.md) 阶段 1。
 
-本次增加周期发送、ACK 检查、回传检查、有限次数位率失配和停止/恢复。没有启用 PB0/PB1、定时器或 DMA，没有实现 CRC/填充/格式位流或外部节点控制。现有 20 项故障菜单和 case ID 保持原含义；本功能使用独立 `can test` 命令和 `kind=can_session` 日志，不修改尚未冻结的 CAN 规则。
+本页描述第一阶段 `can test` 的周期发送、ACK/回传检查、位率失配和停止/恢复，该后端本身不使用额外 GPIO/TIM/DMA。第二阶段新增独立 `can raw` 后端，详见 [GPIO 位流说明](can_gpio_bitstream_usage.md)；它在故障版使用 TIM1/DMA 和 PD1，PB0/PB1 未启用。原 case ID/含义保持不变，成员 C 的规则仍待冻结。
 
-可直接烧录的默认 HEX 及校验值见 [版本发布目录](../../stm32_f407/firmware/releases/2026-10-22-5d788f8/README.md)。该 HEX 对应源代码提交 `5d788f8`，故障宏关闭；无需从历史集成分支寻找固件。
+可直接烧录的默认/故障 HEX 及校验值见 [版本发布目录](../../stm32_f407/firmware/releases/README.md)。历史 `5d788f8` 仅有默认版；新发布同时提供两个配置。
 
 ## 1. 命令与硬件条件
 
