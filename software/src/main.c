@@ -36,6 +36,23 @@
 #define REG_UART_STOP_ERRORS (CORE_BASE + 0x007CU)
 #define REG_UART_BREAK_ERRORS (CORE_BASE + 0x0080U)
 #define REG_UART_SHORT_TRANSACTIONS (CORE_BASE + 0x0084U)
+#define REG_I2C_EVENT_COUNT (CORE_BASE + 0x0094U)
+#define REG_I2C_DATA_COUNT (CORE_BASE + 0x0098U)
+#define REG_I2C_ADDRESS_NACKS (CORE_BASE + 0x009CU)
+#define REG_I2C_BUSY_NACKS (CORE_BASE + 0x00A0U)
+#define REG_I2C_SDA_STUCK (CORE_BASE + 0x00A4U)
+#define REG_I2C_SCL_STUCK (CORE_BASE + 0x00A8U)
+#define REG_I2C_MISSING_STOP (CORE_BASE + 0x00ACU)
+#define REG_I2C_STATS_CTRL (CORE_BASE + 0x00B4U)
+#define REG_CAN_EVENT_COUNT (CORE_BASE + 0x00B8U)
+#define REG_CAN_FRAME_COUNT (CORE_BASE + 0x00BCU)
+#define REG_CAN_ACK_ERRORS (CORE_BASE + 0x00C0U)
+#define REG_CAN_BIT_ERRORS (CORE_BASE + 0x00C4U)
+#define REG_CAN_STUFF_ERRORS (CORE_BASE + 0x00C8U)
+#define REG_CAN_CRC_ERRORS (CORE_BASE + 0x00CCU)
+#define REG_CAN_FORM_ERRORS (CORE_BASE + 0x00D0U)
+#define REG_CAN_BUS_OFF (CORE_BASE + 0x00D4U)
+#define REG_CAN_STATS_CTRL (CORE_BASE + 0x00DCU)
 #define REG_CORE_REJECTED (CORE_BASE + 0x1014U)
 #define COUNTER_POLL_TICKS ((uint64_t)COUNTS_PER_SECOND / 5U)
 
@@ -74,6 +91,12 @@ static void clear_test_display(PlatformUiStatus *s)
     s->spi_response_mismatches = 0U;
     s->uart_event_count = s->uart_data_count = s->uart_stop_errors = 0U;
     s->uart_break_errors = s->uart_short_transactions = 0U;
+    s->i2c_event_count = s->i2c_data_count = 0U;
+    s->i2c_address_nacks = s->i2c_busy_nacks = 0U;
+    s->i2c_sda_stuck = s->i2c_scl_stuck = s->i2c_missing_stop = 0U;
+    s->can_event_count = s->can_frame_count = 0U;
+    s->can_ack_errors = s->can_bit_errors = s->can_stuff_errors = 0U;
+    s->can_crc_errors = s->can_form_errors = s->can_bus_off = 0U;
     s->test_id = s->test_events = s->test_errors = 0U;
     s->test_running = s->retained_tail = s->capture_source = 0U;
     s->test_failed = 0U;
@@ -115,6 +138,44 @@ static void refresh_test(PlatformUiStatus *s)
                                 ERROR_ORIGIN_PL, s->uart_break_errors);
         (void)error_model_report(&s->error_model, ERROR_UART_SHORT_TRANSACTION,
                                 ERROR_ORIGIN_PL, s->uart_short_transactions);
+    } else if (s->selected_protocol == UI_PROTOCOL_I2C) {
+        s->i2c_event_count = Xil_In32(REG_I2C_EVENT_COUNT);
+        s->i2c_data_count = Xil_In32(REG_I2C_DATA_COUNT);
+        s->i2c_address_nacks = Xil_In32(REG_I2C_ADDRESS_NACKS);
+        s->i2c_busy_nacks = Xil_In32(REG_I2C_BUSY_NACKS);
+        s->i2c_sda_stuck = Xil_In32(REG_I2C_SDA_STUCK);
+        s->i2c_scl_stuck = Xil_In32(REG_I2C_SCL_STUCK);
+        s->i2c_missing_stop = Xil_In32(REG_I2C_MISSING_STOP);
+        (void)error_model_report(&s->error_model, ERROR_I2C_ADDRESS_NACK,
+                                ERROR_ORIGIN_PL, s->i2c_address_nacks);
+        (void)error_model_report(&s->error_model, ERROR_I2C_BUSY_NACK,
+                                ERROR_ORIGIN_PL, s->i2c_busy_nacks);
+        (void)error_model_report(&s->error_model, ERROR_I2C_SDA_STUCK,
+                                ERROR_ORIGIN_PL, s->i2c_sda_stuck);
+        (void)error_model_report(&s->error_model, ERROR_I2C_SCL_STUCK,
+                                ERROR_ORIGIN_PL, s->i2c_scl_stuck);
+        (void)error_model_report(&s->error_model, ERROR_I2C_MISSING_STOP,
+                                ERROR_ORIGIN_PL, s->i2c_missing_stop);
+    } else if (s->selected_protocol == UI_PROTOCOL_CAN) {
+        s->can_event_count = Xil_In32(REG_CAN_EVENT_COUNT);
+        s->can_frame_count = Xil_In32(REG_CAN_FRAME_COUNT);
+        s->can_ack_errors = Xil_In32(REG_CAN_ACK_ERRORS);
+        s->can_bit_errors = Xil_In32(REG_CAN_BIT_ERRORS);
+        s->can_stuff_errors = Xil_In32(REG_CAN_STUFF_ERRORS);
+        s->can_crc_errors = Xil_In32(REG_CAN_CRC_ERRORS);
+        s->can_form_errors = Xil_In32(REG_CAN_FORM_ERRORS);
+        s->can_bus_off = Xil_In32(REG_CAN_BUS_OFF);
+        (void)error_model_report(&s->error_model, ERROR_CAN_ACK,
+                                ERROR_ORIGIN_PL, s->can_ack_errors);
+        /* A separate passive transceiver has no local TX intent to compare,
+         * so a transmitter bit error is intentionally reported as unknown. */
+        (void)error_model_report(&s->error_model, ERROR_CAN_STUFF,
+                                ERROR_ORIGIN_PL, s->can_stuff_errors);
+        (void)error_model_report(&s->error_model, ERROR_CAN_CRC,
+                                ERROR_ORIGIN_PL, s->can_crc_errors);
+        (void)error_model_report(&s->error_model, ERROR_CAN_FORM,
+                                ERROR_ORIGIN_PL, s->can_form_errors);
+        /* Bus-off is controller state and cannot be proven by a passive tap. */
     }
     s->test_errors = s->external_loss_count;
     for (i = 0U; i < ERROR_CODE_COUNT; ++i)
@@ -145,8 +206,10 @@ static void end_test(PlatformUiStatus *s, CaptureDemoSnapshot *snapshot)
     record->total_events = s->test_events;
     record->error_count = s->test_errors;
     record->external_loss = s->external_loss_count;
-    record->data_count = s->selected_protocol == UI_PROTOCOL_UART ?
-                         s->uart_data_count : Xil_In32(CORE_BASE + 0x44U);
+    record->data_count = s->selected_protocol == UI_PROTOCOL_UART ? s->uart_data_count :
+                         s->selected_protocol == UI_PROTOCOL_I2C ? s->i2c_data_count :
+                         s->selected_protocol == UI_PROTOCOL_CAN ? s->can_frame_count :
+                         Xil_In32(CORE_BASE + 0x44U);
     record->errors = s->error_model;
     record->snapshot_valid = saved != 0;
     record->overwritten = s->retained_tail;
@@ -172,10 +235,12 @@ static void begin_test(PlatformUiStatus *s, CaptureDemoSnapshot *snapshot)
     /* One deliberate reset at the start of a test, never on page switching. */
     Xil_Out32(CORE_BASE + 0x64U, 1U);
     Xil_Out32(CORE_BASE + 0x90U, 1U);
+    Xil_Out32(REG_I2C_STATS_CTRL, 1U);
+    Xil_Out32(REG_CAN_STATS_CTRL, 1U);
     g_external_base = Xil_In32(REG_EXT_DROPPED);
     s->test_id = g_next_test++;
     XTime_GetTime(&g_test_start);
-    if (capture_session_arm(s->selected_protocol == UI_PROTOCOL_SPI ? 2U : 1U)
+    if (capture_session_arm(ui_protocol_event_id(s->selected_protocol))
         != XST_SUCCESS) {
         xil_printf("TEST START FAILED: manual capture capability required\r\n");
         s->test_failed = 1U;
@@ -213,6 +278,8 @@ static PlatformUiAction console_action(const PlatformUiStatus *s)
         if (!strcmp(line,"view errors")) return PLATFORM_UI_ACTION_ERRORS;
         if (!strcmp(line,"protocol uart")) return PLATFORM_UI_ACTION_SELECT_UART;
         if (!strcmp(line,"protocol spi")) return PLATFORM_UI_ACTION_SELECT_SPI;
+        if (!strcmp(line,"protocol i2c")) return PLATFORM_UI_ACTION_SELECT_I2C;
+        if (!strcmp(line,"protocol can")) return PLATFORM_UI_ACTION_SELECT_CAN;
         if (!strcmp(line,"status"))
             xil_printf("TEST STATUS id=%lu running=%u events=%lu errors=%lu history=%lu\r\n",
                        (unsigned long)s->test_id, s->test_running,
@@ -254,7 +321,7 @@ int main(void)
     Xil_Out32(REG_LED_CTRL,0U);
     platform_ui_render_page(page,&status,status.capture_ok ? &demo : 0);
     XTime_GetTime(&last_poll);
-    xil_printf("UI READY. Commands: protocol spi/uart; test start/stop; view events/errors/history/home; status\r\n");
+    xil_printf("UI READY. Commands: protocol spi/uart/i2c/can; test start/stop; view events/errors/history/home; status\r\n");
     while (1) {
         XTime_GetTime(&now);
         if (status.test_running &&

@@ -1,15 +1,17 @@
 # Zynq-7020 Multi Protocol Platform
 
-本工程适用于 Vivado/SDK 2018.3 和 `xc7z020clg484-2`。从 2026-10-18 起统一使用 `build/vivado` 和 `build/sdk` 作为开发工作区。完整目录说明见 [PROJECT_PATHS.md](PROJECT_PATHS.md)。
+接口、接线、集成说明和实板测试记录统一从 [docs/README.md](docs/README.md) 进入。
+
+本工程适用于 Vivado/SDK 2018.3 和 `xc7z020clg484-2`。Vivado 工程与 SDK 工作区统一放在仓库根目录，完整目录说明见 [PROJECT_PATHS.md](PROJECT_PATHS.md)。
 
 ## 克隆后使用
 
 1. 双击 `01_Open_Vivado.cmd` 打开完整 Vivado 工程；首次使用会从源码生成 BD 和顶层 wrapper。
 2. 双击 `02_Open_SDK.cmd` 打开包含 `platform_hw/platform_bsp/platform_app` 的 SDK 工作区。
 3. SDK 中展开 `platform_app/repo_src` 编辑 C/H 源码。源码实际位于 `software/src`。
-4. 直接下载已实板验证的发布版本，双击 `03_Program_Tested_Release.cmd`。它核对 BIT/HDF/init/ELF 的 SHA-256 后执行易失性 JTAG 下载。
+4. 下载当前根目录中已经编译并实板验证的 BIT/HDF/ELF，双击 `03_Program_Tested_Release.cmd`。它与 SDK 图形界面的 Program FPGA + Run As → Launch on Hardware 使用同一组文件。
 
-根目录旧 `Multi_protocol.xpr`、根目录 SDK 元数据及 `_validation_build` 下的项目仅保留作历史参考。后续开发使用以上两个固定入口。不要通过 Vivado 默认的 `<Local to Project>` 再创建另一套 SDK workspace；若从 Vivado Launch SDK，Workspace 显式选择仓库的 `build/sdk`。
+根目录 `Multi_protocol.xpr` 是唯一日常 Vivado 工程，`Multi_protocol.sdk` 是与之配套的唯一 SDK workspace。Vivado 的 Export Hardware 保持 `<Local to Project>`，Launch SDK 的 Exported location 和 Workspace 也保持 `<Local to Project>` 即可。首次克隆请先双击 `02_Open_SDK.cmd`，它会生成本机专用的 BSP、Eclipse 元数据和 ELF；此后从 Vivado 默认 Launch SDK 会打开同一工作区。
 
 也可在仓库根目录使用 PowerShell。`Prepare` 只创建缺少的工作区；`BuildPl` 重建硬件；`BuildPs` 使用新生成的 BIT/HDF 配对重建软件；硬件尚未重建时使用仓库中已测交接文件：
 
@@ -36,16 +38,16 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tools/project.ps1 -Action Bu
 
 ## 主要路径
 
-- Vivado 工程：`build\vivado\Multi_protocol.xpr`
-- 开发用 Block Design：`build\vivado\Multi_protocol.srcs\sources_1\bd\multi_protocol_bd\multi_protocol_bd.bd`，由 `fpga/build/create_bd.tcl` 生成
+- Vivado 工程：`Multi_protocol.xpr`
+- 开发用 Block Design：`Multi_protocol.srcs\sources_1\bd\multi_protocol_bd\multi_protocol_bd.bd`，由 `fpga/build/create_bd.tcl` 生成
 - FPGA 源码：`fpga\rtl`
 - FPGA 约束：`fpga\constraints`
 - PS 源码：`software\src`
-- SDK workspace：`build\sdk`
-- 本机新综合 Bitstream（生成后才存在）：`build\vivado\Multi_protocol.runs\impl_1\multi_protocol_bd_wrapper.bit`
+- SDK workspace：`Multi_protocol.sdk`
+- 本机新综合 Bitstream（生成后才存在）：`Multi_protocol.runs\impl_1\multi_protocol_bd_wrapper.bit`
 - 当前硬件交接 BIT/HDF/PS 初始化：`Multi_protocol.sdk\platform_hw`
-- 重新构建的 PS ELF：`build\sdk\platform_app\Debug\platform_app.elf`
-- 本机 Vivado/SDK 2018.3：`D:\Vivado2018.3\Vivado\2018.3`、`D:\Vivado2018.3\SDK\2018.3`
+- 重新构建的 PS ELF：`Multi_protocol.sdk\platform_app\Debug\platform_app.elf`
+- 工具脚本自动查找 `D:\Xilinx` 或 `D:\Vivado2018.3` 下的 Vivado/SDK 2018.3
 
 ## 当前硬件配置
 

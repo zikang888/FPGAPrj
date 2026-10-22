@@ -19,6 +19,19 @@ static inline int event_diagnostic_label(const uint32_t *words, uint32_t count,
         if ((view.flags >> 8) == 1U) label = "BADSTOP";
         else if ((view.flags >> 8) == 2U) label = "BREAK";
         else if ((view.flags >> 8) == 4U) label = "SHORT";
+    } else if (view.protocol == 3U && fault) {
+        if ((view.flags >> 8) == 1U) label = "ADDRNCK";
+        else if ((view.flags >> 8) == 2U) label = "BUSYNCK";
+        else if ((view.flags >> 8) == 3U) label = "SDA LOW";
+        else if ((view.flags >> 8) == 4U) label = "SCL LOW";
+        else if ((view.flags >> 8) == 5U) label = "NO STOP";
+    } else if (view.protocol == 4U && fault) {
+        if ((view.flags >> 8) == 1U) label = "NO ACK";
+        else if ((view.flags >> 8) == 2U) label = "BIT ERR";
+        else if ((view.flags >> 8) == 3U) label = "STUFF";
+        else if ((view.flags >> 8) == 4U) label = "CRC ERR";
+        else if ((view.flags >> 8) == 5U) label = "FORM";
+        else if ((view.flags >> 8) == 6U) label = "BUS OFF";
     } else if (view.protocol == 2U && view.event_type == 2U) {
         uint32_t start = index;
         while (start > 0U) {

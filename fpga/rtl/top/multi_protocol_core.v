@@ -47,18 +47,24 @@ module multi_protocol_core (
     input  wire [127:0] ext_evt_data,
     input  wire         ext_evt_trigger,
     input  wire [31:0]  ext_evt_dropped_count,
+    input  wire         can_rx_level,
     output wire [63:0]  event_timestamp,
+    output wire         can_ack_enable,
+    output wire         can_echo_enable,
+    output wire         can_tx_request,
     output wire         led_heartbeat,
     output wire         led_ps_active
 );
 
 localparam [31:0] SYS_ID_VALUE       = 32'h4D50_5254; // "MPRT"
-localparam [31:0] VERSION_VALUE      = 32'h0001_0007; // event format v1, platform 7
-localparam [31:0] BUILD_ID_VALUE     = 32'h2026_1020;
-localparam [31:0] CAPABILITIES_VALUE = 32'h0000_007F; // bit6: manual session/filter/freeze
+localparam [31:0] VERSION_VALUE      = 32'h0001_0008; // event format v1, platform 8
+localparam [31:0] BUILD_ID_VALUE     = 32'h2026_1021;
+localparam [31:0] CAPABILITIES_VALUE = 32'h0000_01FF; // bit7 I2C, bit8 CAN monitor/ACK node
 
 localparam [3:0] PROTOCOL_UART     = 4'h1;
 localparam [3:0] PROTOCOL_SPI      = 4'h2;
+localparam [3:0] PROTOCOL_I2C      = 4'h3;
+localparam [3:0] PROTOCOL_CAN      = 4'h4;
 localparam [5:0] EVENT_START       = 6'h00;
 localparam [5:0] EVENT_DATA        = 6'h01;
 localparam [5:0] EVENT_END         = 6'h02;
@@ -101,6 +107,27 @@ localparam [15:0] REG_UART_SHORT_TRANSACTION_COUNT = 16'h0084;
 localparam [15:0] REG_UART_LAST_TRANSACTION_ID = 16'h0088;
 localparam [15:0] REG_UART_STATS_STATUS = 16'h008C;
 localparam [15:0] REG_UART_STATS_CTRL = 16'h0090;
+localparam [15:0] REG_I2C_EVENT_COUNT = 16'h0094;
+localparam [15:0] REG_I2C_DATA_COUNT = 16'h0098;
+localparam [15:0] REG_I2C_ADDRESS_NACK_COUNT = 16'h009C;
+localparam [15:0] REG_I2C_BUSY_NACK_COUNT = 16'h00A0;
+localparam [15:0] REG_I2C_SDA_STUCK_COUNT = 16'h00A4;
+localparam [15:0] REG_I2C_SCL_STUCK_COUNT = 16'h00A8;
+localparam [15:0] REG_I2C_MISSING_STOP_COUNT = 16'h00AC;
+localparam [15:0] REG_I2C_LAST_TRANSACTION_ID = 16'h00B0;
+localparam [15:0] REG_I2C_STATS_CTRL = 16'h00B4;
+localparam [15:0] REG_CAN_EVENT_COUNT = 16'h00B8;
+localparam [15:0] REG_CAN_FRAME_COUNT = 16'h00BC;
+localparam [15:0] REG_CAN_ACK_ERROR_COUNT = 16'h00C0;
+localparam [15:0] REG_CAN_BIT_ERROR_COUNT = 16'h00C4;
+localparam [15:0] REG_CAN_STUFF_ERROR_COUNT = 16'h00C8;
+localparam [15:0] REG_CAN_CRC_ERROR_COUNT = 16'h00CC;
+localparam [15:0] REG_CAN_FORM_ERROR_COUNT = 16'h00D0;
+localparam [15:0] REG_CAN_BUS_OFF_COUNT = 16'h00D4;
+localparam [15:0] REG_CAN_LAST_TRANSACTION_ID = 16'h00D8;
+localparam [15:0] REG_CAN_STATS_CTRL = 16'h00DC;
+localparam [15:0] REG_CAN_CTRL = 16'h00E0;
+localparam [15:0] REG_CAN_STATUS = 16'h00E4;
 
 localparam [15:0] REG_CAPTURE_CTRL    = 16'h1000;
 localparam [15:0] REG_CAPTURE_STATUS  = 16'h1004;
@@ -117,6 +144,7 @@ reg [31:0] irq_status_reg;
 reg [31:0] irq_enable_reg;
 reg [31:0] scratch_reg;
 reg [31:0] led_ctrl_reg;
+reg [31:0] can_ctrl_reg;
 reg [31:0] dropped_count_reg;
 
 reg [31:0] spi_event_count;
@@ -146,6 +174,25 @@ reg [31:0] uart_stop_error_count;
 reg [31:0] uart_break_count;
 reg [31:0] uart_short_transaction_count;
 reg [23:0] uart_last_transaction_id;
+
+reg [31:0] i2c_event_count;
+reg [31:0] i2c_data_count;
+reg [31:0] i2c_address_nack_count;
+reg [31:0] i2c_busy_nack_count;
+reg [31:0] i2c_sda_stuck_count;
+reg [31:0] i2c_scl_stuck_count;
+reg [31:0] i2c_missing_stop_count;
+reg [23:0] i2c_last_transaction_id;
+
+reg [31:0] can_event_count;
+reg [31:0] can_frame_count;
+reg [31:0] can_ack_error_count;
+reg [31:0] can_bit_error_count;
+reg [31:0] can_stuff_error_count;
+reg [31:0] can_crc_error_count;
+reg [31:0] can_form_error_count;
+reg [31:0] can_bus_off_count;
+reg [23:0] can_last_transaction_id;
 
 reg         capture_arm_pulse;
 reg         capture_ack_pulse;
@@ -217,6 +264,16 @@ wire ext_uart_event_accept;
 wire [5:0] ext_uart_event_type;
 wire [7:0] ext_uart_error_reason;
 wire [23:0] ext_uart_transaction_id;
+wire i2c_stats_clear_command;
+wire ext_i2c_event_accept;
+wire [5:0] ext_i2c_event_type;
+wire [7:0] ext_i2c_error_reason;
+wire [23:0] ext_i2c_transaction_id;
+wire can_stats_clear_command;
+wire ext_can_event_accept;
+wire [5:0] ext_can_event_type;
+wire [7:0] ext_can_error_reason;
+wire [23:0] ext_can_transaction_id;
 
 assign aw_hs = s_axi_awvalid && s_axi_awready;
 assign w_hs = s_axi_wvalid && s_axi_wready;
@@ -267,10 +324,35 @@ assign ext_uart_event_accept = ext_evt_valid && ext_evt_ready &&
 assign ext_uart_event_type = ext_evt_data[53:48];
 assign ext_uart_error_reason = ext_evt_data[47:40];
 assign ext_uart_transaction_id = ext_evt_data[23:0];
+assign i2c_stats_clear_command = write_commit &&
+                                 write_addr == REG_I2C_STATS_CTRL &&
+                                 write_strb[0] && write_data[0];
+assign ext_i2c_event_accept = ext_evt_valid && ext_evt_ready &&
+                              ext_evt_data[63:60] == PROTOCOL_I2C &&
+                              (!capture_manual_mode ||
+                               (capture_active && (capture_protocol_filter == 0 ||
+                                                   capture_protocol_filter == PROTOCOL_I2C)));
+assign ext_i2c_event_type = ext_evt_data[53:48];
+assign ext_i2c_error_reason = ext_evt_data[47:40];
+assign ext_i2c_transaction_id = ext_evt_data[23:0];
+assign can_stats_clear_command = write_commit &&
+                                 write_addr == REG_CAN_STATS_CTRL &&
+                                 write_strb[0] && write_data[0];
+assign ext_can_event_accept = ext_evt_valid && ext_evt_ready &&
+                              ext_evt_data[63:60] == PROTOCOL_CAN &&
+                              (!capture_manual_mode ||
+                               (capture_active && (capture_protocol_filter == 0 ||
+                                                   capture_protocol_filter == PROTOCOL_CAN)));
+assign ext_can_event_type = ext_evt_data[53:48];
+assign ext_can_error_reason = ext_evt_data[47:40];
+assign ext_can_transaction_id = ext_evt_data[23:0];
 
 assign led_heartbeat = heartbeat_state;
 assign led_ps_active = led_ctrl_reg[0];
 assign event_timestamp = timestamp_counter;
+assign can_ack_enable = can_ctrl_reg[0];
+assign can_echo_enable = can_ctrl_reg[1];
+assign can_tx_request = can_ctrl_reg[2];
 
 function [31:0] apply_wstrb;
     input [31:0] previous;
@@ -329,6 +411,25 @@ function [31:0] read_register;
                  (uart_short_transaction_count != 0)),
                 3'd0
             };
+            REG_I2C_EVENT_COUNT: read_register = i2c_event_count;
+            REG_I2C_DATA_COUNT: read_register = i2c_data_count;
+            REG_I2C_ADDRESS_NACK_COUNT: read_register = i2c_address_nack_count;
+            REG_I2C_BUSY_NACK_COUNT: read_register = i2c_busy_nack_count;
+            REG_I2C_SDA_STUCK_COUNT: read_register = i2c_sda_stuck_count;
+            REG_I2C_SCL_STUCK_COUNT: read_register = i2c_scl_stuck_count;
+            REG_I2C_MISSING_STOP_COUNT: read_register = i2c_missing_stop_count;
+            REG_I2C_LAST_TRANSACTION_ID: read_register = {8'd0, i2c_last_transaction_id};
+            REG_CAN_EVENT_COUNT: read_register = can_event_count;
+            REG_CAN_FRAME_COUNT: read_register = can_frame_count;
+            REG_CAN_ACK_ERROR_COUNT: read_register = can_ack_error_count;
+            REG_CAN_BIT_ERROR_COUNT: read_register = can_bit_error_count;
+            REG_CAN_STUFF_ERROR_COUNT: read_register = can_stuff_error_count;
+            REG_CAN_CRC_ERROR_COUNT: read_register = can_crc_error_count;
+            REG_CAN_FORM_ERROR_COUNT: read_register = can_form_error_count;
+            REG_CAN_BUS_OFF_COUNT: read_register = can_bus_off_count;
+            REG_CAN_LAST_TRANSACTION_ID: read_register = {8'd0, can_last_transaction_id};
+            REG_CAN_CTRL: read_register = can_ctrl_reg;
+            REG_CAN_STATUS: read_register = {31'd0, can_rx_level};
             REG_SPI_STATS_STATUS: read_register = {
                 28'd0,
                 ((spi_frame_error_count != 0) ||
@@ -429,6 +530,7 @@ always @(posedge s_axi_aclk) begin
         irq_enable_reg   <= 32'd0;
         scratch_reg      <= 32'd0;
         led_ctrl_reg     <= 32'd0;
+        can_ctrl_reg     <= 32'd3;
         dropped_count_reg <= 32'd0;
         spi_event_count <= 32'd0;
         spi_start_count <= 32'd0;
@@ -456,6 +558,23 @@ always @(posedge s_axi_aclk) begin
         uart_break_count <= 32'd0;
         uart_short_transaction_count <= 32'd0;
         uart_last_transaction_id <= 24'd0;
+        i2c_event_count <= 32'd0;
+        i2c_data_count <= 32'd0;
+        i2c_address_nack_count <= 32'd0;
+        i2c_busy_nack_count <= 32'd0;
+        i2c_sda_stuck_count <= 32'd0;
+        i2c_scl_stuck_count <= 32'd0;
+        i2c_missing_stop_count <= 32'd0;
+        i2c_last_transaction_id <= 24'd0;
+        can_event_count <= 32'd0;
+        can_frame_count <= 32'd0;
+        can_ack_error_count <= 32'd0;
+        can_bit_error_count <= 32'd0;
+        can_stuff_error_count <= 32'd0;
+        can_crc_error_count <= 32'd0;
+        can_form_error_count <= 32'd0;
+        can_bus_off_count <= 32'd0;
+        can_last_transaction_id <= 24'd0;
         capture_arm_pulse <= 1'b0;
         capture_manual_mode <= 1'b0;
         capture_protocol_filter <= 4'd0;
@@ -642,6 +761,62 @@ always @(posedge s_axi_aclk) begin
             end
         end
 
+        if (i2c_stats_clear_command) begin
+            i2c_event_count <= 32'd0;
+            i2c_data_count <= 32'd0;
+            i2c_address_nack_count <= 32'd0;
+            i2c_busy_nack_count <= 32'd0;
+            i2c_sda_stuck_count <= 32'd0;
+            i2c_scl_stuck_count <= 32'd0;
+            i2c_missing_stop_count <= 32'd0;
+            i2c_last_transaction_id <= 24'd0;
+        end else if (ext_i2c_event_accept) begin
+            i2c_event_count <= i2c_event_count + 32'd1;
+            i2c_last_transaction_id <= ext_i2c_transaction_id;
+            if (ext_i2c_event_type == EVENT_DATA) begin
+                i2c_data_count <= i2c_data_count + 32'd1;
+            end else if (ext_i2c_event_type == EVENT_FRAME_ERROR) begin
+                case (ext_i2c_error_reason)
+                    8'h01: i2c_address_nack_count <= i2c_address_nack_count + 32'd1;
+                    8'h02: i2c_busy_nack_count <= i2c_busy_nack_count + 32'd1;
+                    8'h03: i2c_sda_stuck_count <= i2c_sda_stuck_count + 32'd1;
+                    8'h04: i2c_scl_stuck_count <= i2c_scl_stuck_count + 32'd1;
+                    8'h05: i2c_missing_stop_count <= i2c_missing_stop_count + 32'd1;
+                    default: begin
+                    end
+                endcase
+            end
+        end
+
+        if (can_stats_clear_command) begin
+            can_event_count <= 32'd0;
+            can_frame_count <= 32'd0;
+            can_ack_error_count <= 32'd0;
+            can_bit_error_count <= 32'd0;
+            can_stuff_error_count <= 32'd0;
+            can_crc_error_count <= 32'd0;
+            can_form_error_count <= 32'd0;
+            can_bus_off_count <= 32'd0;
+            can_last_transaction_id <= 24'd0;
+        end else if (ext_can_event_accept) begin
+            can_event_count <= can_event_count + 32'd1;
+            can_last_transaction_id <= ext_can_transaction_id;
+            if (ext_can_event_type == EVENT_END) begin
+                can_frame_count <= can_frame_count + 32'd1;
+            end else if (ext_can_event_type == EVENT_FRAME_ERROR) begin
+                case (ext_can_error_reason)
+                    8'h01: can_ack_error_count <= can_ack_error_count + 32'd1;
+                    8'h02: can_bit_error_count <= can_bit_error_count + 32'd1;
+                    8'h03: can_stuff_error_count <= can_stuff_error_count + 32'd1;
+                    8'h04: can_crc_error_count <= can_crc_error_count + 32'd1;
+                    8'h05: can_form_error_count <= can_form_error_count + 32'd1;
+                    8'h06: can_bus_off_count <= can_bus_off_count + 32'd1;
+                    default: begin
+                    end
+                endcase
+            end
+        end
+
         if (heartbeat_counter == 26'd49_999_999) begin
             heartbeat_counter <= 26'd0;
             heartbeat_state <= ~heartbeat_state;
@@ -679,6 +854,8 @@ always @(posedge s_axi_aclk) begin
                     scratch_reg <= apply_wstrb(scratch_reg, write_data, write_strb);
                 REG_LED_CTRL:
                     led_ctrl_reg <= apply_wstrb(led_ctrl_reg, write_data, write_strb);
+                REG_CAN_CTRL:
+                    can_ctrl_reg <= apply_wstrb(can_ctrl_reg, write_data, write_strb);
                 REG_CAPTURE_CTRL: begin
                     if (write_strb[0] && write_data[0]) begin
                         capture_arm_pulse <= 1'b1;

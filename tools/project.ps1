@@ -1,15 +1,27 @@
 param(
-    [ValidateSet('Prepare','OpenVivado','OpenSdk','BuildPl','BuildPs','ProgramRelease','PreflightRelease')]
+    [ValidateSet('Prepare','OpenVivado','OpenSdk','BuildPl','BuildPs','ProgramCurrent','ProgramRelease','PreflightRelease')]
     [string]$Action = 'Prepare'
 )
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
-$vivadoRoot = Join-Path $projectRoot 'build\vivado'
-$sdkWorkspace = Join-Path $projectRoot 'build\sdk'
+$vivadoRoot = $projectRoot
+$sdkWorkspace = Join-Path $projectRoot 'Multi_protocol.sdk'
 $logRoot = Join-Path $projectRoot 'build\logs'
-$vivadoTool = 'D:\Vivado2018.3\Vivado\2018.3\bin\vivado.bat'
-$xsctTool = 'D:\Vivado2018.3\SDK\2018.3\bin\xsct.bat'
-$sdkTool = 'D:\Vivado2018.3\SDK\2018.3\bin\xsdk.bat'
+
+function Resolve-XilinxTool($relativePath) {
+    $candidates = @(
+        (Join-Path 'D:\Xilinx' $relativePath),
+        (Join-Path 'D:\Vivado2018.3' $relativePath)
+    )
+    foreach ($candidate in $candidates) {
+        if (Test-Path -LiteralPath $candidate) { return $candidate }
+    }
+    throw "Xilinx 2018.3 tool not found: $relativePath"
+}
+
+$vivadoTool = Resolve-XilinxTool 'Vivado\2018.3\bin\vivado.bat'
+$xsctTool = Resolve-XilinxTool 'SDK\2018.3\bin\xsct.bat'
+$sdkTool = Resolve-XilinxTool 'SDK\2018.3\bin\xsdk.bat'
 $env:PROCESSOR_ARCHITECTURE = 'AMD64'
 New-Item -ItemType Directory -Path $logRoot -Force | Out-Null
 Set-Location -LiteralPath $projectRoot
@@ -24,13 +36,7 @@ function Invoke-CheckedTool($tool, $toolArgs, $marker, $logName) {
 }
 
 function Build-PsWorkspace {
-    $builtPlatform = Join-Path $vivadoRoot 'Multi_protocol.sdk\platform_hw'
-    $releasePlatform = Join-Path $projectRoot 'Multi_protocol.sdk\platform_hw'
-    $platform = $releasePlatform
-    if ((Test-Path -LiteralPath "$builtPlatform\system.hdf") -and
-        (Test-Path -LiteralPath "$builtPlatform\multi_protocol_bd_wrapper.bit")) {
-        $platform = $builtPlatform
-    }
+    $platform = Join-Path $projectRoot 'Multi_protocol.sdk\platform_hw'
     # Preserve SDK-generated application files before the existing builder
     # recreates its three projects. Business sources remain in software/src.
     $generatedSrc = Join-Path $sdkWorkspace 'platform_app\src'
@@ -49,13 +55,16 @@ function Build-PsWorkspace {
 function Prepare-Workspace {
     $wrapper = Join-Path $vivadoRoot 'Multi_protocol.srcs\sources_1\bd\multi_protocol_bd\hdl\multi_protocol_bd_wrapper.v'
     $project = Join-Path $vivadoRoot 'Multi_protocol.xpr'
-    if (!(Test-Path -LiteralPath $project) -and !(Test-Path -LiteralPath $wrapper)) {
+    if (!(Test-Path -LiteralPath $project)) {
         $env:MULTI_PROTOCOL_BUILD_DIR = $vivadoRoot
         Invoke-CheckedTool $vivadoTool @('-mode','batch','-source','fpga/build/prepare_workspace.tcl') 'GUI_WORKSPACE_READY' 'prepare-vivado.log'
-    } elseif (!(Test-Path -LiteralPath $project) -or !(Test-Path -LiteralPath $wrapper)) {
-        throw "Incomplete workspace at $vivadoRoot. Inspect it before rebuilding; existing files were preserved."
+    } elseif (!(Test-Path -LiteralPath $wrapper)) {
+        $env:MULTI_PROTOCOL_BUILD_DIR = $vivadoRoot
+        Invoke-CheckedTool $vivadoTool @('-mode','batch','-source','fpga/build/create_bd.tcl') 'BD_CREATED' 'prepare-vivado.log'
     }
-    if (!(Test-Path -LiteralPath (Join-Path $sdkWorkspace 'platform_app\.project'))) {
+    if (!(Test-Path -LiteralPath (Join-Path $sdkWorkspace '.metadata')) -or
+        !(Test-Path -LiteralPath (Join-Path $sdkWorkspace 'platform_app\.project')) -or
+        !(Test-Path -LiteralPath (Join-Path $sdkWorkspace 'platform_bsp\.project'))) {
         Build-PsWorkspace
     }
     Write-Output "VIVADO_PROJECT $project"
@@ -80,6 +89,10 @@ switch ($Action) {
         Write-Output 'PL rebuilt. Run BuildPs before using this hardware with a new application.'
     }
     'BuildPs' { Build-PsWorkspace }
+    'ProgramCurrent' {
+        Invoke-CheckedTool $xsctTool @('download_jtag.tcl') `
+            'Successfully downloaded' 'current-download.log'
+    }
     { $_ -in 'ProgramRelease','PreflightRelease' } {
         $release = Join-Path $projectRoot 'releases\uart-20261018'
         $platform = Join-Path $projectRoot 'Multi_protocol.sdk\platform_hw'

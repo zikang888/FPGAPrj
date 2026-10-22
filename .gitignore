@@ -27,7 +27,9 @@ xsim.dir/
 /Multi_protocol.sdk/.metadata/
 /Multi_protocol.sdk/.sdk/
 /Multi_protocol.sdk/platform_app/Debug/
+/Multi_protocol.sdk/platform_app/Release/
 /Multi_protocol.sdk/platform_bsp/
+/.sdk_handoff_stage_*/
 
 # Vivado block-design output products (regenerated from the tracked .bd)
 /Multi_protocol.srcs/sources_1/bd/mref/

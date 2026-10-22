@@ -9,8 +9,14 @@ int main(void)
     assert(!ui_protocol_live(UI_PROTOCOL_SPI, 0U));
     assert(!ui_protocol_live(UI_PROTOCOL_UART, 0xFU));
     assert(ui_protocol_live(UI_PROTOCOL_UART, 1U << 5));
-    assert(!ui_protocol_live(UI_PROTOCOL_I2C, 0xFU));
-    assert(!ui_protocol_live(UI_PROTOCOL_CAN, 0xFU));
+    assert(ui_protocol_live(UI_PROTOCOL_I2C, 1U << 7));
+    assert(ui_protocol_live(UI_PROTOCOL_CAN, 1U << 8));
+    assert(!ui_protocol_live(UI_PROTOCOL_I2C, 0x7FU));
+    assert(!ui_protocol_live(UI_PROTOCOL_CAN, 0xFFU));
+    assert(ui_protocol_event_id(UI_PROTOCOL_SPI) == 2U);
+    assert(ui_protocol_event_id(UI_PROTOCOL_UART) == 1U);
+    assert(ui_protocol_event_id(UI_PROTOCOL_I2C) == 3U);
+    assert(ui_protocol_event_id(UI_PROTOCOL_CAN) == 4U);
     assert(strcmp(ui_protocol_name(UI_PROTOCOL_I2C), "I2C") == 0);
     assert(ui_protocol_from_touch(14U, 112U, &selected) &&
            selected == UI_PROTOCOL_SPI);

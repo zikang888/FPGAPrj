@@ -632,7 +632,7 @@ static void render_self_test_page(const PlatformUiStatus *status,
          C_CYAN, C_PANEL);
     text(582U, 365U,
          ui_protocol_live(status->selected_protocol, status->capabilities) ?
-         "SPI LISTENER READY" : "LISTENER NOT WIRED", C_MUTED, C_PANEL);
+         "LISTENER READY" : "LISTENER NOT WIRED", C_MUTED, C_PANEL);
 }
 
 static void draw_error_metric(u16 x0, u16 x1, u16 y,
@@ -694,6 +694,26 @@ static void render_errors_page(const PlatformUiStatus *status,
                                                    ERROR_UART_BREAK);
     ErrorObservation uart_short = error_model_get(&status->error_model,
                                                    ERROR_UART_SHORT_TRANSACTION);
+    ErrorObservation i2c_addr = error_model_get(&status->error_model,
+                                                 ERROR_I2C_ADDRESS_NACK);
+    ErrorObservation i2c_busy = error_model_get(&status->error_model,
+                                                 ERROR_I2C_BUSY_NACK);
+    ErrorObservation i2c_sda = error_model_get(&status->error_model,
+                                                ERROR_I2C_SDA_STUCK);
+    ErrorObservation i2c_scl = error_model_get(&status->error_model,
+                                                ERROR_I2C_SCL_STUCK);
+    ErrorObservation i2c_stop = error_model_get(&status->error_model,
+                                                 ERROR_I2C_MISSING_STOP);
+    ErrorObservation can_ack = error_model_get(&status->error_model,
+                                                ERROR_CAN_ACK);
+    ErrorObservation can_bit = error_model_get(&status->error_model,
+                                                ERROR_CAN_BIT);
+    ErrorObservation can_stuff = error_model_get(&status->error_model,
+                                                  ERROR_CAN_STUFF);
+    ErrorObservation can_crc = error_model_get(&status->error_model,
+                                                ERROR_CAN_CRC);
+    ErrorObservation can_form = error_model_get(&status->error_model,
+                                                 ERROR_CAN_FORM);
     u32 snapshot_errors = 0U;
     u8 snapshot_known = 0U;
     u8 fault;
@@ -728,6 +748,51 @@ static void render_errors_page(const PlatformUiStatus *status,
               status->external_loss_count == 0U ? C_GREEN : C_RED, C_PANEL);
         text(30U, 352U, "SELECT SPI FOR CONNECTED FAULT CHECKS",
              C_CYAN, C_PANEL);
+        return;
+    }
+    if (status->selected_protocol == UI_PROTOCOL_I2C) {
+        fault = (u8)(status->external_loss_count != 0U ||
+                     i2c_addr.count != 0U || i2c_sda.count != 0U ||
+                     i2c_scl.count != 0U || i2c_stop.count != 0U);
+        fill(14U, 52U, 786U, 116U, C_PANEL);
+        outline(14U, 52U, 786U, 116U, fault ? C_RED : C_GREEN);
+        text(30U, 61U, "I2C PASSIVE MONITOR", C_MUTED, C_PANEL);
+        text(30U, 86U, fault ? "ERROR DETECTED" : "NO DETECTED ERRORS",
+             fault ? C_RED : C_GREEN, C_PANEL);
+        text(614U, 61U, "100 KHZ", C_CYAN, C_PANEL);
+        draw_error_metric(14U,390U,128U,"ADDRESS NACK",i2c_addr.count,1U);
+        draw_error_metric(406U,786U,128U,"BUSY NACK",i2c_busy.count,1U);
+        draw_error_metric(14U,390U,207U,"SDA STUCK",i2c_sda.count,1U);
+        draw_error_metric(406U,786U,207U,"SCL STUCK",i2c_scl.count,1U);
+        draw_error_metric(14U,390U,286U,"MISSING STOP",i2c_stop.count,1U);
+        draw_error_metric(406U,786U,286U,"EVENT LOSS",
+                          status->external_loss_count,1U);
+        text(28U,374U,"AA6=SCL  V8=SDA  BUSY NACK IS TRANSIENT",
+             C_CYAN,C_PANEL);
+        return;
+    }
+    if (status->selected_protocol == UI_PROTOCOL_CAN) {
+        fault = (u8)(status->external_loss_count != 0U || can_ack.count != 0U ||
+                     can_bit.count != 0U || can_stuff.count != 0U ||
+                     can_crc.count != 0U || can_form.count != 0U);
+        fill(14U,52U,786U,116U,C_PANEL);
+        outline(14U,52U,786U,116U,fault ? C_RED : C_GREEN);
+        text(30U,61U,"CAN ACTIVE LISTENER",C_MUTED,C_PANEL);
+        text(30U,86U,fault ? "ERROR DETECTED" : "NO DETECTED ERRORS",
+             fault ? C_RED : C_GREEN,C_PANEL);
+        text(602U,61U,"500 KBIT/S",C_CYAN,C_PANEL);
+        draw_error_metric(14U,390U,128U,"ACK ERROR",can_ack.count,1U);
+        draw_error_metric(406U,786U,128U,"BIT ERROR",can_bit.count,
+                          can_bit.origin != ERROR_ORIGIN_NONE);
+        draw_error_metric(14U,390U,207U,"STUFF ERROR",can_stuff.count,1U);
+        draw_error_metric(406U,786U,207U,"CRC ERROR",can_crc.count,1U);
+        draw_error_metric(14U,390U,286U,"FORM ERROR",can_form.count,1U);
+        draw_error_metric(406U,786U,286U,"EVENT LOSS",
+                          status->external_loss_count,1U);
+        text(28U,363U,"W8=NODE TXD  AA11=NODE RXD  AUTO ACK ON",
+             C_CYAN,C_PANEL);
+        text(28U,385U,"BUS-OFF NEEDS CONTROLLER STATUS; NOT INFERRED",
+             C_MUTED,C_PANEL);
         return;
     }
     if (status->selected_protocol == UI_PROTOCOL_UART) {
@@ -886,6 +951,14 @@ static void draw_event_row_at(const u32 *words, u32 event_index,
         hex8(312U,(u16)(y+8U),(u8)view.flags,C_CYAN,row_bg);
         text(340U,(u16)(y+8U),"R",C_MUTED,row_bg);
         hex8(350U,(u16)(y+8U),(u8)(view.flags>>8),C_GREEN,row_bg);
+    } else if(view.protocol==3U && view.event_type==1U) {
+        text(294U,(u16)(y+8U),(view.flags & 0x8000U) ? "NACK" : "ACK",
+             (view.flags & 0x8000U) ? C_RED : C_GREEN,row_bg);
+        hex8(350U,(u16)(y+8U),(u8)view.flags,C_TEXT,row_bg);
+    } else if(view.protocol==4U && view.event_type==1U) {
+        text(294U,(u16)(y+8U),"B",C_MUTED,row_bg);
+        dec32(306U,(u16)(y+8U),(u8)(view.flags>>8),C_MUTED,row_bg);
+        hex8(350U,(u16)(y+8U),(u8)view.flags,C_TEXT,row_bg);
     } else hex32(294U,(u16)(y+8U),view.flags,C_MUTED,row_bg);
     dec32(414U,(u16)(y+8U),view.transaction_id,C_TEXT,row_bg);
     {
@@ -1192,6 +1265,21 @@ void platform_ui_update_counters(const PlatformUiStatus *status)
         g_requested_status.uart_break_errors == status->uart_break_errors &&
         g_requested_status.uart_short_transactions ==
             status->uart_short_transactions &&
+        g_requested_status.i2c_event_count == status->i2c_event_count &&
+        g_requested_status.i2c_data_count == status->i2c_data_count &&
+        g_requested_status.i2c_address_nacks == status->i2c_address_nacks &&
+        g_requested_status.i2c_busy_nacks == status->i2c_busy_nacks &&
+        g_requested_status.i2c_sda_stuck == status->i2c_sda_stuck &&
+        g_requested_status.i2c_scl_stuck == status->i2c_scl_stuck &&
+        g_requested_status.i2c_missing_stop == status->i2c_missing_stop &&
+        g_requested_status.can_event_count == status->can_event_count &&
+        g_requested_status.can_frame_count == status->can_frame_count &&
+        g_requested_status.can_ack_errors == status->can_ack_errors &&
+        g_requested_status.can_bit_errors == status->can_bit_errors &&
+        g_requested_status.can_stuff_errors == status->can_stuff_errors &&
+        g_requested_status.can_crc_errors == status->can_crc_errors &&
+        g_requested_status.can_form_errors == status->can_form_errors &&
+        g_requested_status.can_bus_off == status->can_bus_off &&
         error_model_equal(&g_requested_status.error_model,
                           &status->error_model))
         return;
@@ -1213,6 +1301,21 @@ void platform_ui_update_counters(const PlatformUiStatus *status)
     g_requested_status.uart_break_errors = status->uart_break_errors;
     g_requested_status.uart_short_transactions =
         status->uart_short_transactions;
+    g_requested_status.i2c_event_count = status->i2c_event_count;
+    g_requested_status.i2c_data_count = status->i2c_data_count;
+    g_requested_status.i2c_address_nacks = status->i2c_address_nacks;
+    g_requested_status.i2c_busy_nacks = status->i2c_busy_nacks;
+    g_requested_status.i2c_sda_stuck = status->i2c_sda_stuck;
+    g_requested_status.i2c_scl_stuck = status->i2c_scl_stuck;
+    g_requested_status.i2c_missing_stop = status->i2c_missing_stop;
+    g_requested_status.can_event_count = status->can_event_count;
+    g_requested_status.can_frame_count = status->can_frame_count;
+    g_requested_status.can_ack_errors = status->can_ack_errors;
+    g_requested_status.can_bit_errors = status->can_bit_errors;
+    g_requested_status.can_stuff_errors = status->can_stuff_errors;
+    g_requested_status.can_crc_errors = status->can_crc_errors;
+    g_requested_status.can_form_errors = status->can_form_errors;
+    g_requested_status.can_bus_off = status->can_bus_off;
     g_requested_status.error_model = status->error_model;
     g_counter_render_pending = 1U;
     g_render_pending = 1U;

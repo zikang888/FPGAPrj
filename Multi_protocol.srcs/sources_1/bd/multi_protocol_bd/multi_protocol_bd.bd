@@ -1,7 +1,7 @@
 {
   "design": {
     "design_info": {
-      "boundary_crc": "0xFDFBDA7498287DEF",
+      "boundary_crc": "0xDBA3D7E5A73FF06F",
       "device": "xc7z020clg484-2",
       "name": "multi_protocol_bd",
       "synth_flow_mode": "Hierarchical",
@@ -22,6 +22,8 @@
       "multi_protocol_core_0": "",
       "spi_mode0_monitor_0": "",
       "uart_rx_monitor_0": "",
+      "i2c_passive_monitor_0": "",
+      "can_passive_monitor_0": "",
       "protocol_event_mux_0": "",
       "axi_vdma_0": "",
       "v_tc_0": "",
@@ -98,6 +100,18 @@
         "direction": "O",
         "left": "0",
         "right": "0"
+      },
+      "I2C_SCL": {
+        "direction": "I"
+      },
+      "I2C_SDA": {
+        "direction": "I"
+      },
+      "CAN_TX": {
+        "direction": "O"
+      },
+      "CAN_RX": {
+        "direction": "I"
       },
       "led_heartbeat": {
         "direction": "O"
@@ -1485,10 +1499,22 @@
             "left": "31",
             "right": "0"
           },
+          "can_rx_level": {
+            "direction": "I"
+          },
           "event_timestamp": {
             "direction": "O",
             "left": "63",
             "right": "0"
+          },
+          "can_ack_enable": {
+            "direction": "O"
+          },
+          "can_echo_enable": {
+            "direction": "O"
+          },
+          "can_tx_request": {
+            "direction": "O"
           },
           "led_heartbeat": {
             "direction": "O"
@@ -1639,6 +1665,148 @@
           }
         }
       },
+      "i2c_passive_monitor_0": {
+        "vlnv": "xilinx.com:module_ref:i2c_passive_monitor_bd:1.0",
+        "xci_name": "multi_protocol_bd_i2c_passive_monitor_0_0",
+        "reference_info": {
+          "ref_type": "hdl",
+          "ref_name": "i2c_passive_monitor_bd",
+          "boundary_crc": "0x0"
+        },
+        "ports": {
+          "clk": {
+            "type": "clk",
+            "direction": "I",
+            "parameters": {
+              "CLK_DOMAIN": {
+                "value": "multi_protocol_bd_processing_system7_0_0_FCLK_CLK0",
+                "value_src": "default_prop"
+              },
+              "FREQ_HZ": {
+                "value": "100000000",
+                "value_src": "user_prop"
+              }
+            }
+          },
+          "rst_n": {
+            "type": "rst",
+            "direction": "I",
+            "parameters": {
+              "POLARITY": {
+                "value": "ACTIVE_LOW",
+                "value_src": "constant"
+              }
+            }
+          },
+          "timestamp": {
+            "direction": "I",
+            "left": "63",
+            "right": "0"
+          },
+          "i2c_scl": {
+            "direction": "I"
+          },
+          "i2c_sda": {
+            "direction": "I"
+          },
+          "evt_valid": {
+            "direction": "O"
+          },
+          "evt_ready": {
+            "direction": "I"
+          },
+          "evt_trigger": {
+            "direction": "O"
+          },
+          "evt_data": {
+            "direction": "O",
+            "left": "127",
+            "right": "0"
+          },
+          "dropped_event_count": {
+            "direction": "O",
+            "left": "31",
+            "right": "0"
+          }
+        }
+      },
+      "can_passive_monitor_0": {
+        "vlnv": "xilinx.com:module_ref:can_passive_monitor_bd:1.0",
+        "xci_name": "multi_protocol_bd_can_passive_monitor_0_0",
+        "reference_info": {
+          "ref_type": "hdl",
+          "ref_name": "can_passive_monitor_bd",
+          "boundary_crc": "0x0"
+        },
+        "ports": {
+          "clk": {
+            "type": "clk",
+            "direction": "I",
+            "parameters": {
+              "CLK_DOMAIN": {
+                "value": "multi_protocol_bd_processing_system7_0_0_FCLK_CLK0",
+                "value_src": "default_prop"
+              },
+              "FREQ_HZ": {
+                "value": "100000000",
+                "value_src": "user_prop"
+              }
+            }
+          },
+          "rst_n": {
+            "type": "rst",
+            "direction": "I",
+            "parameters": {
+              "POLARITY": {
+                "value": "ACTIVE_LOW",
+                "value_src": "constant"
+              }
+            }
+          },
+          "timestamp": {
+            "direction": "I",
+            "left": "63",
+            "right": "0"
+          },
+          "can_rx_bus": {
+            "direction": "I"
+          },
+          "ack_enable": {
+            "direction": "I"
+          },
+          "echo_enable": {
+            "direction": "I"
+          },
+          "tx_request": {
+            "direction": "I"
+          },
+          "can_tx": {
+            "direction": "O"
+          },
+          "can_rx_level": {
+            "direction": "O"
+          },
+          "evt_valid": {
+            "direction": "O"
+          },
+          "evt_ready": {
+            "direction": "I"
+          },
+          "evt_trigger": {
+            "direction": "O"
+          },
+          "evt_data": {
+            "direction": "O",
+            "left": "127",
+            "right": "0"
+          },
+          "dropped_event_count": {
+            "direction": "O",
+            "left": "31",
+            "right": "0"
+          }
+        }
+      },
       "protocol_event_mux_0": {
         "vlnv": "xilinx.com:module_ref:protocol_event_mux_bd:1.0",
         "xci_name": "multi_protocol_bd_protocol_event_mux_0_0",
@@ -1706,6 +1874,44 @@
             "right": "0"
           },
           "uart_dropped": {
+            "direction": "I",
+            "left": "31",
+            "right": "0"
+          },
+          "i2c_valid": {
+            "direction": "I"
+          },
+          "i2c_ready": {
+            "direction": "O"
+          },
+          "i2c_trigger": {
+            "direction": "I"
+          },
+          "i2c_data": {
+            "direction": "I",
+            "left": "127",
+            "right": "0"
+          },
+          "i2c_dropped": {
+            "direction": "I",
+            "left": "31",
+            "right": "0"
+          },
+          "can_valid": {
+            "direction": "I"
+          },
+          "can_ready": {
+            "direction": "O"
+          },
+          "can_trigger": {
+            "direction": "I"
+          },
+          "can_data": {
+            "direction": "I",
+            "left": "127",
+            "right": "0"
+          },
+          "can_dropped": {
             "direction": "I",
             "left": "31",
             "right": "0"
@@ -1880,6 +2086,12 @@
       }
     },
     "interface_nets": {
+      "processing_system7_0_M_AXI_GP0": {
+        "interface_ports": [
+          "processing_system7_0/M_AXI_GP0",
+          "axi_protocol_converter_0/S_AXI"
+        ]
+      },
       "axi_protocol_converter_0_M_AXI": {
         "interface_ports": [
           "axi_protocol_converter_0/M_AXI",
@@ -1892,10 +2104,10 @@
           "multi_protocol_core_0/s_axi"
         ]
       },
-      "processing_system7_0_M_AXI_GP0": {
+      "axi_interconnect_0_M02_AXI": {
         "interface_ports": [
-          "processing_system7_0/M_AXI_GP0",
-          "axi_protocol_converter_0/S_AXI"
+          "axi_interconnect_0/M02_AXI",
+          "v_tc_0/ctrl"
         ]
       },
       "axi_vdma_0_M_AXI_MM2S": {
@@ -1904,34 +2116,28 @@
           "axi_smc_0/S00_AXI"
         ]
       },
-      "axi_smc_0_M00_AXI": {
-        "interface_ports": [
-          "axi_smc_0/M00_AXI",
-          "processing_system7_0/S_AXI_HP0"
-        ]
-      },
-      "axi_vdma_0_M_AXIS_MM2S": {
-        "interface_ports": [
-          "axi_vdma_0/M_AXIS_MM2S",
-          "v_axi4s_vid_out_0/video_in"
-        ]
-      },
       "axi_interconnect_0_M01_AXI": {
         "interface_ports": [
           "axi_interconnect_0/M01_AXI",
           "axi_vdma_0/S_AXI_LITE"
         ]
       },
-      "axi_interconnect_0_M02_AXI": {
+      "axi_smc_0_M00_AXI": {
         "interface_ports": [
-          "axi_interconnect_0/M02_AXI",
-          "v_tc_0/ctrl"
+          "axi_smc_0/M00_AXI",
+          "processing_system7_0/S_AXI_HP0"
         ]
       },
       "v_tc_0_vtiming_out": {
         "interface_ports": [
           "v_tc_0/vtiming_out",
           "v_axi4s_vid_out_0/vtiming_in"
+        ]
+      },
+      "axi_vdma_0_M_AXIS_MM2S": {
+        "interface_ports": [
+          "axi_vdma_0/M_AXIS_MM2S",
+          "v_axi4s_vid_out_0/video_in"
         ]
       },
       "processing_system7_0_GPIO_0": {
@@ -2002,6 +2208,66 @@
           "protocol_event_mux_0/uart_dropped"
         ]
       },
+      "i2c_passive_monitor_0_evt_valid": {
+        "ports": [
+          "i2c_passive_monitor_0/evt_valid",
+          "protocol_event_mux_0/i2c_valid"
+        ]
+      },
+      "protocol_event_mux_0_i2c_ready": {
+        "ports": [
+          "protocol_event_mux_0/i2c_ready",
+          "i2c_passive_monitor_0/evt_ready"
+        ]
+      },
+      "i2c_passive_monitor_0_evt_trigger": {
+        "ports": [
+          "i2c_passive_monitor_0/evt_trigger",
+          "protocol_event_mux_0/i2c_trigger"
+        ]
+      },
+      "i2c_passive_monitor_0_evt_data": {
+        "ports": [
+          "i2c_passive_monitor_0/evt_data",
+          "protocol_event_mux_0/i2c_data"
+        ]
+      },
+      "i2c_passive_monitor_0_dropped_event_count": {
+        "ports": [
+          "i2c_passive_monitor_0/dropped_event_count",
+          "protocol_event_mux_0/i2c_dropped"
+        ]
+      },
+      "can_passive_monitor_0_evt_valid": {
+        "ports": [
+          "can_passive_monitor_0/evt_valid",
+          "protocol_event_mux_0/can_valid"
+        ]
+      },
+      "protocol_event_mux_0_can_ready": {
+        "ports": [
+          "protocol_event_mux_0/can_ready",
+          "can_passive_monitor_0/evt_ready"
+        ]
+      },
+      "can_passive_monitor_0_evt_trigger": {
+        "ports": [
+          "can_passive_monitor_0/evt_trigger",
+          "protocol_event_mux_0/can_trigger"
+        ]
+      },
+      "can_passive_monitor_0_evt_data": {
+        "ports": [
+          "can_passive_monitor_0/evt_data",
+          "protocol_event_mux_0/can_data"
+        ]
+      },
+      "can_passive_monitor_0_dropped_event_count": {
+        "ports": [
+          "can_passive_monitor_0/dropped_event_count",
+          "protocol_event_mux_0/can_dropped"
+        ]
+      },
       "protocol_event_mux_0_evt_valid": {
         "ports": [
           "protocol_event_mux_0/evt_valid",
@@ -2036,7 +2302,9 @@
         "ports": [
           "multi_protocol_core_0/event_timestamp",
           "spi_mode0_monitor_0/timestamp",
-          "uart_rx_monitor_0/timestamp"
+          "uart_rx_monitor_0/timestamp",
+          "i2c_passive_monitor_0/timestamp",
+          "can_passive_monitor_0/timestamp"
         ]
       },
       "v_axi4s_vid_out_0_vtg_ce": {
@@ -2051,6 +2319,8 @@
           "multi_protocol_core_0/s_axi_aclk",
           "spi_mode0_monitor_0/clk",
           "uart_rx_monitor_0/clk",
+          "i2c_passive_monitor_0/clk",
+          "can_passive_monitor_0/clk",
           "protocol_event_mux_0/clk",
           "axi_vdma_0/s_axi_lite_aclk",
           "axi_vdma_0/m_axi_mm2s_aclk",
@@ -2081,6 +2351,8 @@
           "multi_protocol_core_0/s_axi_aresetn",
           "spi_mode0_monitor_0/rst_n",
           "uart_rx_monitor_0/rst_n",
+          "i2c_passive_monitor_0/rst_n",
+          "can_passive_monitor_0/rst_n",
           "protocol_event_mux_0/rst_n",
           "axi_vdma_0/axi_resetn",
           "axi_smc_0/aresetn",
@@ -2171,6 +2443,54 @@
         "ports": [
           "xlconstant_uart_tx/dout",
           "UART_TX"
+        ]
+      },
+      "I2C_SCL_1": {
+        "ports": [
+          "I2C_SCL",
+          "i2c_passive_monitor_0/i2c_scl"
+        ]
+      },
+      "I2C_SDA_1": {
+        "ports": [
+          "I2C_SDA",
+          "i2c_passive_monitor_0/i2c_sda"
+        ]
+      },
+      "can_passive_monitor_0_can_tx": {
+        "ports": [
+          "can_passive_monitor_0/can_tx",
+          "CAN_TX"
+        ]
+      },
+      "CAN_RX_1": {
+        "ports": [
+          "CAN_RX",
+          "can_passive_monitor_0/can_rx_bus"
+        ]
+      },
+      "multi_protocol_core_0_can_ack_enable": {
+        "ports": [
+          "multi_protocol_core_0/can_ack_enable",
+          "can_passive_monitor_0/ack_enable"
+        ]
+      },
+      "multi_protocol_core_0_can_echo_enable": {
+        "ports": [
+          "multi_protocol_core_0/can_echo_enable",
+          "can_passive_monitor_0/echo_enable"
+        ]
+      },
+      "multi_protocol_core_0_can_tx_request": {
+        "ports": [
+          "multi_protocol_core_0/can_tx_request",
+          "can_passive_monitor_0/tx_request"
+        ]
+      },
+      "can_passive_monitor_0_can_rx_level": {
+        "ports": [
+          "can_passive_monitor_0/can_rx_level",
+          "multi_protocol_core_0/can_rx_level"
         ]
       },
       "multi_protocol_core_0_led_heartbeat": {
