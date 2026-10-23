@@ -1,0 +1,27 @@
+#ifndef PLATFORM_BSP_COMPAT_H
+#define PLATFORM_BSP_COMPAT_H
+
+/* Include after the BSP's xparameters.h (or the host test stubs).
+ * SDT LookupConfig takes an address, whereas SDK 2018.3 takes a device ID. */
+#ifdef SDT
+#define MP_UART_LOOKUP_KEY XPAR_XUARTPS_0_BASEADDR
+#define MP_IIC_LOOKUP_KEY  XPAR_XIICPS_0_BASEADDR
+#define MP_GPIO_LOOKUP_KEY XPAR_XGPIOPS_0_BASEADDR
+#define MP_VDMA_LOOKUP_KEY XPAR_XAXIVDMA_0_BASEADDR
+#define MP_VTC_LOOKUP_KEY  XPAR_XVTC_0_BASEADDR
+#define MP_DDR_BASE       XPAR_PS7_DDR_0_BASEADDRESS
+#if XPAR_MULTI_PROTOCOL_CORE_0_BASEADDR != 0x40000000U || \
+    XPAR_XAXIVDMA_0_BASEADDR != 0x43000000U || \
+    XPAR_XVTC_0_BASEADDR != 0x43C00000U
+#error "Hardware address map does not match the multi-protocol platform ABI"
+#endif
+#else
+#define MP_UART_LOOKUP_KEY XPAR_XUARTPS_0_DEVICE_ID
+#define MP_IIC_LOOKUP_KEY  XPAR_XIICPS_0_DEVICE_ID
+#define MP_GPIO_LOOKUP_KEY XPAR_XGPIOPS_0_DEVICE_ID
+#define MP_VDMA_LOOKUP_KEY XPAR_AXIVDMA_0_DEVICE_ID
+#define MP_VTC_LOOKUP_KEY  XPAR_V_TC_0_DEVICE_ID
+#define MP_DDR_BASE       XPAR_PS7_DDR_0_S_AXI_BASEADDR
+#endif
+
+#endif

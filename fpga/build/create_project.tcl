@@ -1,11 +1,4 @@
-set script_dir [file dirname [file normalize [info script]]]
-set source_dir [file dirname [file dirname $script_dir]]
-set build_dir $source_dir
-if {[info exists ::env(MULTI_PROTOCOL_BUILD_DIR)] &&
-    $::env(MULTI_PROTOCOL_BUILD_DIR) ne ""} {
-    set build_dir [file normalize $::env(MULTI_PROTOCOL_BUILD_DIR)]
-}
-file mkdir $build_dir
+source [file join [file dirname [file normalize [info script]]] migration_config.tcl]
 set proj_name "Multi_protocol"
 
 create_project $proj_name $build_dir -part xc7z020clg484-2 -force

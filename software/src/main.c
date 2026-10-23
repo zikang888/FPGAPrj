@@ -11,10 +11,15 @@
 #include "xuartps.h"
 #include "sleep.h"
 #include "string.h"
+#ifdef SDT
+#include "xiltimer.h"
+#else
 #include "xtime_l.h"
+#endif
 #endif
 #include "string.h"
 #include "ui_counter_semantics.h"
+#include "platform_bsp_compat.h"
 
 #define CORE_BASE       XPAR_MULTI_PROTOCOL_CORE_0_BASEADDR
 #define REG_SYS_ID      (CORE_BASE + 0x0000U)
@@ -70,7 +75,7 @@ static CaptureDemoCache g_live_cache;
 #ifndef SESSION_HOST_TEST
 static int uart_init(void)
 {
-    XUartPs_Config *config = XUartPs_LookupConfig(XPAR_XUARTPS_0_DEVICE_ID);
+    XUartPs_Config *config = XUartPs_LookupConfig(MP_UART_LOOKUP_KEY);
     int status;
     if (config == 0) return XST_FAILURE;
     status = XUartPs_CfgInitialize(&g_uart, config, config->BaseAddress);

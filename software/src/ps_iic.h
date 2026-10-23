@@ -7,8 +7,9 @@
 
 #include "xparameters.h"
 #include "xiicps.h"
+#include "platform_bsp_compat.h"
 
-#define IIC_DEV_ID    XPAR_XIICPS_0_DEVICE_ID  // I2C0
+#define IIC_DEV_ID    MP_IIC_LOOKUP_KEY  // I2C0: device ID or SDT base address
 #define IIC_CLK_FREQ  400000U                    // GT911 recommended maximum: 400kHz
 
 int  iic_init(void);
