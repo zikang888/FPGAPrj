@@ -1,5 +1,5 @@
 param(
-    [ValidateSet('all','sim','pl','ps','host','open')][string]$Step = 'all',
+    [ValidateSet('all','sim','pl','ps','host','audit','open')][string]$Step = 'all',
     [string]$ToolRoot = 'E:\AMDDesignTools\2026.1',
     [string]$HostCompiler = 'D:\MinGW\MinGW\bin\gcc.exe'
 )
@@ -30,6 +30,11 @@ try {
     if ($Step -in @('all','pl')) {
         $env:MULTI_PROTOCOL_BUILD_DIR = Join-Path $taskBuild 'pl'
         Invoke-MigrationVivado 'build_2026_1.tcl' 'build'
+        Invoke-MigrationVivado 'audit_2026_1.tcl' 'audit'
+    }
+    if ($Step -eq 'audit') {
+        $env:MULTI_PROTOCOL_BUILD_DIR = Join-Path $taskBuild 'pl'
+        Invoke-MigrationVivado 'audit_2026_1.tcl' 'audit'
     }
     if ($Step -in @('all','ps')) {
         & $taskVitis -s (Join-Path $taskRepo 'software\build_vitis_2026_1.py') 2>&1 | Tee-Object -FilePath 'logs\vitis_app.log'

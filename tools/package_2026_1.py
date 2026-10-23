@@ -65,6 +65,13 @@ for folder in ('fpga/rtl', 'fpga/constraints'):
 
 xsa = build / 'pl/export/multi_protocol.xsa'
 bit = build / 'pl/export/multi_protocol.bit'
+require(all((reports / name).stat().st_mtime_ns >= bit.stat().st_mtime_ns
+    for name in ('ip_status_final.rpt', 'bus_skew.rpt', 'clocks.rpt')),
+    'Re-run the final implementation audit after the latest PL build')
+for source in (repo / 'software/src').iterdir():
+    if source.suffix in {'.c', '.h'}:
+        require(source.read_bytes() == (build / 'vitis/multi_protocol_app' / source.name).read_bytes(),
+                'Application source differs from compiled workspace: ' + source.name)
 memory = json.loads((build / 'vitis/memory_verification.json').read_text())
 require(memory['xsa_sha256'] == sha(xsa.read_bytes()) and memory['overlap'] is False, 'ELF/XSA memory verification mismatch')
 elf = build / 'vitis/multi_protocol_app/build/multi_protocol_app.elf'
