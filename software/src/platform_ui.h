@@ -22,6 +22,9 @@ typedef enum {
     PLATFORM_UI_ACTION_EVENTS,
     PLATFORM_UI_ACTION_ERRORS,
     PLATFORM_UI_ACTION_CAPTURE_LIVE,
+    /* One-shot triggered capture used by the HOME waveform panel.  Keep it
+     * separate from CAPTURE_LIVE, which starts a bounded test session. */
+    PLATFORM_UI_ACTION_CAPTURE_HOME,
     PLATFORM_UI_ACTION_END_TEST,
     PLATFORM_UI_ACTION_HISTORY,
     PLATFORM_UI_ACTION_SELECT_SPI,

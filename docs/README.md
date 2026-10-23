@@ -10,6 +10,7 @@
 - [UART RX 监听接口](interfaces/uart_rx_monitor.md)
 - [SPI Mode-0 监听接口](interfaces/spi_mode0_monitor.md)
 - [PS 事件视图](interfaces/ps_event_view.md)
+- [HOME 四协议波形](interfaces/home_waveform.md)
 - [测试会话、过滤与冻结](interfaces/test_sessions.md)
 
 ## 硬件与接线
@@ -28,6 +29,7 @@
 
 ## 最新测试证据
 
+- [2026-10-23 HOME 四协议波形实板验证](test-results/2026-10-23-home-waveform-four-protocol.md)
 - [2026-10-22 I2C/CAN 错误事件与 UI 实板测试](test-results/2026-10-22-i2c-can-error-ui-board.md)
 - [2026-10-21 I2C/CAN 被动监听](test-results/2026-10-21-i2c-can-passive-monitor.md)
 - [2026-10-20 会话离线测试](test-results/2026-10-20-session-offline.md)

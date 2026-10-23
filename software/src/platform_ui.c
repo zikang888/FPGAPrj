@@ -3,6 +3,7 @@
 #include "event_view.h"
 #include "event_audit.h"
 #include "spi_trace.h"
+#include "protocol_trace.h"
 #include "event_diagnostics.h"
 #include "ui_counter_semantics.h"
 
@@ -374,6 +375,7 @@ static void draw_header(const char *title, const PlatformUiStatus *status,
                         status->test_failed != 0U ? "ERROR" :
                         status->capture_ok == 0U ? "IDLE" :
                         status->test_running != 0U ? "RECORD" :
+                        status->capture_source == 1U ? "ARMED" :
                         status->capture_source == 2U ? "SAVED" : "DEMO";
 
     fill(0U, 0U, 799U, 41U, C_HEADER);
@@ -424,7 +426,8 @@ static void hex8(u16 x, u16 y, u8 value, u32 fg, u32 bg)
 static void draw_home_status(const PlatformUiStatus *status)
 {
     const char *source = status->test_running ? "RECORDING" :
-                         status->capture_source == 2U ? "SAVED TEST" : "NO TEST";
+                         status->capture_source == 1U ? "WAIT DATA" :
+                         status->capture_source == 2U ? "BUS FRAME" : "NO CAPTURE";
     fill(14U, 52U, 786U, 100U, C_PANEL);
     outline(14U, 52U, 786U, 100U, C_BORDER);
     text(30U, 59U, "PLATFORM", C_MUTED, C_PANEL);
@@ -457,12 +460,12 @@ static void draw_protocol_tabs(const PlatformUiStatus *status)
     }
 }
 
-static void draw_spi_wave_lane(const u8 bytes[SPI_TRACE_BYTES], u16 high_y,
+static void draw_spi_wave_lane(const u8 *bytes, u32 count, u16 high_y,
                                u16 low_y, u32 color)
 {
     u32 bit;
     u8 previous = 0U;
-    for (bit = 0U; bit < SPI_TRACE_BYTES * 8U; ++bit) {
+    for (bit = 0U; bit < count * 8U; ++bit) {
         u8 level = (u8)((bytes[bit / 8U] >> (7U - bit % 8U)) & 1U);
         u16 x = (u16)(196U + bit * 15U);
         u16 y = level != 0U ? high_y : low_y;
@@ -504,6 +507,81 @@ static void draw_uart_trace(const PlatformUiStatus *status)
     } else text(30U,248U,"RX",C_CYAN,C_PANEL);
 }
 
+static void draw_i2c_trace(const PlatformUiStatus *status)
+{
+    I2cTrace trace;
+    u32 byte_index, bit;
+    u32 shown = 0U;
+    int have_trace = 0;
+    if (status->capture_source == 2U && g_event_cache != 0 &&
+        g_event_cache->valid != 0U)
+        have_trace = i2c_trace_extract(&g_event_cache->event_word[0][0],
+                                       g_event_cache->count,&trace);
+    text(30U,190U,"I2C BYTE TRACE",C_CYAN,C_PANEL);
+    text(302U,190U,"DECODED - NOT SAMPLED",C_MUTED,C_PANEL);
+    hline(30U,770U,214U,C_BORDER);
+    if (!have_trace) {
+        text(226U,248U,status->capture_source==1U ? "WAITING FOR I2C MESSAGE" :
+             "NO COMPLETE I2C TRANSACTION",C_TEXT,C_PANEL);
+        text(214U,282U,"TAP PANEL TO ARM ANOTHER CAPTURE",C_CYAN,C_PANEL);
+        return;
+    }
+    shown = trace.count > 4U ? 4U : trace.count;
+    text(30U,232U,"SCL",C_CYAN,C_PANEL);
+    text(30U,300U,"SDA",C_GREEN,C_PANEL);
+    for (byte_index=0U;byte_index<shown;++byte_index) {
+        for (bit=0U;bit<9U;++bit) {
+            u32 lane_bit=byte_index*9U+bit;
+            u16 x=(u16)(196U+lane_bit*15U);
+            u8 level=bit==8U ? (u8)trace.nack[byte_index] :
+                     (u8)((trace.data[byte_index]>>(7U-bit))&1U);
+            hline(x,(u16)(x+6U),255U,C_CYAN);
+            vline((u16)(x+7U),231U,255U,C_CYAN);
+            hline((u16)(x+7U),(u16)(x+14U),231U,C_CYAN);
+            vline((u16)(x+14U),231U,255U,C_CYAN);
+            hline(x,(u16)(x+14U),level?299U:323U,C_GREEN);
+            if (lane_bit!=0U) vline(x,299U,323U,C_GREEN);
+        }
+        hex8((u16)(234U+byte_index*135U),355U,trace.data[byte_index],
+             C_TEXT,C_PANEL);
+        text((u16)(218U+byte_index*135U),381U,
+             trace.nack[byte_index]?"NACK":"ACK",trace.nack[byte_index]?C_RED:C_GREEN,
+             C_PANEL);
+    }
+    if (trace.count>4U) text(690U,355U,"+MORE",C_MUTED,C_PANEL);
+}
+
+static void draw_can_trace(const PlatformUiStatus *status)
+{
+    CanTrace trace;
+    u32 byte_index, shown;
+    int have_trace = 0;
+    if (status->capture_source == 2U && g_event_cache != 0 &&
+        g_event_cache->valid != 0U)
+        have_trace = can_trace_extract(&g_event_cache->event_word[0][0],
+                                       g_event_cache->count,&trace);
+    text(30U,190U,"CAN DATA TRACE",C_CYAN,C_PANEL);
+    text(302U,190U,"DECODED - NOT SAMPLED",C_MUTED,C_PANEL);
+    hline(30U,770U,214U,C_BORDER);
+    if (!have_trace) {
+        text(226U,248U,status->capture_source==1U ? "WAITING FOR CAN FRAME" :
+             "NO COMPLETE CAN DATA FRAME",C_TEXT,C_PANEL);
+        text(214U,282U,"TAP PANEL TO ARM ANOTHER CAPTURE",C_CYAN,C_PANEL);
+        return;
+    }
+    shown=trace.count>4U?4U:trace.count;
+    text(30U,232U,"RX",C_CYAN,C_PANEL);
+    draw_spi_wave_lane(trace.data,shown,231U,255U,C_CYAN);
+    text(30U,300U,"ID",C_MUTED,C_PANEL);
+    hex32(72U,300U,(u32)trace.identifier,C_TEXT,C_PANEL);
+    text(250U,300U,"DLC",C_MUTED,C_PANEL);
+    dec32(290U,300U,trace.dlc,C_TEXT,C_PANEL);
+    text(30U,355U,"DATA",C_MUTED,C_PANEL);
+    for(byte_index=0U;byte_index<shown;++byte_index)
+        hex8((u16)(196U+byte_index*120U),355U,trace.data[byte_index],C_CYAN,C_PANEL);
+    if(trace.count>4U) text(690U,355U,"+MORE",C_MUTED,C_PANEL);
+}
+
 static void render_home_page(const PlatformUiStatus *status,
                              const CaptureDemoSnapshot *snapshot)
 {
@@ -527,6 +605,16 @@ static void render_home_page(const PlatformUiStatus *status,
     if (status->selected_protocol == UI_PROTOCOL_UART &&
         ui_protocol_live(UI_PROTOCOL_UART,status->capabilities)) {
         draw_uart_trace(status);
+        return;
+    }
+    if (status->selected_protocol == UI_PROTOCOL_I2C &&
+        ui_protocol_live(UI_PROTOCOL_I2C,status->capabilities)) {
+        draw_i2c_trace(status);
+        return;
+    }
+    if (status->selected_protocol == UI_PROTOCOL_CAN &&
+        ui_protocol_live(UI_PROTOCOL_CAN,status->capabilities)) {
+        draw_can_trace(status);
         return;
     }
     if (status->selected_protocol != UI_PROTOCOL_SPI) {
@@ -563,8 +651,8 @@ static void render_home_page(const PlatformUiStatus *status,
         u16 x = (u16)(196U + byte_index * 120U);
         vline(x, 224U, 340U, C_GRID);
     }
-    draw_spi_wave_lane(trace.mosi, 231U, 255U, C_CYAN);
-    draw_spi_wave_lane(trace.miso, 299U, 323U, C_GREEN);
+    draw_spi_wave_lane(trace.mosi, SPI_TRACE_BYTES, 231U, 255U, C_CYAN);
+    draw_spi_wave_lane(trace.miso, SPI_TRACE_BYTES, 299U, 323U, C_GREEN);
     text(30U, 355U, "TX", C_CYAN, C_PANEL);
     text(30U, 381U, "RX", C_GREEN, C_PANEL);
     for (byte_index = 0U; byte_index < SPI_TRACE_BYTES; ++byte_index) {
@@ -1442,9 +1530,10 @@ PlatformUiAction platform_ui_poll_action(void)
     if (g_requested_page == PLATFORM_UI_PAGE_HOME &&
         ui_protocol_live(g_requested_status.selected_protocol,
                          g_requested_status.capabilities) &&
-        g_requested_status.capture_source == 0U &&
+        g_requested_status.test_running == 0U &&
+        g_requested_status.capture_source != 1U &&
         y >= 176U && y <= 407U && x >= 14U && x <= 786U)
-        return PLATFORM_UI_ACTION_CAPTURE_LIVE;
+        return PLATFORM_UI_ACTION_CAPTURE_HOME;
     if (y < 414U || y > 479U) return PLATFORM_UI_ACTION_NONE;
     if (x >= 12U && x <= 188U) return PLATFORM_UI_ACTION_HOME;
     if (x >= 196U && x <= 384U) return PLATFORM_UI_ACTION_SELF_TEST;

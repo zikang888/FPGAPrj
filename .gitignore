@@ -76,6 +76,7 @@ xsim.dir/
 *.before_*
 
 # Archives and editor/OS files
+.vscode/
 *.zip
 .DS_Store
 Thumbs.db

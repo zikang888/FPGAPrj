@@ -54,7 +54,9 @@
 #define REG_CAN_BUS_OFF (CORE_BASE + 0x00D4U)
 #define REG_CAN_STATS_CTRL (CORE_BASE + 0x00DCU)
 #define REG_CORE_REJECTED (CORE_BASE + 0x1014U)
+#define REG_CAPTURE_TOTAL (CORE_BASE + 0x101CU)
 #define COUNTER_POLL_TICKS ((uint64_t)COUNTS_PER_SECOND / 5U)
+#define HOME_CAPTURE_QUIET_TICKS ((uint64_t)COUNTS_PER_SECOND / 50U)
 
 #define EXPECTED_ID     0x4D505254U
 #define SCRATCH_TEST    0xA5A55A5AU
@@ -289,12 +291,56 @@ static PlatformUiAction console_action(const PlatformUiStatus *s)
     return PLATFORM_UI_ACTION_NONE;
 }
 
+static u32 g_home_capture_total;
+static XTime g_home_capture_last_event;
+
+/* HOME uses a protocol-filtered manual capture and freezes it after 20 ms of
+ * bus silence.  Unlike the legacy trigger-only path, this works for normal
+ * SPI, UART, I2C and CAN traffic, not just events marked as errors/triggers. */
+static int arm_home_capture(PlatformUiStatus *status, XTime now)
+{
+    if (status->test_running != 0U ||
+        !ui_protocol_live(status->selected_protocol,status->capabilities) ||
+        capture_session_arm(ui_protocol_event_id(status->selected_protocol))
+            != XST_SUCCESS)
+        return XST_FAILURE;
+    g_home_capture_total = 0U;
+    g_home_capture_last_event = now;
+    status->capture_source = 1U;
+    status->test_failed = 0U;
+    platform_ui_set_event_cache(0);
+    return XST_SUCCESS;
+}
+
+/* Returns 1 when a new HOME snapshot is ready, 0 while waiting, -1 on error. */
+static int poll_home_capture(PlatformUiStatus *status,
+                             CaptureDemoSnapshot *snapshot, XTime now)
+{
+    u32 total = Xil_In32(REG_CAPTURE_TOTAL);
+    if (total != g_home_capture_total) {
+        g_home_capture_total = total;
+        g_home_capture_last_event = now;
+    }
+    if (total == 0U ||
+        (uint64_t)(now - g_home_capture_last_event) <
+            HOME_CAPTURE_QUIET_TICKS)
+        return 0;
+    if (capture_session_freeze(snapshot) != XST_SUCCESS ||
+        capture_demo_cache_snapshot(&g_live_cache,snapshot) != XST_SUCCESS)
+        return -1;
+    status->capture_source = 2U;
+    platform_ui_set_event_cache(&g_live_cache);
+    return 1;
+}
+
 int main(void)
 {
     PlatformUiStatus status;
     CaptureDemoSnapshot demo, live;
     PlatformUiPage page = PLATFORM_UI_PAGE_HOME;
     PlatformUiAction action;
+    int home_capture_result;
+    u8 home_capture_updated;
     XTime now, last_poll;
     memset(&status,0,sizeof(status));
     memset(&demo,0,sizeof(demo));
@@ -319,10 +365,14 @@ int main(void)
     clear_test_display(&status);
     platform_ui_set_history(&g_history);
     Xil_Out32(REG_LED_CTRL,0U);
-    platform_ui_render_page(page,&status,status.capture_ok ? &demo : 0);
     XTime_GetTime(&last_poll);
+    if (arm_home_capture(&status,last_poll) == XST_SUCCESS)
+        xil_printf("HOME CAPTURE ARMED protocol=%s\r\n",
+                   ui_protocol_name(status.selected_protocol));
+    platform_ui_render_page(page,&status,status.capture_ok ? &demo : 0);
     xil_printf("UI READY. Commands: protocol spi/uart/i2c/can; test start/stop; view events/errors/history/home; status\r\n");
     while (1) {
+        home_capture_updated = 0U;
         XTime_GetTime(&now);
         if (status.test_running &&
             ui_counter_poll_due((uint64_t)now,(uint64_t)last_poll,COUNTER_POLL_TICKS)) {
@@ -337,6 +387,19 @@ int main(void)
         else if (action == PLATFORM_UI_ACTION_EVENTS) page = PLATFORM_UI_PAGE_EVENTS;
         else if (action == PLATFORM_UI_ACTION_ERRORS) page = PLATFORM_UI_PAGE_ERRORS;
         else if (action == PLATFORM_UI_ACTION_HISTORY) page = PLATFORM_UI_PAGE_HISTORY;
+        else if (action == PLATFORM_UI_ACTION_CAPTURE_HOME) {
+            if (arm_home_capture(&status,now) == XST_SUCCESS) {
+                page = PLATFORM_UI_PAGE_HOME;
+                xil_printf("HOME CAPTURE ARMED protocol=%s\r\n",
+                           ui_protocol_name(status.selected_protocol));
+            } else {
+                status.capture_source = 0U;
+                status.test_failed = 1U;
+                platform_ui_set_event_cache(0);
+                xil_printf("HOME CAPTURE ARM ERROR protocol=%s\r\n",
+                           ui_protocol_name(status.selected_protocol));
+            }
+        }
         else if (action == PLATFORM_UI_ACTION_CAPTURE_LIVE) {
             begin_test(&status,&live);
             page = PLATFORM_UI_PAGE_EVENTS;
@@ -351,9 +414,30 @@ int main(void)
                 clear_test_display(&status);
                 status.selected_protocol = selected;
                 platform_ui_set_event_cache(&g_demo_cache);
+                if (arm_home_capture(&status,now) == XST_SUCCESS)
+                    xil_printf("HOME CAPTURE ARMED protocol=%s\r\n",
+                               ui_protocol_name(status.selected_protocol));
             }
         }
-        if (action != PLATFORM_UI_ACTION_NONE)
+        /* A manual EVENTS test also has capture_source=1, but test_running
+         * keeps the two capture state machines independent. */
+        if (status.capture_source == 1U && status.test_running == 0U) {
+            home_capture_result = poll_home_capture(&status,&live,now);
+            if (home_capture_result > 0) {
+                home_capture_updated = 1U;
+                xil_printf("HOME SNAPSHOT READY: protocol=%s id=%lu count=%lu\r\n",
+                           ui_protocol_name(status.selected_protocol),
+                           (unsigned long)live.snapshot_id,
+                           (unsigned long)live.count);
+            } else if (home_capture_result < 0) {
+                status.capture_source = 0U;
+                status.test_failed = 1U;
+                platform_ui_set_event_cache(0);
+                home_capture_updated = 1U;
+                xil_printf("HOME CAPTURE STATUS ERROR\r\n");
+            }
+        }
+        if (action != PLATFORM_UI_ACTION_NONE || home_capture_updated != 0U)
             platform_ui_render_page(page,&status,status.capture_source == 2U ? &live :
                                     status.capture_source == 1U ? 0 : &demo);
         platform_ui_tick();

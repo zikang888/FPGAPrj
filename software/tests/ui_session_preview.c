@@ -53,6 +53,12 @@ int main(int argc,char **argv)
     assert(tap(60U,65U)==PLATFORM_UI_ACTION_CAPTURE_LIVE);
     assert(tap(300U,65U)==PLATFORM_UI_ACTION_END_TEST);
     assert(tap(650U,65U)==PLATFORM_UI_ACTION_HISTORY);
+    status.test_running=0U; status.capture_source=0U;
+    platform_ui_render_page(PLATFORM_UI_PAGE_HOME,&status,0);
+    assert(tap(400U,260U)==PLATFORM_UI_ACTION_CAPTURE_HOME);
+    status.capture_source=1U;
+    platform_ui_render_page(PLATFORM_UI_PAGE_HOME,&status,0);
+    assert(tap(400U,260U)==PLATFORM_UI_ACTION_NONE);
     cache.snapshot_id=1U;cache.trigger_index=0xFFFFFFFFU;cache.valid=1U;
     for(i=1U;i<=3U;++i) { put(0U,0U,i);put(0x3FU,0x0155U,i); }
     put(0U,0U,4U);put(0x3FU,0x0200U,4U);
