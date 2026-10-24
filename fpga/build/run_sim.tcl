@@ -1,10 +1,4 @@
-set script_dir [file dirname [file normalize [info script]]]
-set source_dir [file dirname [file dirname $script_dir]]
-set build_dir $source_dir
-if {[info exists ::env(MULTI_PROTOCOL_BUILD_DIR)] &&
-    $::env(MULTI_PROTOCOL_BUILD_DIR) ne ""} {
-    set build_dir [file normalize $::env(MULTI_PROTOCOL_BUILD_DIR)]
-}
+source [file join [file dirname [file normalize [info script]]] migration_config.tcl]
 set xpr [file join $build_dir Multi_protocol.xpr]
 
 if {![file exists $xpr]} {
@@ -29,6 +23,8 @@ proc run_test {build_dir top_name pass_text} {
     if {[string first $pass_text $log_text] < 0} {
         error "$top_name did not report PASS"
     }
+    file mkdir [file join $build_dir reports simulation]
+    file copy -force $sim_log [file join $build_dir reports simulation ${top_name}.log]
     puts "PASS: $top_name"
 }
 

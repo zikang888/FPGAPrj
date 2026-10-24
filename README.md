@@ -1,5 +1,13 @@
 # Zynq-7020 Multi Protocol Platform
 
+> **member C · Vivado / Vitis 2026.1 迁移版本（2026-10-24）**
+>
+> 本分支 `migration/vivado-vitis-2026.1` 是从 Vivado/SDK 2018.3 迁移到 Vivado/Vitis 2026.1 的版本。member C 已完成本机实板验证并确认：**触控正常、切换页面正常、协议监听与显示正常**；SPI 100 笔对账及 CAN 正常回环通过。
+>
+> **请其他成员在各自板卡和环境上再做交叉验证，并在 PR 中反馈结果，交叉验证完成后再决定合入。** 复测步骤和结果模板见 [member C 交叉验证说明](docs/integration/2026-10-24-member-c-migration-cross-validation.md)；[配套板测镜像](releases/vivado-vitis-2026.1-memberC-20261024/README.md)、[迁移入口](README_MIGRATION_2026_1.md)、[实板证据](docs/test-results/2026-10-24-vivado-2026.1-board.md) 和 [2026 skill](skills/vivado-vitis-2026/SKILL.md) 已随分支提交。
+>
+> 当前边界：UART 为 RX-only；I2C EEPROM 测试仍出现 busy NACK；本机下载使用 2026.1 XSDB + 2018.3 hw_server 兼容路径。协议功能正常的确认不代表这些完整闭环和新版服务端问题已解决。以下原有 2018.3 使用说明保留供历史工程参考；本迁移分支请从上述新版入口开始。
+
 接口、接线、集成说明和实板测试记录统一从 [docs/README.md](docs/README.md) 进入。
 
 本工程适用于 Vivado/SDK 2018.3 和 `xc7z020clg484-2`。Vivado 工程与 SDK 工作区统一放在仓库根目录，完整目录说明见 [PROJECT_PATHS.md](PROJECT_PATHS.md)。

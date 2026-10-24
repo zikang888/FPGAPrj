@@ -11,10 +11,15 @@
 #include "xuartps.h"
 #include "sleep.h"
 #include "string.h"
+#ifdef SDT
+#include "xiltimer.h"
+#else
 #include "xtime_l.h"
+#endif
 #endif
 #include "string.h"
 #include "ui_counter_semantics.h"
+#include "platform_bsp_compat.h"
 
 #define CORE_BASE       XPAR_MULTI_PROTOCOL_CORE_0_BASEADDR
 #define REG_SYS_ID      (CORE_BASE + 0x0000U)
@@ -70,7 +75,7 @@ static CaptureDemoCache g_live_cache;
 #ifndef SESSION_HOST_TEST
 static int uart_init(void)
 {
-    XUartPs_Config *config = XUartPs_LookupConfig(XPAR_XUARTPS_0_DEVICE_ID);
+    XUartPs_Config *config = XUartPs_LookupConfig(MP_UART_LOOKUP_KEY);
     int status;
     if (config == 0) return XST_FAILURE;
     status = XUartPs_CfgInitialize(&g_uart, config, config->BaseAddress);
@@ -222,11 +227,11 @@ static void end_test(PlatformUiStatus *s, CaptureDemoSnapshot *snapshot)
                record->count * sizeof(record->words[0]));
     }
     platform_ui_set_history(&g_history);
-    xil_printf("TEST SAVED id=%lu protocol=%s events=%lu retained=%lu errors=%lu tail=%u history=%lu\r\n",
-               (unsigned long)s->test_id, ui_protocol_name(s->selected_protocol),
-               (unsigned long)s->test_events, (unsigned long)record->count,
-               (unsigned long)s->test_errors, s->retained_tail,
-               (unsigned long)g_history.count);
+    xil_printf("TEST SAVED id=%u protocol=%s events=%u retained=%u errors=%u tail=%u history=%u\r\n",
+               (unsigned int)s->test_id, ui_protocol_name(s->selected_protocol),
+               (unsigned int)s->test_events, (unsigned int)record->count,
+               (unsigned int)s->test_errors, s->retained_tail,
+               (unsigned int)g_history.count);
 }
 
 static void begin_test(PlatformUiStatus *s, CaptureDemoSnapshot *snapshot)
@@ -252,9 +257,9 @@ static void begin_test(PlatformUiStatus *s, CaptureDemoSnapshot *snapshot)
     s->capture_source = 1U;
     platform_ui_set_event_cache(0);
     refresh_test(s);
-    xil_printf("TEST START id=%lu protocol=%s errors=%lu\r\n",
-               (unsigned long)s->test_id, ui_protocol_name(s->selected_protocol),
-               (unsigned long)s->test_errors);
+    xil_printf("TEST START id=%u protocol=%s errors=%u\r\n",
+               (unsigned int)s->test_id, ui_protocol_name(s->selected_protocol),
+               (unsigned int)s->test_errors);
 }
 
 /* The USB console invokes the same actions as touch; useful for repeatable
@@ -283,10 +288,10 @@ static PlatformUiAction console_action(const PlatformUiStatus *s)
         if (!strcmp(line,"protocol i2c")) return PLATFORM_UI_ACTION_SELECT_I2C;
         if (!strcmp(line,"protocol can")) return PLATFORM_UI_ACTION_SELECT_CAN;
         if (!strcmp(line,"status"))
-            xil_printf("TEST STATUS id=%lu running=%u events=%lu errors=%lu history=%lu\r\n",
-                       (unsigned long)s->test_id, s->test_running,
-                       (unsigned long)s->test_events, (unsigned long)s->test_errors,
-                       (unsigned long)g_history.count);
+            xil_printf("TEST STATUS id=%u running=%u events=%u errors=%u history=%u\r\n",
+                       (unsigned int)s->test_id, s->test_running,
+                       (unsigned int)s->test_events, (unsigned int)s->test_errors,
+                       (unsigned int)g_history.count);
     }
     return PLATFORM_UI_ACTION_NONE;
 }
@@ -425,10 +430,10 @@ int main(void)
             home_capture_result = poll_home_capture(&status,&live,now);
             if (home_capture_result > 0) {
                 home_capture_updated = 1U;
-                xil_printf("HOME SNAPSHOT READY: protocol=%s id=%lu count=%lu\r\n",
+                xil_printf("HOME SNAPSHOT READY: protocol=%s id=%u count=%u\r\n",
                            ui_protocol_name(status.selected_protocol),
-                           (unsigned long)live.snapshot_id,
-                           (unsigned long)live.count);
+                           (unsigned int)live.snapshot_id,
+                           (unsigned int)live.count);
             } else if (home_capture_result < 0) {
                 status.capture_source = 0U;
                 status.test_failed = 1U;

@@ -19,8 +19,9 @@
 #include "sleep.h"
 #endif
 #include "string.h"
+#include "platform_bsp_compat.h"
 
-#define FB_ADDR      (XPAR_PS7_DDR_0_S_AXI_BASEADDR + 0x01000000U)
+#define FB_ADDR      (MP_DDR_BASE + 0x01000000U)
 #define FB_W         800U
 #define FB_H         480U
 #define FB_STRIDE    (FB_W * 3U)
@@ -257,7 +258,7 @@ static int video_init(void)
     int status;
     int index;
 
-    vdma_config = XAxiVdma_LookupConfig(XPAR_AXIVDMA_0_DEVICE_ID);
+    vdma_config = XAxiVdma_LookupConfig(MP_VDMA_LOOKUP_KEY);
     if (vdma_config == 0) return XST_FAILURE;
     status = XAxiVdma_CfgInitialize(&g_vdma, vdma_config,
                                     vdma_config->BaseAddress);
@@ -290,7 +291,7 @@ static int video_init(void)
     g_draw_frame = 1U;
     g_fb = (u8 *)g_frame_addr[g_draw_frame];
 
-    vtc_config = XVtc_LookupConfig(XPAR_V_TC_0_DEVICE_ID);
+    vtc_config = XVtc_LookupConfig(MP_VTC_LOOKUP_KEY);
     if (vtc_config == 0) return XST_FAILURE;
     status = XVtc_CfgInitialize(&g_vtc, vtc_config,
                                 vtc_config->BaseAddress);
@@ -1001,7 +1002,7 @@ static void draw_event_row_at(const u32 *words, u32 event_index,
                               const u32 *all_words, u32 word_count)
 {
     EventView view;
-    char type_text[8];
+    char type_text[8] = {0};
     int diagnostic_fault;
     u32 row_bg;
     u16 y;
