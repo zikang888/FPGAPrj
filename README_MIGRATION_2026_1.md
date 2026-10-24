@@ -1,4 +1,8 @@
-# Vivado / Vitis 2026.1 离线迁移候选版本
+# member C · Vivado / Vitis 2026.1 迁移版本
+
+**提交人/负责成员：member C。当前状态：本机实板验证完成，触控正常、切换页面正常、协议监听与显示正常；等待其他成员交叉验证。**
+
+请其他成员按 [交叉验证说明](docs/integration/2026-10-24-member-c-migration-cross-validation.md) 复测并反馈。无需重建即可使用 [本轮匹配的板测镜像](releases/vivado-vitis-2026.1-memberC-20261024/README.md)。2026 版开发经验见 [随仓库保存的 skill](skills/vivado-vitis-2026/SKILL.md)。下文保留原离线阶段说明，最新交付入口以此处链接为准。
 
 > **2026-10-24 实板阶段更新：** 新 BIT / XSA 与修复串口格式后的 ELF 已运行于实板，SPI 100 笔对账、UART RX、CAN 回环、四协议 HOME 帧缓冲和会话历史已验证；用户确认“显示稳定，触摸切页正常”。I2C EEPROM 仍返回 busy NACK。当前使用 2026.1 XSDB + 2018.3 hw_server 的调试兼容路径，新版 hw_server 枚举阻塞仍未解决。四角定位、滑动等仍待验收。见 [本次实板记录](docs/test-results/2026-10-24-vivado-2026.1-board.md)。以下“未连接”描述保留为原离线候选包的历史状态。
 

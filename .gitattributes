@@ -1,2 +1,7 @@
 # Keep the SDK-exported release init byte-exact for manifest verification.
 releases/session-candidate-20261020/ps7_init.tcl -text -diff
+
+# Preserve exact bytes and accept CRLF in the SHA256-verified migration bundle.
+releases/vivado-vitis-2026.1-memberC-20261024/** -text whitespace=cr-at-eol
+# Vendor-generated initialization is kept identical to the XSA, including whitespace.
+releases/vivado-vitis-2026.1-memberC-20261024/ps7_init.tcl -diff

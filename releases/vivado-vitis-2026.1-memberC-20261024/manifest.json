@@ -1,0 +1,63 @@
+{
+  "version": "Vivado/Vitis 2026.1 migration - member C - 20261024",
+  "responsible_member": "member C",
+  "status": "member_c_board_verified_awaiting_other_members_cross_validation",
+  "tested_source_commit": "92012009201c40fd85fb181736f847d93bec279e",
+  "source_branch": "migration/vivado-vitis-2026.1",
+  "baseline_commit": "0d9fde5b312a62feed08525b0c1c31f4385e7f81",
+  "part": "xc7z020clg484-2",
+  "vivado": "2026.1 build 6511674",
+  "vitis": "2026.1 build 6497934",
+  "debug_stack": {
+    "xsdb": "2026.1",
+    "hw_server": "2018.3 compatibility fallback"
+  },
+  "limits": [
+    "2026.1 hw_server enumeration stalls on member C machine",
+    "UART is RX-only, no TX loopback",
+    "I2C EEPROM command still reports busy NACK",
+    "external timing budgets, complete fault suite and long-run stability remain"
+  ],
+  "files": [
+    {
+      "path": "multi_protocol.bit",
+      "bytes": 4045780,
+      "sha256": "e69fcaa0b50936cfd2f729d96c17c915ee6aa59c77aa618c2864e5f756ae66c9"
+    },
+    {
+      "path": "multi_protocol.xsa",
+      "bytes": 641914,
+      "sha256": "fe2d26c4ece8e0888a1bd0d22a3d74bf9db11dee73e634d7c758d8421f0d095f"
+    },
+    {
+      "path": "multi_protocol_app.elf",
+      "bytes": 724444,
+      "sha256": "0faadc7c9cd892ddff20d538f67e4bff542572a27d365e3fa2bd2fc85d4e1c94"
+    },
+    {
+      "path": "program_2026_1.ps1",
+      "bytes": 1489,
+      "sha256": "deb23b6e0d102318783221fcbfd04bdada602573149c9c7719f8f3d0c9008207"
+    },
+    {
+      "path": "program_2026_1.tcl",
+      "bytes": 1239,
+      "sha256": "46ff96c97a137d28b961112ac90c352af2b83aa800b8b24be4d0f36123abb19e"
+    },
+    {
+      "path": "ps7_init.tcl",
+      "bytes": 34511,
+      "sha256": "47d35117fe590757d5f887986ae68b1e64f5cdcfc7eeb480825af9543bf91399"
+    },
+    {
+      "path": "README.md",
+      "bytes": 2329,
+      "sha256": "8c6e84ab5aebbc126f09f872f78b894af6d6ca6f22da11fa081e44d810dc3eca"
+    },
+    {
+      "path": "verification.json",
+      "bytes": 10323,
+      "sha256": "5e62af1186c2e4a97d60c92c3db3fb1519725971a1007c3d3b7bb3e86db2688d"
+    }
+  ]
+}

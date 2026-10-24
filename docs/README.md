@@ -4,6 +4,8 @@
 
 ## 当前实现优先阅读
 
+- [member C：2026.1 迁移版与其他成员交叉验证](integration/2026-10-24-member-c-migration-cross-validation.md)
+
 - [寄存器与 128-bit 事件格式](interfaces/register_map.md)
 - [I2C/CAN 被动监听接口](interfaces/i2c_can_passive_monitor.md)
 - [错误事件接入状态](interfaces/error_event_catalog.md)
@@ -28,6 +30,8 @@
 - `migration/`：Vivado 版本迁移注意事项。
 
 ## 最新测试证据
+
+- [2026-10-24 Vivado/Vitis 2026.1 迁移实板验证（member C）](test-results/2026-10-24-vivado-2026.1-board.md)
 
 - [2026-10-23 HOME 四协议波形实板验证](test-results/2026-10-23-home-waveform-four-protocol.md)
 - [2026-10-22 I2C/CAN 错误事件与 UI 实板测试](test-results/2026-10-22-i2c-can-error-ui-board.md)
