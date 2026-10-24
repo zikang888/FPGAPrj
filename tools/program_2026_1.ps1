@@ -21,5 +21,10 @@ foreach ($taskFile in $taskManifest.files) {
 }
 $taskArgs = @((Join-Path $PSScriptRoot 'program_2026_1.tcl'), $taskBundle)
 if ($PreflightOnly) { $taskArgs += '--preflight' }
-& (Join-Path $ToolRoot 'Vitis\bin\xsdb.bat') @taskArgs
+& (Join-Path $ToolRoot 'Vitis\bin\xsdb.bat') @taskArgs 2>&1 | Tee-Object -Variable taskOutput
 if ($LASTEXITCODE -ne 0) { throw 'JTAG loader failed.' }
+# XSDB can return zero after an uncaught Tcl error; require the final marker.
+$taskMarker = if ($PreflightOnly) { 'JTAG_FILES_PREFLIGHT_PASS:' } else { 'JTAG_CANDIDATE_STARTED:' }
+if (($taskOutput -join "`n") -notmatch [regex]::Escape($taskMarker)) {
+    throw "JTAG loader did not complete: missing $taskMarker"
+}

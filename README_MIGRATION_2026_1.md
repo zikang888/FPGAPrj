@@ -1,5 +1,7 @@
 # Vivado / Vitis 2026.1 离线迁移候选版本
 
+> **2026-10-24 实板阶段更新：** 新 BIT / XSA 与修复串口格式后的 ELF 已运行于实板，SPI 100 笔对账、UART RX、CAN 回环、四协议 HOME 帧缓冲和会话历史已验证；I2C EEPROM 仍返回 busy NACK。当前使用 2026.1 XSDB + 2018.3 hw_server 的调试兼容路径，新版 hw_server 枚举阻塞仍未解决。实屏/触摸操作待用户反馈。见 [本次实板记录](docs/test-results/2026-10-24-vivado-2026.1-board.md)。以下“未连接”描述保留为原离线候选包的历史状态。
+
 本分支以 `fix/fpga_waveform` 的 `0d9fde5b312a62feed08525b0c1c31f4385e7f81` 为基线，迁移目标为 ACZ702 + AC820、`xc7z020clg484-2`。2026-10-24 完成离线构建；用户明确未连接 FPGA，因此本候选版本尚未通过实板验收。
 
 ## 工作区与打开方式
