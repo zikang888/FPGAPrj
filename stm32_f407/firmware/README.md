@@ -57,6 +57,8 @@ Program Size: Code=30886 RO-data=3362 RW-data=72 ZI-data=5512
 
 GPIO RAW 后端还需要 `mc_can_raw.c`、`mc_can_raw_hal.c`；其 TIM1/DMA2 由后端按需配置，未在 `.ioc` 中常驻启用。故障版定义 Stream5 IRQ；后续 CubeMX 若新增同一 IRQ 必须先处理重复定义/资源冲突。双配置构建：`./build_profiles.ps1 -Profile all -Release`，RAW 接线和命令见 [说明](../../docs/hardware/can_gpio_bitstream_usage.md)。
 
+2026-10-27 增加 `mc_ui_menu.c`、`mc_button.c`（common 分组）：四协议母菜单与正常/故障子菜单、30 ms 消抖和长按锁存；不新增引脚或更改 `.ioc`。CubeMX 再生成后须保留这两个源文件，两个发布配置均包含新 UI。使用方式及正常测试外设前提见 [OLED 菜单说明](../../docs/hardware/stm32_fault_menu_oled.md)，回归见 [验证记录](../../docs/test-results/2026-10-27-hierarchical-menu.md)。
+
 LIVE 后端增加 `mc_can_live.c`、`mc_can_live_hal.c`，故障配置开启 `MC_ENABLE_CAN_LIVE`。
 按需使用 PA1/PA2、TIM2、TIM2/CAN1_SCE IRQ，不在 default 启动时启用；这两个 IRQ 符号也不能与未来 CubeMX 同名处理函数重复定义。新接线、Bus-off 判定及恢复见 [LIVE 说明](../../docs/hardware/can_live_injection_usage.md)。
 

@@ -489,6 +489,16 @@
               <FilePath>../../../app/src/mc_board_app.c</FilePath>
             </File>
             <File>
+              <FileName>mc_ui_menu.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../../../common/src/mc_ui_menu.c</FilePath>
+            </File>
+            <File>
+              <FileName>mc_button.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../../../common/src/mc_button.c</FilePath>
+            </File>
+            <File>
               <FileName>mc_faults.c</FileName>
               <FileType>1</FileType>
               <FilePath>../../../common/src/mc_faults.c</FilePath>

@@ -10,6 +10,8 @@
 #include "mc_can_raw_hal.h"
 #include "mc_can_live_hal.h"
 #include "mc_build_profile.h"
+#include "mc_button.h"
+#include "mc_ui_menu.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,13 +38,15 @@ static uint32_t g_last_dropped;
 static int g_discard_line;
 static uint8_t g_jedec_id[3];
 static int g_jedec_id_valid;
-static GPIO_PinState g_previous_key_state;
-static uint32_t g_key_down_ms;
-static int g_long_press_ran;
+static mc_button_t g_button;
 static mc_fault_id_t g_selected_fault;
 static int g_last_fault_result = MC_ERR_UNSUPPORTED;
 static int g_has_fault_result;
 static uint32_t g_fault_runs;
+static mc_ui_menu_t g_menu;
+static uint32_t g_normal_runs;
+static int g_menu_running;
+static int g_normal_can_from_menu;
 static mc_can_session_t g_can_session;
 static mc_can_session_hal_t g_can_hal;
 static mc_can_session_t g_raw_session;
@@ -55,6 +59,7 @@ static int g_live_from_menu;
 static int g_can_view;
 static uint32_t g_can_display_ms;
 static void print_can_status(void);
+static void run_command(const char *command);
 
 static mc_can_mode_t fault_raw_mode(mc_fault_id_t id)
 {
@@ -146,37 +151,55 @@ static void print_help(void)
         "    LIVE: PD1->PA1 jumper; PA2->separate transceiver TXD\r\n"
         "  can live status|stop|recover\r\n"
         "  help                 Show this help\r\n"
-        "USER_KEY: short=next, hold 0.8s=run.\r\n> ");
+        "USER_KEY: short=next, hold 0.8s=enter/run/back; CAN hold=stop.\r\n> ");
 }
 
 static void display_fault_menu(void)
 {
     char line[24];
-    unsigned int base = ((unsigned int)g_selected_fault / 4U) * 4U;
+    unsigned int base = (g_menu.item / 4U) * 4U;
     unsigned int i;
-    const mc_fault_info_t *selected = mc_fault_get(g_selected_fault);
+    mc_ui_entry_t entry = mc_ui_menu_entry(g_menu.protocol, g_menu.item);
+    const mc_fault_info_t *selected = entry.action == MC_UI_FAULT ? mc_fault_get(entry.fault) : NULL;
     mc_oled_clear();
-    mc_oled_text(0U, 0U, "FAULT SELECT");
+    if (!g_menu.in_submenu) {
+        mc_oled_text(0U, 0U, "PROTOCOL SELECT");
+        for (i = 0U; i < MC_UI_PROTOCOL_COUNT; ++i) {
+            (void)snprintf(line, sizeof(line), "%c %s", i == (unsigned int)g_menu.protocol ? '>' : ' ',
+                           mc_ui_protocol_name((mc_ui_protocol_t)i));
+            mc_oled_text(0U, (uint8_t)(i + 1U), line);
+        }
+        mc_oled_text(0U, 5U, "TAP NEXT HOLD ENTER");
+        mc_oled_text(0U, 6U, "MENU DOES NOT SEND");
+        mc_oled_text(0U, 7U, "SELECT A PROTOCOL");
+        mc_oled_flush();
+        return;
+    }
+    (void)snprintf(line, sizeof(line), "%s NORMAL / FAULT", mc_ui_protocol_name(g_menu.protocol));
+    mc_oled_text(0U, 0U, line);
     for (i = 0U; i < 4U; ++i) {
-        const mc_fault_info_t *item = mc_fault_get((mc_fault_id_t)(base + i));
-        if (item != NULL) {
-            (void)snprintf(line, sizeof(line), "%c%02u %s",
-                           base + i == (unsigned int)g_selected_fault ? '>' : ' ',
-                           base + i, item->label);
+        mc_ui_entry_t item = mc_ui_menu_entry(g_menu.protocol, base + i);
+        if (item.action != MC_UI_NAVIGATE) {
+            (void)snprintf(line, sizeof(line), "%c%s",
+                           base + i == g_menu.item ? '>' : ' ', item.label);
             mc_oled_text(0U, (uint8_t)(i + 1U), line);
         }
     }
-    (void)snprintf(line, sizeof(line), "RUNS %lu HOLD RUN", (unsigned long)g_fault_runs);
+    (void)snprintf(line, sizeof(line), "NORMAL %lu FAULT %lu", (unsigned long)g_normal_runs,
+                   (unsigned long)g_fault_runs);
     mc_oled_text(0U, 5U, line);
-    if (g_has_fault_result) {
+    if (g_menu_running) {
+        strcpy(line, "RUNNING PLEASE WAIT");
+    } else if (g_has_fault_result) {
         if (g_last_fault_result == MC_ERR_UNSUPPORTED) {
-            strcpy(line, "NEEDS EXTERNAL HW");
+            strcpy(line, "DISABLED/NEEDS HW");
         } else {
-        (void)snprintf(line, sizeof(line), "RESULT %d", g_last_fault_result);
+        (void)snprintf(line, sizeof(line), "%s R %d",
+                       g_last_fault_result == MC_OK ? "LOCAL OK" : "LOCAL ERROR", g_last_fault_result);
         }
     } else if (selected != NULL) {
-        if (fault_raw_mode(g_selected_fault) >= MC_CAN_RAW_VALID) {
-            strcpy(line, fault_raw_mode(g_selected_fault) >= MC_CAN_LIVE_DISTURB ? "LIVE READY PA1/2" : "RAW READY PD1");
+        if (fault_raw_mode(entry.fault) >= MC_CAN_RAW_VALID) {
+            strcpy(line, fault_raw_mode(entry.fault) >= MC_CAN_LIVE_DISTURB ? "LIVE READY PA1/2" : "RAW READY PD1");
         } else { switch (selected->requirement) {
         case MC_FAULT_LOCAL: strcpy(line, "READY"); break;
         case MC_FAULT_NEEDS_WIRING: strcpy(line, "NEEDS LINK"); break;
@@ -185,12 +208,14 @@ static void display_fault_menu(void)
         default: strcpy(line, "NOT BASELINE"); break;
         } }
     } else {
-        strcpy(line, "INVALID");
+        strcpy(line, entry.action == MC_UI_BACK ? "HOLD RETURN" : "HOLD RUN ONCE");
     }
     mc_oled_text(0U, 6U, line);
     if (selected != NULL) {
         (void)snprintf(line, sizeof(line), "CASE %lu", (unsigned long)selected->case_id);
         mc_oled_text(0U, 7U, line);
+    } else {
+        mc_oled_text(0U, 7U, entry.action == MC_UI_BACK ? "NO OUTPUT" : "LOCAL TEST NOT PL");
     }
     mc_oled_flush();
 }
@@ -263,6 +288,7 @@ static void select_fault(unsigned int index)
         return;
     }
     g_selected_fault = (mc_fault_id_t)index;
+    (void)mc_ui_menu_select_fault(&g_menu, g_selected_fault);
     g_has_fault_result = 0;
     display_fault_menu();
 }
@@ -298,6 +324,10 @@ static void print_summary(const char *name, int result, const mc_run_summary_t *
                    (unsigned long)summary->passed,
                    (unsigned long)summary->failed);
     console_write(line);
+    if (g_menu_running) {
+        g_last_fault_result = result;
+        g_has_fault_result = 1;
+    }
     HAL_GPIO_WritePin(USER_LED_GPIO_Port,
                       USER_LED_Pin,
                       result == MC_OK ? GPIO_PIN_SET : GPIO_PIN_RESET);
@@ -331,8 +361,15 @@ static void run_spi_jedec(uint32_t iterations)
 {
     mc_run_summary_t summary;
     int result;
-    if (!g_jedec_id_valid && probe_jedec_id() != MC_OK) {
-        return;
+    if (!g_jedec_id_valid) {
+        result = probe_jedec_id();
+        if (result != MC_OK) {
+            if (g_menu_running) {
+                g_last_fault_result = result;
+                g_has_fault_result = 1;
+            }
+            return;
+        }
     }
     result = mc_run_spi_jedec(&g_runner, 1001U, iterations, g_jedec_id, &summary);
     print_summary("SPI_JEDEC", result, &summary);
@@ -448,6 +485,8 @@ static void run_command(const char *command)
             }
             select_fault((unsigned int)index);
         }
+        /* A CLI run without N still shows the fault it actually executes. */
+        select_fault((unsigned int)g_selected_fault);
         trigger_selected_fault();
     } else if (strcmp(command, "spi probe") == 0) {
         (void)probe_jedec_id();
@@ -476,6 +515,57 @@ static void run_command(const char *command)
     } else {
         console_write("Unknown command. Type help.\r\n> ");
     }
+}
+
+static void confirm_menu(void)
+{
+    mc_ui_entry_t entry;
+    if (g_can_session.held || g_raw_session.held || g_live_session.held) {
+        console_write("CAN owns resources; stop/recover first\r\n> ");
+        return;
+    }
+    entry = mc_ui_menu_confirm(&g_menu);
+    g_has_fault_result = 0;
+    if (entry.action == MC_UI_NAVIGATE) {
+        display_fault_menu();
+        return;
+    }
+    if (entry.action == MC_UI_FAULT) {
+        g_selected_fault = entry.fault;
+        g_menu_running = 1;
+        display_fault_menu();
+        g_menu_running = 0;
+        trigger_selected_fault();
+        return;
+    }
+    ++g_normal_runs;
+    g_menu_running = 1;
+    HAL_GPIO_WritePin(USER_LED_GPIO_Port, USER_LED_Pin, GPIO_PIN_RESET);
+    display_fault_menu();
+    console_write("\r\nMENU NORMAL one iteration; local result is not PL detection\r\n");
+    switch (entry.action) {
+    case MC_UI_SPI_JEDEC: run_command("spi jedec 1"); break;
+    case MC_UI_SPI_PATTERN: run_command("spi pattern 1"); break;
+    case MC_UI_UART_ECHO: run_command("uart loop 1"); break;
+    case MC_UI_I2C_EEPROM: run_command("i2c eeprom 1"); break;
+    case MC_UI_CAN_ECHO: run_command("can loop 1"); break;
+    case MC_UI_CAN_TX: {
+        mc_can_config_t config;
+        int result = mc_can_session_parse("normal 1 100", &config);
+        if (result == MC_OK) { result = mc_can_session_start(&g_can_session, &config); }
+        g_last_fault_result = result;
+        g_has_fault_result = 1;
+        g_normal_can_from_menu = result == MC_OK;
+        g_can_backend = 0;
+        g_can_view = 1;
+        print_can_status();
+        display_can_session();
+        break;
+    }
+    default: break;
+    }
+    g_menu_running = 0;
+    if (!g_can_view) { display_fault_menu(); }
 }
 
 static int can_start_accept_all(void)
@@ -529,15 +619,19 @@ void mc_board_app_init(void)
     g_live_from_menu = 0;
     g_can_view = 0;
     g_fault_runs = 0U;
+    g_normal_runs = 0U;
+    g_menu_running = 0;
+    g_normal_can_from_menu = 0;
+    mc_ui_menu_init(&g_menu);
     mc_cli_rx_init(&g_console_rx);
     g_command_length = 0U;
     g_discard_line = 0;
     g_last_dropped = 0U;
     g_uart_rx_errors = 0U;
     g_jedec_id_valid = 0;
-    g_previous_key_state = HAL_GPIO_ReadPin(USER_KEY_GPIO_Port, USER_KEY_Pin);
-    g_key_down_ms = HAL_GetTick();
-    g_long_press_ran = 0;
+    mc_button_init(&g_button,
+                   HAL_GPIO_ReadPin(USER_KEY_GPIO_Port, USER_KEY_Pin) == GPIO_PIN_SET,
+                   HAL_GetTick());
     g_selected_fault = MC_FAULT_SPI_PARTIAL;
     g_has_fault_result = 0;
     can_result = can_start_accept_all();
@@ -564,7 +658,7 @@ void mc_board_app_init(void)
 void mc_board_app_poll(void)
 {
     uint8_t value;
-    GPIO_PinState key_state;
+    mc_button_event_t key_event;
     unsigned int processed = 0U;
 
     if (g_console_rx.dropped != g_last_dropped || g_uart_rx_errors != 0U) {
@@ -604,13 +698,10 @@ void mc_board_app_poll(void)
         }
     }
 
-    key_state = HAL_GPIO_ReadPin(USER_KEY_GPIO_Port, USER_KEY_Pin);
-    if (key_state == GPIO_PIN_SET && g_previous_key_state == GPIO_PIN_RESET) {
-        g_key_down_ms = HAL_GetTick();
-        g_long_press_ran = 0;
-    } else if (key_state == GPIO_PIN_SET && !g_long_press_ran &&
-               (uint32_t)(HAL_GetTick() - g_key_down_ms) >= 800U) {
-        g_long_press_ran = 1;
+    key_event = mc_button_poll(&g_button,
+                              HAL_GPIO_ReadPin(USER_KEY_GPIO_Port, USER_KEY_Pin) == GPIO_PIN_SET,
+                              HAL_GetTick());
+    if (key_event == MC_BUTTON_LONG) {
         if (visible_can()->state == MC_CAN_RUNNING) {
             (void)mc_can_session_stop(visible_can());
             print_can_status();
@@ -625,20 +716,20 @@ void mc_board_app_poll(void)
                 display_fault_menu();
             }
         } else {
-            trigger_selected_fault();
+            confirm_menu();
         }
-    } else if (key_state == GPIO_PIN_RESET && g_previous_key_state == GPIO_PIN_SET &&
-               !g_long_press_ran && (uint32_t)(HAL_GetTick() - g_key_down_ms) >= 25U) {
+    } else if (key_event == MC_BUTTON_SHORT) {
         if (!g_can_session.held && !g_raw_session.held && !g_live_session.held) {
             if (g_can_view) {
                 g_can_view = 0;
                 display_fault_menu();
             } else {
-                select_fault((unsigned int)(g_selected_fault + 1U) % (unsigned int)MC_FAULT_COUNT);
+                mc_ui_menu_next(&g_menu);
+                g_has_fault_result = 0;
+                display_fault_menu();
             }
         }
     }
-    g_previous_key_state = key_state;
     if (visible_can()->state == MC_CAN_RUNNING) {
         mc_can_session_tick(visible_can(), HAL_GetTick());
         if (visible_can()->state != MC_CAN_RUNNING) { print_can_status(); }
@@ -654,6 +745,14 @@ void mc_board_app_poll(void)
                               g_raw_session.last_result;
         g_has_fault_result = 1;
         g_raw_from_menu = 0;
+    }
+    if (g_normal_can_from_menu && g_can_session.state != MC_CAN_RUNNING) {
+        g_last_fault_result = g_can_session.state == MC_CAN_STOPPED ? MC_ERR_BUSY :
+                              g_can_session.last_result;
+        g_has_fault_result = 1;
+        g_normal_can_from_menu = 0;
+        HAL_GPIO_WritePin(USER_LED_GPIO_Port, USER_LED_Pin,
+                          g_last_fault_result == MC_OK ? GPIO_PIN_SET : GPIO_PIN_RESET);
     }
     if (g_live_from_menu && g_live_session.state!=MC_CAN_RUNNING) {
         g_last_fault_result=g_live_session.state==MC_CAN_STOPPED ? MC_ERR_BUSY : g_live_session.last_result;

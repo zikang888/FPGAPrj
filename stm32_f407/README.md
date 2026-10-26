@@ -35,7 +35,7 @@ docs/protocol-rules/protocol_rules.yaml
 - CAN 标准帧回环。
 - JSONL 真值日志与本地事务号。
 - SPI JSONL 同时记录 `data`（实际 RX）和 `tx`（实际发送），日志失败会反馈到测试结果。
-- 20 项可选择错误事件菜单；PA0 短按切换、长按触发，USART1 也可用 `fault` 命令控制。
+- 四协议母菜单＋正常/错误事件子菜单：6 个正常测试入口、20 项原故障，另设 BACK；PA0 短按切换、长按进入/执行/返回，原 `fault` 串口命令不变。见 [菜单说明](../docs/hardware/stm32_fault_menu_oled.md)。
 - 128×64 SSD1306 4 线 SPI OLED 页面，使用 PB12/PB13/PB15、PC4/PC5。
 - USART1 使用中断接收缓冲，整行回显；连续快速发送不再逐字节阻塞发送。
 - 可选同步脉冲接口。
@@ -91,7 +91,7 @@ SPI 第一闭环固定为 STM32 主机、W25Q128 从机、FPGA 被动监听：
 | 外接 AT24C256 | PB6/PB7 | I²C1，100 kHz |
 | 外接 SN65HVD230 | PD0/PD1 | CAN1 RX/TX，500 kbit/s |
 | 用户 LED | PB2 | 成功点亮，失败熄灭 |
-| 用户按键 | PA0 | 短按切换错误事件，长按执行 |
+| 用户按键 | PA0 | 短按切换，长按进入协议/执行所选测试/BACK 返回；CAN 会话中长按停止 |
 | 同步脉冲 | PC6 | 已配置输出；FPGA 侧输入尚未接入，不能当作已有同步链路 |
 | OLED | PB12/PB13/PB15、PC4/PC5 | 128×64 SSD1306 4 线 SPI |
 

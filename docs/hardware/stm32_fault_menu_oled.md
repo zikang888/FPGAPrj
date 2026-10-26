@@ -1,6 +1,6 @@
-# STM32F407 错误事件菜单与 SSD1306 OLED 接线
+# STM32F407 正常/错误事件分级菜单与 SSD1306 OLED 接线
 
-状态：初版实现于 2026-10-12；2026-10-22 更新执行计数和 CAN 会话入口，已编译和主机测试，尚未烧录或完成波形实测。协议规则由成员 C 维护，详见 `docs/protocol-rules/protocol_rules.yaml`。
+状态：初版实现于 2026-10-12；2026-10-27 改为四协议母菜单，增加正常测试入口。已完成主机测试和双配置编译，尚未烧录或完成波形实测。新界面须烧录 [最新发布 HEX](../../stm32_f407/firmware/releases/README.md)，旧 HEX 不会自动更新。协议规则由成员 C 维护，详见 `docs/protocol-rules/protocol_rules.yaml`。
 
 ## OLED 选择
 
@@ -20,13 +20,34 @@ OLED 使用独立 GPIO 软件 SPI，不占用连接板载 W25Q128 的 SPI1 PA4�
 
 ## 选择和触发
 
-- PA0 短按（25 ms～799 ms）：选择下一个事件；20 项循环。
-- PA0 长按（至少 800 ms）：执行当前事件一次；OLED 显示结果码。
+- 母菜单 `PROTOCOL SELECT`：SPI、UART、I2C、CAN 四项。PA0 短按切换，长按（至少 800 ms）进入子菜单；导航不发送。按下与松开均作 30 ms 稳定消抖，建议短按 100～300 ms。
+- 子菜单：先列正常测试，再列该协议的错误事件，最后一项为 `BACK`。短按选下一项（自动翻页、循环），长按执行所选测试一次；选 `BACK` 长按返回母菜单，不发送。
+- 同一次持续长按最多确认一次：长按进入子菜单后，必须稳定松开至少 30 ms 再长按才执行，不会直接连发；上电一直按住时须先松手才启用按键。没有定时循环发送的新模式；需要多轮时仍用原串口命令的 count。
 - USART1 115200 8N1：`fault list`、`fault select N`、`fault run`、`fault run N`。N 为 0～19。
-- 菜单新增 `RUNS N` 显示本次开机的触发尝试次数。周期 CAN 测试使用独立会话，见 [CAN 会话使用说明](can_session_firmware_usage.md)；会话运行时长按停止，结束后可返回原菜单。
-- 每次执行输出一条 JSONL，含 case ID、协议、动作、STM32 返回码和说明。对发波形的用例，`0` 只表示 STM32 完成了动作；仍需 FPGA 事件或独立采集确认线上实际波形。I²C NACK 与 CAN ACK 探测则由 STM32 检查对应状态。`-5` 表示当前硬件路径不支持。
+- `fault select N` 会定位到对应协议子菜单，但不会执行；`fault run` 仍执行最后选定的故障，正常菜单选择不会将它改成另一故障。下面的索引始终是原串口故障索引，不是新屏幕行号。
+- `NORMAL N FAULT M` 分别显示本次开机正常菜单触发尝试次数、故障触发尝试次数（含串口故障触发），不代表成功帧数。导航不会增加计数，复位后清零。
+- 同步测试先显示 `RUNNING PLEASE WAIT`，完成显示 `LOCAL OK R 0` / `LOCAL ERROR R -N`；不支持显示 `DISABLED/NEEDS HW`。运行很短时可能看不清 RUNNING，可核对累计计数和 USART1 的 JSONL/SUMMARY。PB2 LED 在正常测试开始时清零，最终成功置位，失败清零；LED 不是逐帧脉冲。
+- CAN NORMAL TX、RAW/LIVE 使用独立会话页：显示 RUNNING/DONE/STOPPED/ERROR、REQ、DONE、PASS/FAIL。长按停止；完成后短按回原子菜单，不切到下一项；恢复失败时短按不退出，长按重试恢复。见 [CAN 会话使用说明](can_session_firmware_usage.md)。
+- 测试沿用原日志：普通 runner 输出含 case ID 的 JSONL/SUMMARY，CAN TX/RAW/LIVE 输出独立会话记录，不新分配 case ID。`0` 或 `LOCAL OK` 只表示本地动作/对应比较完成，不能表示 FPGA 检出。I²C NACK 与 CAN ACK 探测检查本地状态；`-5` 表示当前路径不支持。
 
-## 事件菜单
+## 正常测试子项
+
+| 母菜单 | 子项 | 一次确认执行内容 | 对端/注意事项 |
+|---|---|---|---|
+| SPI | NORMAL JEDEC | case 1001：一笔 `9F 00 00 00`，比较缓存的实物 ID | W25Q128；上电原有 case 1000 探测最多 3 次不变；若缓存无效，本次先重新探测，探测失败不执行 1001 |
+| SPI | NORMAL PATTERN | case 1002：一次原有确定性字节模式事务 | 复用 SPI1 与原 CS；成功只表示本地传输完成，不校验 Flash 内容 |
+| UART | NORMAL ECHO | case 2001：USART3 发送 8 字节，然后收 8 字节比较 | PD8→对端 RX，PD9←对端 TX；也可隔离外部驱动后本地 TX/RX 回环。缺少回送会超时，不能据此说未发送 |
+| I2C | NORMAL EEPROM | case 3001：0x50、0x0100 起写 16 字节、等待就绪、读回比较 | AT24C256、3.3 V 上拉；会覆盖 0x0100～0x010F，必须预留为测试区 |
+| CAN | NORMAL TX | `normal 1 100` 会话：提交 1 帧，500 kbit/s、标准 ID 0x321、8 字节，不要求应用层回送 | 必须有收发器、正确终端与另一正常节点 ACK；不是无对端物理回环。不新增冻结 case ID |
+| CAN | NORMAL ECHO | case 4001：发送 1 帧后接收同 ID/数据并比较 | 对端须主动发送回送帧；ACK 不等于应用层 echo |
+
+每个协议均保留其原有引脚、速率和测试格式；未新增协议规则或启用原先关闭的故障宏。CAN Bus-off 故障是例外：一次确认启动原有最多 64 次的有界尝试，不是只发一帧。
+
+## 与旧代码的隔离
+
+纯菜单状态与映射在 `common/src/mc_ui_menu.c`，消抖/长按锁存在 `common/src/mc_button.c`，实际发送仍在原 runner、fault hooks、CAN 会话后端；规范 Keil 工程已加入新源文件。`mc_faults.c`、20 个故障 ID、协议规则、HAL 引脚初始化和接收环形缓冲不改。CAN 持有资源或恢复未成功时，仍阻止其他测试进入。两个新板级主机测试分别编译默认和故障宏配置，调用真实 `mc_board_app.c`、模拟按键和 I/O 验证，不等价于电气/时序实测。验证见 [本次记录](../test-results/2026-10-27-hierarchical-menu.md)。
+
+## 错误事件子项（原串口索引不变）
 
 | 索引 | 事件 | 当前执行方式/前提 |
 |---:|---|---|

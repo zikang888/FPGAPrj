@@ -1,7 +1,7 @@
 # 成员 C 实施规划：STM32F407 真值节点、Zynq PS 事件解析与系统验证
 
-版本：v1.2
-日期：2026-10-22（核对当前固件、CAN 会话与发布文件）
+版本：v1.3
+日期：2026-10-27（增加正常测试和四协议分级菜单；接线不变）
 目标平台：立创·天空星 STM32F407VGT6 + Zynq-7020 多协议通信分析平台
 
 当前规则文件仍为成员 C 所有的草案（`approval_status: draft_member_c_owned`）。文中冻结/验收条款是协作流程要求，不表示所有协议已经获批或通过实板验收。
@@ -125,7 +125,7 @@ FPGA 统一事件 ───┼→ 成员 C 比对与报告
 
 OLED 使用独立 GPIO 软件 SPI，PB13/PB15/PB12 在驱动中配置为 GPIO 输出，不启用硬件 SPI2；不占用 W25Q128 和 FPGA 监听所使用的 PA4～PA7。OLED 无需 MISO，PB14 不接。当前驱动不能直接用于只有 VCC/GND/SCL/SDA 的 4 针 I²C OLED，也不能直接套用到其他控制器或分辨率的屏幕。
 
-引脚初始化和显示驱动位于 [mc_oled.c](../../stm32_f407/app/src/mc_oled.c)，由 [mc_board_app.c](../../stm32_f407/app/src/mc_board_app.c) 调用。接好屏幕后，使用板载 PA0 按键：短按（25～799 ms）切换事件，长按（至少 800 ms）执行当前事件一次；屏幕显示选择项和执行结果。也可通过 USART1 输入 `fault list`、`fault select N`、`fault run`，其中 N 为 0～19。
+引脚初始化和显示驱动位于 [mc_oled.c](../../stm32_f407/app/src/mc_oled.c)，由 [mc_board_app.c](../../stm32_f407/app/src/mc_board_app.c) 调用。新版屏幕母菜单为 SPI/UART/I2C/CAN；板载 PA0 短按切换（建议 100～300 ms，30 ms 稳定消抖）、长按（至少 800 ms）进入。子菜单含该协议正常测试、原错误事件及 BACK；长按测试项执行一轮，长按 BACK 返回，进入/返回不发送。同一持续长按不会重复执行。原 USART1 `fault list`、`fault select N`、`fault run` 保持不变，其中 N 为原故障索引 0～19。正常项与硬件前提、计数和结果显示见 [菜单说明](stm32_fault_menu_oled.md#正常测试子项)。
 
 屏幕显示的执行返回码只反映 STM32 侧结果；FPGA 检测结果仍需从 FPGA 事件或计数核对。菜单详细清单和故障连线见 [STM32 错误事件菜单与 OLED 接线](stm32_fault_menu_oled.md)。当前 OLED 已完成编译检查，显示效果仍需实板验收。
 
@@ -331,7 +331,7 @@ UART 是推挽点对点连接，不需要上拉。双方都是 3.3 V CMOS 才能
 - `txn`：STM32 本地事务号，不等同于 FPGA 事务号。
 - SPI 的 `data` 为实际 RX，`tx` 为实际发送；不能只记期望值。第一字节 RX 和实物 ID 均以实测为准。
 - `result=0` 表示本节点判定通过，负值表示参数、IO、超时或校验失败。
-- 当前启动文本包含工作时钟和协议速率，不自动输出完整提交号/板号。每批采集需操作人员额外记录 HEX 的来源提交、校验值和板号，详见 [固件发布说明](../../stm32_f407/firmware/releases/2026-10-22-5d788f8/README.md)。
+- 当前脚本构建的启动文本含 `BUILD rev=<7位源提交>`、CAN 宏、工作时钟与协议速率；不自动输出板号或完整提交号。每批采集仍需额外记录 HEX 来源提交、校验值和板号，详见 [最新固件发布目录](../../stm32_f407/firmware/releases/README.md)。
 
 `can test` 输出独立 `kind=can_session` 记录，没有正式 `case` 字段，不能交给旧的 20 项 case 映射器直接计数；字段及通过含义见 [CAN 会话日志说明](can_session_firmware_usage.md#4-日志与结果含义)。
 

@@ -6,6 +6,8 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 add_library(mc_protocol_common
     common/src/mc_cli_rx.c
+    common/src/mc_button.c
+    common/src/mc_ui_menu.c
     common/src/mc_protocol_runner.c
     common/src/mc_truth_log.c
     common/src/mc_faults.c
@@ -22,6 +24,36 @@ else()
 endif()
 
 enable_testing()
+add_executable(mc_button_tests tests/test_button.c)
+target_link_libraries(mc_button_tests PRIVATE mc_protocol_common)
+if(MSVC)
+    target_compile_options(mc_button_tests PRIVATE /W4)
+else()
+    target_compile_options(mc_button_tests PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME mc_button_tests COMMAND mc_button_tests)
+add_executable(mc_ui_menu_tests tests/test_ui_menu.c)
+target_link_libraries(mc_ui_menu_tests PRIVATE mc_protocol_common)
+if(MSVC)
+    target_compile_options(mc_ui_menu_tests PRIVATE /W4)
+else()
+    target_compile_options(mc_ui_menu_tests PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME mc_ui_menu_tests COMMAND mc_ui_menu_tests)
+foreach(profile IN ITEMS default can_fault)
+    add_executable(mc_board_menu_${profile}_tests tests/test_board_menu.c)
+    target_include_directories(mc_board_menu_${profile}_tests PRIVATE tests/fake_board app/include hal/include firmware/Core/Inc)
+    target_link_libraries(mc_board_menu_${profile}_tests PRIVATE mc_protocol_common)
+    if(profile STREQUAL "can_fault")
+        target_compile_definitions(mc_board_menu_${profile}_tests PRIVATE MC_ENABLE_CAN_FAULTS MC_ENABLE_CAN_RAW_GPIO MC_ENABLE_CAN_LIVE)
+    endif()
+    if(MSVC)
+        target_compile_options(mc_board_menu_${profile}_tests PRIVATE /W4)
+    else()
+        target_compile_options(mc_board_menu_${profile}_tests PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    endif()
+    add_test(NAME mc_board_menu_${profile}_tests COMMAND mc_board_menu_${profile}_tests)
+endforeach()
 add_executable(mc_protocol_tests tests/test_protocol_runner.c)
 target_link_libraries(mc_protocol_tests PRIVATE mc_protocol_common)
 if(MSVC)
