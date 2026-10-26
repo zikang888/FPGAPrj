@@ -26,7 +26,7 @@
 - AT24C256：I²C1 PB6/PB7，100 kHz。
 - CAN：CAN1 PD0/PD1，500 kbit/s，必须外接 SN65HVD230。
 - 用户 LED：PB2；用户按键：PA0；同步脉冲：PC6。
-- OLED：PB12/PB13/PB15、PC4/PC5；四协议母菜单、正常/故障子菜单，显示触发次数与本地结果；[操作及接线](docs/hardware/stm32_fault_menu_oled.md)。
+- OLED：PB12/PB13/PB15、PC4/PC5；四协议母菜单、6 个正常项＋图片指定 10 个错误项，其他故障只从屏幕隐藏；[操作及接线](docs/hardware/stm32_fault_menu_oled.md)。
 - CAN 周期会话：normal/echo 默认可用；noack/bitrate 需显式启用故障宏。
 - CAN GPIO 位流：故障版可播放合法/CRC/填充/格式语料，复用 PD1；接线与命令见 [RAW 说明](docs/hardware/can_gpio_bitstream_usage.md)。
 - CAN LIVE：故障版通过 PD1→PA1 同步、PA2＋独立收发器叠加脉冲，检查发送位错误和真实 BOFF/恢复，见 [使用说明](docs/hardware/can_live_injection_usage.md)。
@@ -34,7 +34,7 @@
 ## 验证状态
 
 - Keil ARMCC 5.06：0 error、0 warning。
-- 当前电脑端测试：13/13 passed（原 9 项回归，加按键消抖、菜单映射、默认/故障配置真实板级应用模拟）；[本次验证](docs/test-results/2026-10-27-hierarchical-menu.md)。
+- 当前电脑端测试：13/13 passed（原 9 项回归，加按键消抖、菜单映射、默认/故障配置真实板级应用模拟）；[10 项屏幕白名单验证](docs/test-results/2026-10-27-oled-fault-whitelist.md)。
 - 尚未完成天空星、外设模块和 FPGA 的实板联调。
 
 ## 协作规则

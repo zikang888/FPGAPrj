@@ -131,5 +131,5 @@ fault run
 ## CAN LIVE：实时叠加与控制器错误
 
 新故障版开启 `MC_ENABLE_CAN_LIVE`；`can live start disturb|bit|busoff COUNT PERIOD [EVERY]`。
-PD1→PA1 同步，PA2/TIM2 驱动独立收发器，不与 RAW 同时使用；菜单 15/19 可触发。
+PD1→PA1 同步，PA2/TIM2 驱动独立收发器，不与 RAW 同时使用；精简菜单已隐藏 15/19，仍可分别通过串口 `fault run 15`、`fault run 19` 触发。
 只凭控制器位错误/BOFF 和恢复状态判断目标，不以发出脉冲或次数代替。详见 [接线/命令](../docs/hardware/can_live_injection_usage.md)、[测试记录](../docs/test-results/2026-10-22-can-live.md)。
