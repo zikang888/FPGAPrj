@@ -10,6 +10,7 @@
 #include "mc_can_raw_hal.h"
 #include "mc_can_live_hal.h"
 #include "mc_build_profile.h"
+#include "mc_button.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,9 +37,7 @@ static uint32_t g_last_dropped;
 static int g_discard_line;
 static uint8_t g_jedec_id[3];
 static int g_jedec_id_valid;
-static GPIO_PinState g_previous_key_state;
-static uint32_t g_key_down_ms;
-static int g_long_press_ran;
+static mc_button_t g_button;
 static mc_fault_id_t g_selected_fault;
 static int g_last_fault_result = MC_ERR_UNSUPPORTED;
 static int g_has_fault_result;
@@ -535,9 +534,9 @@ void mc_board_app_init(void)
     g_last_dropped = 0U;
     g_uart_rx_errors = 0U;
     g_jedec_id_valid = 0;
-    g_previous_key_state = HAL_GPIO_ReadPin(USER_KEY_GPIO_Port, USER_KEY_Pin);
-    g_key_down_ms = HAL_GetTick();
-    g_long_press_ran = 0;
+    mc_button_init(&g_button,
+                   HAL_GPIO_ReadPin(USER_KEY_GPIO_Port, USER_KEY_Pin) == GPIO_PIN_SET,
+                   HAL_GetTick());
     g_selected_fault = MC_FAULT_SPI_PARTIAL;
     g_has_fault_result = 0;
     can_result = can_start_accept_all();
@@ -564,7 +563,7 @@ void mc_board_app_init(void)
 void mc_board_app_poll(void)
 {
     uint8_t value;
-    GPIO_PinState key_state;
+    mc_button_event_t key_event;
     unsigned int processed = 0U;
 
     if (g_console_rx.dropped != g_last_dropped || g_uart_rx_errors != 0U) {
@@ -604,13 +603,10 @@ void mc_board_app_poll(void)
         }
     }
 
-    key_state = HAL_GPIO_ReadPin(USER_KEY_GPIO_Port, USER_KEY_Pin);
-    if (key_state == GPIO_PIN_SET && g_previous_key_state == GPIO_PIN_RESET) {
-        g_key_down_ms = HAL_GetTick();
-        g_long_press_ran = 0;
-    } else if (key_state == GPIO_PIN_SET && !g_long_press_ran &&
-               (uint32_t)(HAL_GetTick() - g_key_down_ms) >= 800U) {
-        g_long_press_ran = 1;
+    key_event = mc_button_poll(&g_button,
+                              HAL_GPIO_ReadPin(USER_KEY_GPIO_Port, USER_KEY_Pin) == GPIO_PIN_SET,
+                              HAL_GetTick());
+    if (key_event == MC_BUTTON_LONG) {
         if (visible_can()->state == MC_CAN_RUNNING) {
             (void)mc_can_session_stop(visible_can());
             print_can_status();
@@ -627,8 +623,7 @@ void mc_board_app_poll(void)
         } else {
             trigger_selected_fault();
         }
-    } else if (key_state == GPIO_PIN_RESET && g_previous_key_state == GPIO_PIN_SET &&
-               !g_long_press_ran && (uint32_t)(HAL_GetTick() - g_key_down_ms) >= 25U) {
+    } else if (key_event == MC_BUTTON_SHORT) {
         if (!g_can_session.held && !g_raw_session.held && !g_live_session.held) {
             if (g_can_view) {
                 g_can_view = 0;
@@ -638,7 +633,6 @@ void mc_board_app_poll(void)
             }
         }
     }
-    g_previous_key_state = key_state;
     if (visible_can()->state == MC_CAN_RUNNING) {
         mc_can_session_tick(visible_can(), HAL_GetTick());
         if (visible_can()->state != MC_CAN_RUNNING) { print_can_status(); }

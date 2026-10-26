@@ -6,6 +6,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 add_library(mc_protocol_common
     common/src/mc_cli_rx.c
+    common/src/mc_button.c
     common/src/mc_protocol_runner.c
     common/src/mc_truth_log.c
     common/src/mc_faults.c
@@ -22,6 +23,14 @@ else()
 endif()
 
 enable_testing()
+add_executable(mc_button_tests tests/test_button.c)
+target_link_libraries(mc_button_tests PRIVATE mc_protocol_common)
+if(MSVC)
+    target_compile_options(mc_button_tests PRIVATE /W4)
+else()
+    target_compile_options(mc_button_tests PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME mc_button_tests COMMAND mc_button_tests)
 add_executable(mc_protocol_tests tests/test_protocol_runner.c)
 target_link_libraries(mc_protocol_tests PRIVATE mc_protocol_common)
 if(MSVC)
