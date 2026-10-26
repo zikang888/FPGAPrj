@@ -32,6 +32,8 @@
 
 使用 `stm32_f407/firmware/build_profiles.ps1 -Profile all` 首轮构建：默认版和故障版均 0 error / 0 warning。正式发布必须先提交固件源代码，再使用 `-Release` 重编译，记录干净源提交、程序大小、HEX SHA-256 和文件大小，见 [发布目录](../../stm32_f407/firmware/releases/README.md)。不覆盖历史 HEX；新菜单必须烧录新版 HEX 才可使用。
 
+正式构建已完成：源提交 `89283c63e0bf04cffb38fcc57cfe14b914910bad`，使用 `-Profile all -Release`；两配置均 0 error / 0 warning，13 项测试复跑通过。默认版 Code/RO/RW/ZI 为 34042/4218/96/5952，故障版为 42090/5106/96/7200。HEX、SHA-256 和 manifest 见 [本次发布](../../stm32_f407/firmware/releases/2026-10-27-89283c6/README.md)。与旧基线的比较确认协议 YAML、runner/logger、20 个原故障、HAL/Core/IOC 与 USART1 RX 缓冲未改。
+
 ## 未完成的实板验收
 
 本次未连接实板、未烧录、未采集总线波形，不声明屏幕显示或 FPGA 检出已实测。下列项目需人工完成：

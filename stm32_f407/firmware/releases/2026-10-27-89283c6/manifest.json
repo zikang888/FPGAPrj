@@ -1,0 +1,49 @@
+{
+  "schema_version": 2,
+  "published_on": "2026-10-27",
+  "source_branch": "memberC/stm32-f407",
+  "source_commit": "89283c63e0bf04cffb38fcc57cfe14b914910bad",
+  "build_id": "89283C6",
+  "target": "STM32F407VGT6",
+  "toolchain": "Keil ARMCC 5.06 update 2",
+  "flash_origin": "0x08000000",
+  "host_tests_passed": 13,
+  "host_tests_total": 13,
+  "board_tested": false,
+  "pl_can_verified": false,
+  "profiles": [
+    {
+      "name": "default",
+      "hex": "sky_star-default-89283c6.hex",
+      "defines": ["USE_HAL_DRIVER", "STM32F407xx", "MC_BUILD_REV=0x89283c6"],
+      "MC_ENABLE_CAN_FAULTS": false,
+      "MC_ENABLE_CAN_RAW_GPIO": false,
+      "MC_ENABLE_CAN_LIVE": false,
+      "MC_ENABLE_I2C_FAULT_LINKS": false,
+      "file_size_bytes": 107937,
+      "sha256": "2106E0EE58D322B993208FB1EBA8A20ACAD0F54A8BC9928B3B1AE3B45B7F58CB",
+      "program_size": {"code": 34042, "ro_data": 4218, "rw_data": 96, "zi_data": 5952},
+      "build_errors": 0,
+      "build_warnings": 0
+    },
+    {
+      "name": "can_fault",
+      "hex": "sky_star-can-fault-89283c6.hex",
+      "defines": ["USE_HAL_DRIVER", "STM32F407xx", "MC_BUILD_REV=0x89283c6", "MC_ENABLE_CAN_FAULTS", "MC_ENABLE_CAN_RAW_GPIO", "MC_ENABLE_CAN_LIVE"],
+      "MC_ENABLE_CAN_FAULTS": true,
+      "MC_ENABLE_CAN_RAW_GPIO": true,
+      "MC_ENABLE_CAN_LIVE": true,
+      "MC_ENABLE_I2C_FAULT_LINKS": false,
+      "raw_output_pin": "PD1",
+      "live_sync_input": "PA1 (TIM2_CH2), jumper from PD1",
+      "live_output_pin": "PA2 (TIM2_CH3), independent transceiver TXD",
+      "live_bitrate": 500000,
+      "live_modes": ["disturb", "bit", "busoff"],
+      "file_size_bytes": 133063,
+      "sha256": "C66603B99D79F46262E0FB748EA9619913B1D60C5B0387BBD086064EED9966F4",
+      "program_size": {"code": 42090, "ro_data": 5106, "rw_data": 96, "zi_data": 7200},
+      "build_errors": 0,
+      "build_warnings": 0
+    }
+  ]
+}
