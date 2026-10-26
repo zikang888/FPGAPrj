@@ -1,6 +1,6 @@
 # STM32F407 正常/错误事件分级菜单与 SSD1306 OLED 接线
 
-状态：初版实现于 2026-10-12；2026-10-27 改为四协议母菜单，增加正常测试入口。已完成主机测试和双配置编译，尚未烧录或完成波形实测。新界面须烧录 [最新发布 HEX](../../stm32_f407/firmware/releases/README.md)，旧 HEX 不会自动更新。协议规则由成员 C 维护，详见 `docs/protocol-rules/protocol_rules.yaml`。
+状态：初版实现于 2026-10-12；2026-10-27 改为四协议母菜单，增加正常测试入口，随后按用户图片将屏幕错误项精简为 10 项；底层 20 个故障和串口保留。已完成主机测试，尚未烧录或完成波形实测。新界面须烧录 [最新发布 HEX](../../stm32_f407/firmware/releases/README.md)，旧 HEX 不会自动更新。协议规则由成员 C 维护，详见 `docs/protocol-rules/protocol_rules.yaml`。
 
 ## OLED 选择
 
@@ -24,7 +24,7 @@ OLED 使用独立 GPIO 软件 SPI，不占用连接板载 W25Q128 的 SPI1 PA4�
 - 子菜单：先列正常测试，再列该协议的错误事件，最后一项为 `BACK`。短按选下一项（自动翻页、循环），长按执行所选测试一次；选 `BACK` 长按返回母菜单，不发送。
 - 同一次持续长按最多确认一次：长按进入子菜单后，必须稳定松开至少 30 ms 再长按才执行，不会直接连发；上电一直按住时须先松手才启用按键。没有定时循环发送的新模式；需要多轮时仍用原串口命令的 count。
 - USART1 115200 8N1：`fault list`、`fault select N`、`fault run`、`fault run N`。N 为 0～19。
-- `fault select N` 会定位到对应协议子菜单，但不会执行；`fault run` 仍执行最后选定的故障，正常菜单选择不会将它改成另一故障。下面的索引始终是原串口故障索引，不是新屏幕行号。
+- `fault select N` 对可见事件定位到对应子菜单，对隐藏事件返回其协议母菜单；均不会执行。`fault run` 仍执行最后选定的故障（包括隐藏项），正常菜单选择不会将它改成另一故障。下面的索引始终是原串口故障索引，不是新屏幕行号。
 - `NORMAL N FAULT M` 分别显示本次开机正常菜单触发尝试次数、故障触发尝试次数（含串口故障触发），不代表成功帧数。导航不会增加计数，复位后清零。
 - 同步测试先显示 `RUNNING PLEASE WAIT`，完成显示 `LOCAL OK R 0` / `LOCAL ERROR R -N`；不支持显示 `DISABLED/NEEDS HW`。运行很短时可能看不清 RUNNING，可核对累计计数和 USART1 的 JSONL/SUMMARY。PB2 LED 在正常测试开始时清零，最终成功置位，失败清零；LED 不是逐帧脉冲。
 - CAN NORMAL TX、RAW/LIVE 使用独立会话页：显示 RUNNING/DONE/STOPPED/ERROR、REQ、DONE、PASS/FAIL。长按停止；完成后短按回原子菜单，不切到下一项；恢复失败时短按不退出，长按重试恢复。见 [CAN 会话使用说明](can_session_firmware_usage.md)。
@@ -41,13 +41,24 @@ OLED 使用独立 GPIO 软件 SPI，不占用连接板载 W25Q128 的 SPI1 PA4�
 | CAN | NORMAL TX | `normal 1 100` 会话：提交 1 帧，500 kbit/s、标准 ID 0x321、8 字节，不要求应用层回送 | 必须有收发器、正确终端与另一正常节点 ACK；不是无对端物理回环。不新增冻结 case ID |
 | CAN | NORMAL ECHO | case 4001：发送 1 帧后接收同 ID/数据并比较 | 对端须主动发送回送帧；ACK 不等于应用层 echo |
 
-每个协议均保留其原有引脚、速率和测试格式；未新增协议规则或启用原先关闭的故障宏。CAN Bus-off 故障是例外：一次确认启动原有最多 64 次的有界尝试，不是只发一帧。
+每个协议均保留其原有引脚、速率和测试格式；未新增协议规则或启用原先关闭的故障宏。CAN Bus-off 已从屏幕隐藏，原串口 `fault run 19` 的最多 64 次有界尝试逻辑保留。
 
 ## 与旧代码的隔离
 
 纯菜单状态与映射在 `common/src/mc_ui_menu.c`，消抖/长按锁存在 `common/src/mc_button.c`，实际发送仍在原 runner、fault hooks、CAN 会话后端；规范 Keil 工程已加入新源文件。`mc_faults.c`、20 个故障 ID、协议规则、HAL 引脚初始化和接收环形缓冲不改。CAN 持有资源或恢复未成功时，仍阻止其他测试进入。两个新板级主机测试分别编译默认和故障宏配置，调用真实 `mc_board_app.c`、模拟按键和 I/O 验证，不等价于电气/时序实测。验证见 [本次记录](../test-results/2026-10-27-hierarchical-menu.md)。
 
-## 错误事件子项（原串口索引不变）
+## 屏幕保留的错误事件（仅图片中的 10 项）
+
+| 母菜单 | 屏幕错误项 | 原串口索引 |
+|---|---|---|
+| SPI | PARTIAL BYTE、SHORT TXN、EXTRA BYTE | 0、1、2 |
+| UART | BAD STOP、BREAK | 4、5 |
+| I2C | ADDR NACK、NO STOP（图片中的 missing STOP） | 9、13 |
+| CAN | STUFF ERROR、CRC ERROR、FORM ERROR | 16、17、18 |
+
+正常测试 6 项、四协议母菜单、BACK 和按键方式均不变。SPI MISO CHECK，UART BAUD OFFSET/SHORT TXN/PARITY，I2C BUSY NACK/SDA LOW/SCL LOW，以及 CAN NO ACK/BIT/BUS OFF 仅从屏幕隐藏，不删除实现、不改用例编号或串口权限。CAN 屏幕错误项仍需故障版 HEX 和 RAW 接线；默认版不会因为可见而启用故障宏。
+
+## 后台保留清单（20 项，并非屏幕显示清单）
 
 | 索引 | 事件 | 当前执行方式/前提 |
 |---:|---|---|
@@ -72,7 +83,7 @@ OLED 使用独立 GPIO 软件 SPI，不占用连接板载 W25Q128 的 SPI1 PA4�
 
 RAW 的接线、串口命令和两个编译开关见 [GPIO 位流使用说明](can_gpio_bitstream_usage.md)。本版复用 PD1 和现有收发器，先暂停 bxCAN，再 GPIO 播放并恢复；不启用 PB0/PB1。`mc_faults.c` 和旧 case ID 不改，故障版板级菜单 16～18 改派到独立 `kind=can_raw` 会话，不能据其完成结果报告 PL 检出。
 
-LIVE 接线/第三个编译开关见 [LIVE 使用说明](can_live_injection_usage.md)。菜单 15/19 改派独立 LIVE 后端，要求增加收发器 I；不要照 RAW 仅一个收发器的接法使用。
+LIVE 接线/第三个编译开关见 [LIVE 使用说明](can_live_injection_usage.md)。15/19 已从屏幕隐藏；串口 `fault run 15` / `fault run 19` 仍派发独立 LIVE 后端，要求增加收发器 I；不要照 RAW 仅一个收发器的接法使用。
 
 ## FPGA 配合
 

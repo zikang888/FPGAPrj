@@ -26,6 +26,7 @@ mc_ui_entry_t mc_ui_menu_entry(mc_ui_protocol_t protocol, unsigned int index);
 void mc_ui_menu_next(mc_ui_menu_t *menu);
 /* Navigation returns NAVIGATE, never a transmission action. One call per hold. */
 mc_ui_entry_t mc_ui_menu_confirm(mc_ui_menu_t *menu);
+/* Hidden, valid CLI cases return UNSUPPORTED and show their protocol parent. */
 int mc_ui_menu_select_fault(mc_ui_menu_t *menu, mc_fault_id_t fault);
 
 #endif

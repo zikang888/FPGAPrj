@@ -1,7 +1,14 @@
 #include "mc_ui_menu.h"
 
 static const unsigned int k_first[] = {0U, 4U, 9U, 14U};
-static const unsigned int k_fault_count[] = {4U, 5U, 5U, 6U};
+/* Display whitelist only. All 20 backend/CLI fault IDs remain unchanged. */
+static const unsigned int k_fault_count[] = {3U, 2U, 2U, 3U};
+static const mc_fault_id_t k_visible_faults[][3] = {
+    {MC_FAULT_SPI_PARTIAL, MC_FAULT_SPI_SHORT, MC_FAULT_SPI_EXTRA},
+    {MC_FAULT_UART_BAD_STOP, MC_FAULT_UART_BREAK, MC_FAULT_COUNT},
+    {MC_FAULT_I2C_ADDRESS_NACK, MC_FAULT_I2C_NO_STOP, MC_FAULT_COUNT},
+    {MC_FAULT_CAN_STUFF, MC_FAULT_CAN_CRC, MC_FAULT_CAN_FORM}
+};
 static const unsigned int k_normal_count[] = {2U, 1U, 1U, 2U};
 static const mc_ui_entry_t k_normals[][2] = {
     {{"NORMAL JEDEC", MC_UI_SPI_JEDEC, MC_FAULT_COUNT},
@@ -45,7 +52,7 @@ mc_ui_entry_t mc_ui_menu_entry(mc_ui_protocol_t protocol, unsigned int index)
         entry.label = "BACK";
         entry.action = MC_UI_BACK;
     } else {
-        entry.fault = (mc_fault_id_t)(k_first[protocol] + index - k_normal_count[protocol]);
+        entry.fault = k_visible_faults[protocol][index - k_normal_count[protocol]];
         entry.label = mc_fault_get(entry.fault)->label;
         entry.action = MC_UI_FAULT;
     }
@@ -82,15 +89,27 @@ mc_ui_entry_t mc_ui_menu_confirm(mc_ui_menu_t *menu)
 
 int mc_ui_menu_select_fault(mc_ui_menu_t *menu, mc_fault_id_t fault)
 {
-    unsigned int p;
+    unsigned int p, i;
     if (menu == 0 || (unsigned int)fault >= MC_FAULT_COUNT) { return MC_ERR_ARGUMENT; }
     for (p = 0U; p < MC_UI_PROTOCOL_COUNT; ++p) {
-        if ((unsigned int)fault >= k_first[p] && (unsigned int)fault < k_first[p] + k_fault_count[p]) {
-            menu->protocol = (mc_ui_protocol_t)p;
-            menu->item = k_normal_count[p] + (unsigned int)fault - k_first[p];
-            menu->in_submenu = 1U;
-            return MC_OK;
+        for (i = 0U; i < k_fault_count[p]; ++i) {
+            if (fault == k_visible_faults[p][i]) {
+                menu->protocol = (mc_ui_protocol_t)p;
+                menu->item = k_normal_count[p] + i;
+                menu->in_submenu = 1U;
+                return MC_OK;
+            }
         }
     }
-    return MC_ERR_ARGUMENT;
+    /* A CLI-only selection must not reveal a hidden row or highlight a
+       different test. Return to that protocol's parent instead. */
+    for (p = MC_UI_PROTOCOL_COUNT; p > 0U; --p) {
+        if ((unsigned int)fault >= k_first[p - 1U]) {
+            menu->protocol = (mc_ui_protocol_t)(p - 1U);
+            menu->item = 0U;
+            menu->in_submenu = 0U;
+            break;
+        }
+    }
+    return MC_ERR_UNSUPPORTED;
 }

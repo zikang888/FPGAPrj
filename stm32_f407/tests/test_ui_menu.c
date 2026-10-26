@@ -10,11 +10,17 @@ int main(void)
     mc_ui_entry_t entry;
     unsigned int p, i, normals = 0U;
     unsigned int seen[MC_FAULT_COUNT] = {0};
+    const unsigned int expected[MC_FAULT_COUNT] = {
+        1U, 1U, 1U, 0U, 1U, 1U, 0U, 0U, 0U, 1U,
+        0U, 0U, 0U, 1U, 0U, 0U, 1U, 1U, 1U, 0U
+    };
+    const unsigned int counts[] = {6U, 4U, 4U, 6U};
     mc_ui_menu_init(&menu);
     CHECK(menu.protocol == MC_UI_SPI && !menu.in_submenu);
     /* Parent navigation is always output-free, including wraparound. */
     for (p = 0U; p < MC_UI_PROTOCOL_COUNT; ++p) {
         CHECK(menu.protocol == (mc_ui_protocol_t)p);
+        CHECK(mc_ui_menu_count(menu.protocol) == counts[p]);
         entry = mc_ui_menu_confirm(&menu);
         CHECK(entry.action == MC_UI_NAVIGATE && menu.in_submenu && menu.item == 0U);
         for (i = 0U; i < mc_ui_menu_count(menu.protocol); ++i) {
@@ -40,10 +46,17 @@ int main(void)
     }
     CHECK(menu.protocol == MC_UI_SPI && normals == 6U);
     for (i = 0U; i < MC_FAULT_COUNT; ++i) {
-        CHECK(seen[i] == 1U);
-        CHECK(mc_ui_menu_select_fault(&menu, (mc_fault_id_t)i) == MC_OK);
-        CHECK(mc_ui_menu_confirm(&menu).fault == (mc_fault_id_t)i);
-        CHECK(mc_ui_menu_entry(menu.protocol, menu.item).action == MC_UI_FAULT);
+        CHECK(seen[i] == expected[i]);
+        if (expected[i]) {
+            CHECK(mc_ui_menu_select_fault(&menu, (mc_fault_id_t)i) == MC_OK);
+            CHECK(mc_ui_menu_confirm(&menu).fault == (mc_fault_id_t)i);
+            CHECK(mc_ui_menu_entry(menu.protocol, menu.item).action == MC_UI_FAULT);
+        } else {
+            CHECK(mc_ui_menu_select_fault(&menu, (mc_fault_id_t)i) == MC_ERR_UNSUPPORTED);
+            CHECK(!menu.in_submenu && menu.item == 0U);
+            CHECK(strcmp(mc_ui_protocol_name(menu.protocol), mc_fault_get((mc_fault_id_t)i)->protocol) == 0);
+            CHECK(mc_ui_menu_confirm(&menu).action == MC_UI_NAVIGATE);
+        }
     }
     CHECK(mc_ui_menu_select_fault(&menu, MC_FAULT_COUNT) == MC_ERR_ARGUMENT);
     CHECK(mc_ui_menu_select_fault(0, MC_FAULT_SPI_PARTIAL) == MC_ERR_ARGUMENT);
@@ -57,6 +70,6 @@ int main(void)
     CHECK(mc_ui_menu_entry(MC_UI_I2C, 0U).action == MC_UI_I2C_EEPROM);
     CHECK(mc_ui_menu_entry(MC_UI_CAN, 0U).action == MC_UI_CAN_TX);
     CHECK(mc_ui_menu_entry(MC_UI_CAN, 1U).action == MC_UI_CAN_ECHO);
-    puts("UI menu: four parents, six normal actions, 20 unchanged faults, BACK and CLI mapping PASS");
+    puts("UI menu: four parents, six normal actions, exactly 10 visible faults, hidden CLI mapping and BACK PASS");
     return 0;
 }

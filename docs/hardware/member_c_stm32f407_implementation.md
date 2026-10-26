@@ -169,7 +169,7 @@ PS CAN 经 EMIO RX ← 第二只 SN65HVD230 R/RXD
 
 ### 5.4 实际故障复现与检测规划
 
-新增的 [CAN 实际故障复现规划](can_real_fault_reproduction_plan.md) 列出故障场景。第一阶段 `can test` 见 [会话说明](can_session_firmware_usage.md)；[RAW](can_gpio_bitstream_usage.md) 复用 PD1/TIM1/DMA，菜单 16～18 播放预制错误；新 [LIVE](can_live_injection_usage.md) 通过 PD1→PA1 跳线、PA2/TIM2＋独立收发器 I 叠加脉冲，菜单 15/19 执行位错误/真实 BOFF 与恢复。PB0/PB1 不启用；原 case ID/规则未改，CAN PL 检测仍待接入。
+新增的 [CAN 实际故障复现规划](can_real_fault_reproduction_plan.md) 列出故障场景。第一阶段 `can test` 见 [会话说明](can_session_firmware_usage.md)；[RAW](can_gpio_bitstream_usage.md) 复用 PD1/TIM1/DMA，屏幕 16～18 播放预制错误；[LIVE](can_live_injection_usage.md) 通过 PD1→PA1 跳线、PA2/TIM2＋独立收发器 I 叠加脉冲，串口 `fault run 15/19` 分别执行位错误/真实 BOFF 与恢复（15/19 已从精简屏幕隐藏，实际输入时分别使用 15 或 19）。PB0/PB1 不启用；原 case ID/规则未改，CAN PL 检测仍待接入。
 
 ## 6. I²C 连接与配合
 

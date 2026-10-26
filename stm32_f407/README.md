@@ -35,7 +35,7 @@ docs/protocol-rules/protocol_rules.yaml
 - CAN 标准帧回环。
 - JSONL 真值日志与本地事务号。
 - SPI JSONL 同时记录 `data`（实际 RX）和 `tx`（实际发送），日志失败会反馈到测试结果。
-- 四协议母菜单＋正常/错误事件子菜单：6 个正常测试入口、20 项原故障，另设 BACK；PA0 短按切换、长按进入/执行/返回，原 `fault` 串口命令不变。见 [菜单说明](../docs/hardware/stm32_fault_menu_oled.md)。
+- 四协议母菜单＋正常/错误事件子菜单：6 个正常测试入口、图片指定的 10 项错误，另设 BACK；其余 10 项仅从屏幕隐藏，底层 20 项原故障和 `fault` 串口命令不变。PA0 短按切换、长按进入/执行/返回，见 [菜单说明](../docs/hardware/stm32_fault_menu_oled.md)。
 - 128×64 SSD1306 4 线 SPI OLED 页面，使用 PB12/PB13/PB15、PC4/PC5。
 - USART1 使用中断接收缓冲，整行回显；连续快速发送不再逐字节阻塞发送。
 - 可选同步脉冲接口。

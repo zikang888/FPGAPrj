@@ -177,7 +177,10 @@ int main(void)
     tap(); CHECK(!g_can_view && g_menu.protocol == MC_UI_CAN);
 #endif
 #if MC_BUILD_CAN_LIVE
-    run_command("fault select 15"); hold();
+    run_command("fault select 15");
+    CHECK(!g_menu.in_submenu && g_menu.protocol == MC_UI_CAN && !g_can_view);
+    run_command("fault run 15"); /* hidden from OLED, backend/CLI still available */
+    mc_board_app_poll(); mc_board_app_poll();
     CHECK(g_can_backend == 2 && g_can_view && g_live_session.config.mode == MC_CAN_LIVE_BIT);
     CHECK(g_live_session.state != MC_CAN_RUNNING && !g_live_session.held);
     tap(); CHECK(!g_can_view && g_menu.protocol == MC_UI_CAN);

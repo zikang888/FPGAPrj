@@ -28,8 +28,8 @@ PA1/PA2 是当前固件未占用的 MCU 信号名，不是 FPGA 球位或排针�
 | `can live status` | 查看次数、脉冲、位错误、BOFF、恢复前后 ESR 和恢复返回码 |
 | `can live stop` | 停止、释放 I、终止请求、恢复外设配置；长按 PA0 同样停止 |
 | `can live recover` | 恢复失败后重试；运行中相当于停止 |
-| 故障版菜单 **15：CAN BIT** | 长按执行一次 LIVE bit，500 kbit/s |
-| 故障版菜单 **19：CAN BUS OFF** | 长按启动最多 64 次、100 ms 间隔的 Bus-off 用例；不是一帧就保证 Bus-off |
+| `fault run 15`（原 CAN BIT） | 执行一次 LIVE bit，500 kbit/s；精简版已从屏幕隐藏，底层不改 |
+| `fault run 19`（原 CAN BUS OFF） | 启动最多 64 次、100 ms 间隔的 Bus-off 用例；不是一帧就保证 Bus-off；精简版已从屏幕隐藏 |
 
 语法：`can live start disturb|bit|busoff COUNT PERIOD_MS [EVERY]`。disturb/bit 的 COUNT=1～10000，PERIOD=50～60000 ms，EVERY=1～60000，省略为 1。busoff 的 COUNT=32～128、PERIOD=50～1000 ms，EVERY 必须为 1；起始 TEC/REC 须为零、未处于 warning/passive/BOFF，避免把历史状态当作本轮结果。未满足时返回验证错误，可先建立正常基线或复位后检查。
 
