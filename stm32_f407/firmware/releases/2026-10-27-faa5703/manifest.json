@@ -1,0 +1,65 @@
+{
+  "schema_version": 2,
+  "published_on": "2026-10-27",
+  "source_branch": "fix/stm32-button-debounce",
+  "source_commit": "faa570380a028662f426ffc57f6af06332921dc7",
+  "build_id": "FAA5703",
+  "target": "STM32F407VGT6",
+  "toolchain": "Keil ARMCC 5.06 update 2",
+  "flash_origin": "0x08000000",
+  "host_tests_passed": 10,
+  "host_tests_total": 10,
+  "board_tested": false,
+  "pl_can_verified": false,
+  "profiles": [
+    {
+      "name": "default",
+      "hex": "sky_star-default-faa5703.hex",
+      "file_size_bytes": 103437,
+      "sha256": "15A4A7EBF3DBC331DD646EABC55CB4F489E141497DEB30C036E286FB95B97F77",
+      "defines": [
+        "USE_HAL_DRIVER",
+        "STM32F407xx",
+        "MC_BUILD_REV=0xfaa5703"
+      ],
+      "MC_ENABLE_CAN_FAULTS": false,
+      "MC_ENABLE_CAN_RAW_GPIO": false,
+      "MC_ENABLE_CAN_LIVE": false,
+      "MC_ENABLE_I2C_FAULT_LINKS": false,
+      "program_size": {
+        "code": 32718,
+        "ro_data": 3954,
+        "rw_data": 84,
+        "zi_data": 5940
+      },
+      "build_errors": 0,
+      "build_warnings": 0
+    },
+    {
+      "name": "can_fault",
+      "hex": "sky_star-can-fault-faa5703.hex",
+      "file_size_bytes": 128547,
+      "sha256": "B6A341EA7E23181EB0C2474D8506D4878EFBD11E9C40E70E9B8F62520E9EF399",
+      "defines": [
+        "USE_HAL_DRIVER",
+        "STM32F407xx",
+        "MC_BUILD_REV=0xfaa5703",
+        "MC_ENABLE_CAN_FAULTS",
+        "MC_ENABLE_CAN_RAW_GPIO",
+        "MC_ENABLE_CAN_LIVE"
+      ],
+      "MC_ENABLE_CAN_FAULTS": true,
+      "MC_ENABLE_CAN_RAW_GPIO": true,
+      "MC_ENABLE_CAN_LIVE": true,
+      "MC_ENABLE_I2C_FAULT_LINKS": false,
+      "program_size": {
+        "code": 40758,
+        "ro_data": 4842,
+        "rw_data": 84,
+        "zi_data": 7188
+      },
+      "build_errors": 0,
+      "build_warnings": 0
+    }
+  ]
+}
