@@ -66,9 +66,9 @@ static inline int event_audit_snapshot(const uint32_t *words,
             if (view.event_type == 0U) ++out->protocol_starts[view.protocol];
             if (view.event_type == 1U) ++out->protocol_data[view.protocol];
             if (view.event_type == 2U) ++out->protocol_ends[view.protocol];
-            if (view.event_type == 0x3FU) ++out->protocol_errors[view.protocol];
+            if (event_view_is_error(&view)) ++out->protocol_errors[view.protocol];
         }
-        if (view.event_type == 0x3FU) ++out->errors;
+        if (event_view_is_error(&view)) ++out->errors;
         else if (view.event_type > 2U) ++out->extensions;
         if (view.protocol == 2U && view.event_type == 1U &&
             view.payload_length != 2U) ++out->spi_invalid_data_length;

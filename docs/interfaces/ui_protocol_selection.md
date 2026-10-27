@@ -1,5 +1,9 @@
 # HOME 协议选择接口（2026-10-10）
 
+> 2026-10-23 更新：SPI、UART、I2C、CAN 四个 PL listener 均已接入。
+> 下文保留的 `NOT WIRED` 表格是 2026-10-10 的历史状态，当前行为以
+> [HOME 四协议波形](home_waveform.md) 和最新实板测试记录为准。
+
 HOME 上的 SPI / UART / I2C / CAN 四个标签是**运行时界面选择**，不是
 可编程硬件多路复用器。`software/src/ui_protocol_select.h` 定义选择状态、
 触摸矩形及可用性判定；`PlatformUiStatus.selected_protocol` 保存当前选择，

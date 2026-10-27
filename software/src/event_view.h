@@ -61,6 +61,9 @@ static inline void event_view_type_text(uint8_t event_type, char out[8])
 
 static inline int event_view_is_error(const EventView *view)
 {
+    uint8_t code = (uint8_t)(view->flags >> 8);
+    if (view->protocol == 3U && (code == 3U || code == 4U)) return 0;
+    if (view->protocol == 4U && (code == 2U || code == 5U)) return 0;
     return view->event_type == 0x3FU;
 }
 

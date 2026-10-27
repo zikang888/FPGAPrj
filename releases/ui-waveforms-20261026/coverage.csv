@@ -1,0 +1,29 @@
+﻿case,command,events,FPGA_errors,coverage,captured_error_types
+01-spi-jedec,spi jedec 1,6,0,已捕获；按实际事件核对,
+02-uart-rx,uart loop 1,10,0,已捕获；按实际事件核对,
+03-i2c-eeprom,i2c eeprom 1,25,0,已捕获；按实际事件核对,BUSY NACK (INFO)
+04-can-loop,can loop 1,23,2,已捕获；按实际事件核对,BIT ERROR; FORM ERROR; STUFF ERROR
+10-spi-partial,fault run 0,2,1,已捕获；按实际事件核对,PARTIAL (4 bits; levels unknown)
+11-spi-short,fault run 1,4,1,已捕获；按实际事件核对,
+12-spi-extra,fault run 2,7,1,已捕获；按实际事件核对,
+13-spi-miso-check,fault run 3,0,0,注入不支持／需外部条件,
+14-uart-bad-stop,fault run 4,2,1,已捕获；按实际事件核对,BAD STOP
+15-uart-break,fault run 5,2,1,已捕获；按实际事件核对,BREAK
+16-uart-baud-offset,fault run 6,4,1,已捕获；按实际事件核对,SHORT
+17-uart-short,fault run 7,5,1,已捕获；按实际事件核对,SHORT
+18-uart-parity,fault run 8,0,0,注入不支持／需外部条件,
+19-i2c-address-nack,fault run 9,7,1,已捕获；按实际事件核对,ADDRESS NACK
+20-i2c-busy-nack,fault run 10,73,0,已捕获；按实际事件核对,BUSY NACK (INFO)
+21-i2c-sda-low,fault run 11,0,0,注入不支持／需外部条件,
+22-i2c-scl-low,fault run 12,0,0,注入不支持／需外部条件,
+23-i2c-no-stop,fault run 13,3,1,已捕获；按实际事件核对,MISSING STOP
+24-can-no-ack,fault run 14,21,0,已捕获；按实际事件核对,
+25-can-bit,fault run 15,0,0,注入不支持／需外部条件,
+26-can-stuff,fault run 16,0,0,未捕获事件,
+27-can-crc,fault run 17,0,0,未捕获事件,
+28-can-form,fault run 18,0,0,未捕获事件,
+29-can-bus-off,fault run 19,0,0,注入不支持／需外部条件,
+30-can-stuff-recovered,fault run 16,12,2,已捕获；按实际事件核对,NO ACK; STUFF ERROR
+31-can-crc-recovered,fault run 17,12,2,已捕获；按实际事件核对,CRC ERROR; NO ACK
+32-can-form-recovered,fault run 18,11,1,已捕获；按实际事件核对,FORM ERROR
+33-can-no-ack-single-frame,can raw start valid 500000 1 100,11,1,已捕获；按实际事件核对,NO ACK

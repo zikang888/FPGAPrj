@@ -80,9 +80,18 @@ static inline ErrorObservation error_model_get(const ErrorModel *model,
 /* AT24C256's write-cycle NACK is an expected temporary busy indication.
  * A caller must apply a timeout/retry rule before reporting a persistent
  * I2C failure under another code; a busy count alone is informational. */
+/* Keep numeric IDs reserved for ABI compatibility; retired cases are not
+ * user-facing detections and must not affect results or saved totals. */
+static inline int error_model_code_enabled(ErrorCode code)
+{
+    return (unsigned int)code < ERROR_CODE_COUNT &&
+           code != ERROR_I2C_SDA_STUCK && code != ERROR_I2C_SCL_STUCK &&
+           code != ERROR_CAN_BIT && code != ERROR_CAN_FORM;
+}
+
 static inline int error_model_code_is_fault(ErrorCode code)
 {
-    return code != ERROR_I2C_BUSY_NACK;
+    return error_model_code_enabled(code) && code != ERROR_I2C_BUSY_NACK;
 }
 
 static inline int error_model_has_fault(const ErrorModel *model)

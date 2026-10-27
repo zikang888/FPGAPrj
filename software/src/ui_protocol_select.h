@@ -22,14 +22,24 @@ static inline const char *ui_protocol_name(UiProtocol protocol)
            name[protocol] : "UNKNOWN";
 }
 
-/* PL capability bits: passive SPI=2, passive UART RX=5. */
+/* PL capability bits: passive SPI=2, UART RX=5, I2C=7 and CAN=8. */
 static inline int ui_protocol_live(UiProtocol protocol, uint32_t capabilities)
 {
     if (protocol == UI_PROTOCOL_SPI)
         return (capabilities & (1U << 2)) != 0U;
     if (protocol == UI_PROTOCOL_UART)
         return (capabilities & (1U << 5)) != 0U;
+    if (protocol == UI_PROTOCOL_I2C)
+        return (capabilities & (1U << 7)) != 0U;
+    if (protocol == UI_PROTOCOL_CAN)
+        return (capabilities & (1U << 8)) != 0U;
     return 0;
+}
+
+static inline uint8_t ui_protocol_event_id(UiProtocol protocol)
+{
+    static const uint8_t event_id[UI_PROTOCOL_COUNT] = {2U, 1U, 3U, 4U};
+    return (unsigned int)protocol < UI_PROTOCOL_COUNT ? event_id[protocol] : 0U;
 }
 
 /* Event ABI IDs differ from UI order: UART=1, SPI=2, I2C=3, CAN=4.
@@ -39,11 +49,10 @@ static inline int ui_protocol_event_matches(UiProtocol selected,
                                             uint8_t event_protocol,
                                             int demo_snapshot)
 {
-    static const uint8_t event_id[UI_PROTOCOL_COUNT] = {2U, 1U, 3U, 4U};
     if ((unsigned int)selected >= UI_PROTOCOL_COUNT) return 0;
     if (demo_snapshot != 0)
         return selected == UI_PROTOCOL_SPI && event_protocol == 0U;
-    return event_protocol == event_id[selected];
+    return event_protocol == ui_protocol_event_id(selected);
 }
 
 static inline uint16_t ui_protocol_tab_left(UiProtocol protocol)

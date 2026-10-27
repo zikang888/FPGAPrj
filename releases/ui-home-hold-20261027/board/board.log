@@ -1,0 +1,24 @@
+SEND COM10 : protocol spi
+SEND COM10 : view home
+???Z?
+SEND COM6 : spi jedec 1
+spi jedec 1
+{"seq":3,"ms":2581289,"case":1001,"txn":3,"protocol":"SPI","op":"JEDEC_ID","dir":"TXRX","data":"FFEF4018","tx":"9F000000","result":0,"detail":"matched"}
+SUMMARY protocol=SPI_JEDEC result=0 iterations=1 passed=1 failed=0
+> 
+SEND COM10 : status
+TEST STATUS id=0 running=0 events=0 errors=0 history=0
+
+FRAMEBUFFER before DONE
+SEND COM10 : capture again
+HOME CAPTURE ARMED protocol=SPI
+
+FRAMEBUFFER waiting DONE
+SEND COM6 : spi jedec 1
+spi jedec 1
+{"seq":4,"ms":2611228,"case":1001,"txn":4,"protocol":"SPI","op":"JEDEC_ID","dir":"TXRX","data":"FFEF4018","tx":"9F000000","result":0,"detail":"matched"}
+SUMMARY protocol=SPI_JEDEC result=0 iterations=1 passed=1 failed=0
+> 
+SEND COM10 : status
+TEST STATUS id=0 running=0 events=0 errors=0 history=0
+

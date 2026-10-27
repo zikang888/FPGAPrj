@@ -1,0 +1,27 @@
+JTAG_FREQUENCY_HZ 5000000
+ABI_OK 0x40000000 1297109588
+ABI_OK 0x40000004 65544
+ABI_OK 0x4000000C 511
+
+Downloading Program -- D:/fpga_class/FPGAPrj/ab_new_board_test_20261017/build/ui-workflow-20261023/sdk/platform_app/Debug/platform_app.elf
+	section, .text: 0x00100000 - 0x001180f3
+	section, .init: 0x001180f4 - 0x0011810b
+	section, .fini: 0x0011810c - 0x00118123
+	section, .rodata: 0x00118124 - 0x0011e5c3
+	section, .data: 0x0011e5c8 - 0x0011edf7
+	section, .eh_frame: 0x0011edf8 - 0x0011edfb
+	section, .mmu_tbl: 0x00120000 - 0x00123fff
+	section, .ARM.exidx: 0x00124000 - 0x00124007
+	section, .init_array: 0x00124008 - 0x0012400b
+	section, .fini_array: 0x0012400c - 0x0012400f
+	section, .bss: 0x00124020 - 0x0012f47f
+	section, .heap: 0x0012f480 - 0x0013147f
+	section, .stack: 0x00131480 - 0x00134c7f
+
+  0%    0MB   0.0MB/s  ??:?? ETA
+ 55%    0MB   0.1MB/s  ??:?? ETA
+100%    0MB   0.1MB/s  00:01    
+
+Setting PC to Program Start Address 0x00100000
+Successfully downloaded D:/fpga_class/FPGAPrj/ab_new_board_test_20261017/build/ui-workflow-20261023/sdk/platform_app/Debug/platform_app.elf
+GRID_ELF_DOWNLOAD_DONE

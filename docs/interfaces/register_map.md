@@ -5,9 +5,9 @@ Base address: `0x4000_0000`, aperture: 64 KiB.
 | Offset | Name | Access | Reset/value |
 |---:|---|---|---:|
 | `0x0000` | SYS_ID | RO | `0x4D505254` |
-| `0x0004` | VERSION | RO | `0x00010007` |
-| `0x0008` | BUILD_ID | RO | `0x20261020` |
-| `0x000C` | CAPABILITIES | RO | bit0=`event snapshot`, bit1=`external ready/valid ingress`, bit2=`SPI Mode-0 monitor`, bit3=`SPI acceptance statistics`, bit4=`W25Q128 JEDEC semantic checks`, bit5=`UART RX monitor`, bit6=`manual test sessions/filter/freeze` |
+| `0x0004` | VERSION | RO | `0x00010008` |
+| `0x0008` | BUILD_ID | RO | `0x20261021` |
+| `0x000C` | CAPABILITIES | RO | bit0=`event snapshot`, bit1=`external ready/valid ingress`, bit2=`SPI Mode-0 monitor`, bit3=`SPI acceptance statistics`, bit4=`W25Q128 JEDEC semantic checks`, bit5=`UART RX monitor`, bit6=`manual test sessions/filter/freeze`, bit7=`I2C passive monitor`, bit8=`CAN passive monitor` |
 | `0x0010` | SYS_CTRL | RW | `0` |
 | `0x0014` | SYS_STATUS | RO | bit0=`ready` |
 | `0x0018` | IO_MODE | RW | `0` (`OBSERVE`) |
@@ -41,7 +41,28 @@ Base address: `0x4000_0000`, aperture: 64 KiB.
 | `0x0088` | UART_LAST_TRANSACTION_ID | RO | most recently accepted UART transaction ID in bits `[23:0]` |
 | `0x008C` | UART_STATS_STATUS | RO | bit3=`any UART error counter is non-zero` |
 | `0x0090` | UART_STATS_CTRL | WO | write bit0=`1` to clear UART statistics |
-| `0x1000` | CAPTURE_CTRL | WO | bit0=`ARM`, bit1=`ACK`, bit2=`SOFT_TRIGGER`, bit3=`FREEZE`; ARM bit4=`manual`, bits19:16=`protocol filter` (0 all, 1 UART, 2 SPI) |
+| `0x0094` | I2C_EVENT_COUNT | RO | accepted I2C START + DATA + END + ERROR events |
+| `0x0098` | I2C_DATA_COUNT | RO | accepted address/data-byte events after the ninth clock |
+| `0x009C` | I2C_ADDRESS_NACK_COUNT | RO | NACK for an address other than the post-write busy case |
+| `0x00A0` | I2C_BUSY_NACK_COUNT | RO | address `0x50` NACK inside the post-write busy window |
+| `0x00A4` | I2C_SDA_STUCK_COUNT | RO | SDA held low beyond the monitor timeout |
+| `0x00A8` | I2C_SCL_STUCK_COUNT | RO | SCL held low beyond the monitor timeout |
+| `0x00AC` | I2C_MISSING_STOP_COUNT | RO | active transaction timed out without STOP while SDA is high |
+| `0x00B0` | I2C_LAST_TRANSACTION_ID | RO | most recently accepted I2C transaction ID in bits `[23:0]` |
+| `0x00B4` | I2C_STATS_CTRL | WO | write bit0=`1` to clear I2C statistics |
+| `0x00B8` | CAN_EVENT_COUNT | RO | accepted CAN START + DATA + END + ERROR events |
+| `0x00BC` | CAN_FRAME_COUNT | RO | standard CAN 2.0A frames reaching EOF |
+| `0x00C0` | CAN_ACK_ERROR_COUNT | RO | recessive ACK slot |
+| `0x00C4` | CAN_BIT_ERROR_COUNT | RO | reserved at zero in the passive two-transceiver build (no local TX intent) |
+| `0x00C8` | CAN_STUFF_ERROR_COUNT | RO | invalid stuffing from SOF through CRC sequence |
+| `0x00CC` | CAN_CRC_ERROR_COUNT | RO | received CRC differs from calculated CRC-15 |
+| `0x00D0` | CAN_FORM_ERROR_COUNT | RO | dominant delimiter/EOF bit or unsupported frame form |
+| `0x00D4` | CAN_BUS_OFF_COUNT | RO | reserved at zero; bus-off is controller state and cannot be proven by this passive tap |
+| `0x00D8` | CAN_LAST_TRANSACTION_ID | RO | most recently accepted CAN transaction ID in bits `[23:0]` |
+| `0x00DC` | CAN_STATS_CTRL | WO | write bit0=`1` to clear CAN statistics |
+| `0x00E0` | CAN_CTRL | RW | bit0=`ACK_ENABLE`, bit1=`ECHO_ENABLE`, bit2 rising edge=`TX_TEST_REQUEST` (ID 0x321, DLC 8, data 00..07); reset value 3; return bit2 to 0 before another request |
+| `0x00E4` | CAN_STATUS | RO | bit0 is the synchronized RXD level (1 recessive, 0 dominant) |
+| `0x1000` | CAPTURE_CTRL | WO | bit0=`ARM`, bit1=`ACK`, bit2=`SOFT_TRIGGER`, bit3=`FREEZE`; ARM bit4=`manual`, bits19:16=`protocol filter` (0 all, 1 UART, 2 SPI, 3 I2C, 4 CAN) |
 | `0x1004` | CAPTURE_STATUS | RO | bit0=`active`, bit1=`ready`, bit2=`overwritten`, bit3=`core or external dropped_count != 0`, bit4=`manual mode` |
 | `0x1008` | SNAPSHOT_ID | RO | increments for each completed snapshot |
 | `0x100C` | SNAPSHOT_COUNT | RO | valid event count, maximum 256 |
@@ -103,6 +124,18 @@ byte; for short transaction it is the received byte count. UART is fixed to
 identified uniquely from a passive line and therefore appears as corrupted
 DATA and/or bad-stop events; parity error is deliberately unavailable in 8N1.
 
+For I2C DATA, `flags[15]` is NACK, `flags[14]` marks the address byte,
+`flags[13]` is R/W for an address byte, and `flags[7:0]` is the sampled byte.
+I2C ERROR uses `flags[15:8]` as reason: `0x01` address NACK, `0x02` EEPROM
+busy NACK, `0x03` SDA stuck low, `0x04` SCL stuck low and `0x05` missing STOP.
+The current listener is fixed to the STM32/AT24C256 100 kHz use case.
+
+For CAN DATA, `flags[15:8]` is the payload-byte index and `flags[7:0]` is the
+payload byte. CAN END carries `{DLC, reserved, standard_id[10:0]}` in flags.
+CAN ERROR uses `flags[15:8]` as reason: `0x01` ACK, `0x02` bit, `0x03` stuff,
+`0x04` CRC and `0x05` form. The current decoder accepts standard CAN 2.0A
+data frames at 500 kbit/s. It does not claim CAN controller bus-off state.
+
 Protocol listeners use ready/valid transfer semantics. An event is accepted only
 when `evt_valid && evt_ready` is true. A producer asserting `evt_valid` while
 `evt_ready` is low must keep `evt_data` and `evt_trigger` stable. Arbitration or
@@ -129,9 +162,11 @@ The core exposes one generic external producer port:
 `ext_evt_dropped_count[31:0]` for producer-side loss observability. It and the
 AXI virtual self-test source feed the same round-robin arbiter and the same
 snapshot buffer. In this integration build the external port is fed by a fair
-two-source mux combining the passive SPI Mode-0 and UART RX monitors. The UART
+four-source fair mux combining the passive SPI, UART, I2C and CAN monitors. The UART
 input is W5; AA9 is reserved as FPGA UART TX and is held at the idle-high level,
-with no frames transmitted. The legacy C candidate map is P7-38/35/36/33
+with no frames transmitted. I2C uses AA6=SCL and V8=SDA. CAN uses W8 for the
+STM32 TXD intent node and AA11 for the transceiver RXD/bus-observation node;
+both are FPGA inputs, never CANH/CANL. The legacy C candidate map is P7-38/35/36/33
 (CS/SCLK/MOSI/MISO, FPGA AA8/AB10/AB9/AA7) in the legacy candidate only.
 The current integration XDC follows A's P7-2/1/3/4 map (FPGA
 U11/U12/U10/U9). Check the selected BIT and actual wiring before programming.

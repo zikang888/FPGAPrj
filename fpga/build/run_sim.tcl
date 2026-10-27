@@ -53,6 +53,10 @@ run_test $build_dir spi_snapshot_path_tb \
     "PASS: SPI waveform through ready/valid arbiter to triggered snapshot"
 run_test $build_dir uart_rx_monitor_tb \
     "PASS: UART 115200-style 8N1 data, end, bad stop, break, short transaction and backpressure"
+run_test $build_dir i2c_passive_monitor_tb \
+    "PASS: I2C ACK/NACK, busy window and missing STOP monitor"
+run_test $build_dir can_passive_monitor_tb \
+    "PASS: CAN 2.0A receive, ACK, CRC and echo node"
 set_property top multi_protocol_core_tb [get_filesets sim_1]
 close_project
 puts "SIMULATION_COMPLETED"

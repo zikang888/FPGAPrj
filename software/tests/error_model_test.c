@@ -1,6 +1,9 @@
 #include <assert.h>
 #include "../src/error_model.h"
 #include "../src/stm32_fault_bridge.h"
+#include "../src/event_audit.h"
+#include "../src/event_diagnostics.h"
+#include <string.h>
 
 int main(void)
 {
@@ -57,12 +60,40 @@ int main(void)
         unsigned int i;
         ErrorCode code = ERROR_SPI_PARTIAL_BYTE;
         for (i = 0U; i < ERROR_CODE_COUNT; ++i) {
-            assert(stm32_fault_case_to_error(case_ids[i], &code));
-            assert(code == (ErrorCode)i);
+            if (error_model_code_enabled((ErrorCode)i)) {
+                assert(stm32_fault_case_to_error(case_ids[i], &code));
+                assert(code == (ErrorCode)i);
+            } else {
+                assert(!stm32_fault_case_to_error(case_ids[i], &code));
+            }
         }
         assert(!stm32_fault_case_to_error(1001U, &code));
         assert(!stm32_fault_case_to_error(1091U, 0));
         assert(code == ERROR_CAN_BUS_OFF);
+    }
+    {
+        static const ErrorCode retired[4] = {ERROR_I2C_SDA_STUCK,
+            ERROR_I2C_SCL_STUCK,ERROR_CAN_BIT,ERROR_CAN_FORM};
+        uint32_t words[5][4] = {{0}};
+        EventAudit audit;
+        unsigned int i;
+        char label[8];
+        error_model_init(&copy);
+        for (i=0U;i<4U;++i) {
+            assert(error_model_report(&copy,retired[i],ERROR_ORIGIN_PL,99U));
+            assert(!error_model_code_is_fault(retired[i]));
+            words[i][1]=((i<2U?3U:4U)<<28)|(0x3FU<<16)|
+                         ((i==0U?3U:i==1U?4U:i==2U?2U:5U)<<8);
+            assert(!event_diagnostic_label(&words[0][0],4U,i,label));
+            assert(strcmp(label,"INFO")==0);
+        }
+        assert(!error_model_has_fault(&copy));
+        words[4][1]=(4U<<28)|(0x3FU<<16)|(3U<<8); /* retained stuff */
+        assert(event_audit_snapshot(&words[0][0],5U,UINT32_MAX,&audit));
+        assert(audit.errors==1U && audit.protocol_errors[3]==0U &&
+               audit.protocol_errors[4]==1U);
+        assert(event_diagnostic_label(&words[0][0],5U,4U,label));
+        assert(strcmp(label,"STUFF")==0);
     }
     return 0;
 }

@@ -23,6 +23,10 @@ foreach new_source [list \
     [file join $source_dir fpga rtl protocol uart_rx_monitor.sv] \
     [file join $source_dir fpga rtl top spi_mode0_monitor_bd.v] \
     [file join $source_dir fpga rtl top uart_rx_monitor_bd.v] \
+    [file join $source_dir fpga rtl protocol i2c_passive_monitor.sv] \
+    [file join $source_dir fpga rtl protocol can_passive_monitor.sv] \
+    [file join $source_dir fpga rtl top i2c_passive_monitor_bd.v] \
+    [file join $source_dir fpga rtl top can_passive_monitor_bd.v] \
     [file join $source_dir fpga rtl top protocol_event_mux_bd.v] \
 ] {
     if {[get_files -quiet $new_source] eq ""} {
@@ -120,6 +124,8 @@ set ps_reset [create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset:5.0 pro
 set core [create_bd_cell -type module -reference multi_protocol_core multi_protocol_core_0]
 set spi_monitor [create_bd_cell -type module -reference spi_mode0_monitor_bd spi_mode0_monitor_0]
 set uart_monitor [create_bd_cell -type module -reference uart_rx_monitor_bd uart_rx_monitor_0]
+set i2c_monitor [create_bd_cell -type module -reference i2c_passive_monitor_bd i2c_passive_monitor_0]
+set can_monitor [create_bd_cell -type module -reference can_passive_monitor_bd can_passive_monitor_0]
 set event_mux [create_bd_cell -type module -reference protocol_event_mux_bd protocol_event_mux_0]
 
 set vdma [create_bd_cell -type ip -vlnv xilinx.com:ip:axi_vdma:6.3 axi_vdma_0]
@@ -167,6 +173,16 @@ connect_bd_net [get_bd_pins protocol_event_mux_0/uart_ready] [get_bd_pins uart_r
 connect_bd_net [get_bd_pins uart_rx_monitor_0/evt_trigger] [get_bd_pins protocol_event_mux_0/uart_trigger]
 connect_bd_net [get_bd_pins uart_rx_monitor_0/evt_data] [get_bd_pins protocol_event_mux_0/uart_data]
 connect_bd_net [get_bd_pins uart_rx_monitor_0/dropped_event_count] [get_bd_pins protocol_event_mux_0/uart_dropped]
+connect_bd_net [get_bd_pins i2c_passive_monitor_0/evt_valid] [get_bd_pins protocol_event_mux_0/i2c_valid]
+connect_bd_net [get_bd_pins protocol_event_mux_0/i2c_ready] [get_bd_pins i2c_passive_monitor_0/evt_ready]
+connect_bd_net [get_bd_pins i2c_passive_monitor_0/evt_trigger] [get_bd_pins protocol_event_mux_0/i2c_trigger]
+connect_bd_net [get_bd_pins i2c_passive_monitor_0/evt_data] [get_bd_pins protocol_event_mux_0/i2c_data]
+connect_bd_net [get_bd_pins i2c_passive_monitor_0/dropped_event_count] [get_bd_pins protocol_event_mux_0/i2c_dropped]
+connect_bd_net [get_bd_pins can_passive_monitor_0/evt_valid] [get_bd_pins protocol_event_mux_0/can_valid]
+connect_bd_net [get_bd_pins protocol_event_mux_0/can_ready] [get_bd_pins can_passive_monitor_0/evt_ready]
+connect_bd_net [get_bd_pins can_passive_monitor_0/evt_trigger] [get_bd_pins protocol_event_mux_0/can_trigger]
+connect_bd_net [get_bd_pins can_passive_monitor_0/evt_data] [get_bd_pins protocol_event_mux_0/can_data]
+connect_bd_net [get_bd_pins can_passive_monitor_0/dropped_event_count] [get_bd_pins protocol_event_mux_0/can_dropped]
 connect_bd_net [get_bd_pins protocol_event_mux_0/evt_valid] [get_bd_pins multi_protocol_core_0/ext_evt_valid]
 connect_bd_net [get_bd_pins multi_protocol_core_0/ext_evt_ready] [get_bd_pins protocol_event_mux_0/evt_ready]
 connect_bd_net [get_bd_pins protocol_event_mux_0/evt_trigger] [get_bd_pins multi_protocol_core_0/ext_evt_trigger]
@@ -174,6 +190,8 @@ connect_bd_net [get_bd_pins protocol_event_mux_0/evt_data] [get_bd_pins multi_pr
 connect_bd_net [get_bd_pins protocol_event_mux_0/dropped_event_count] [get_bd_pins multi_protocol_core_0/ext_evt_dropped_count]
 connect_bd_net [get_bd_pins multi_protocol_core_0/event_timestamp] [get_bd_pins spi_mode0_monitor_0/timestamp]
 connect_bd_net [get_bd_pins multi_protocol_core_0/event_timestamp] [get_bd_pins uart_rx_monitor_0/timestamp]
+connect_bd_net [get_bd_pins multi_protocol_core_0/event_timestamp] [get_bd_pins i2c_passive_monitor_0/timestamp]
+connect_bd_net [get_bd_pins multi_protocol_core_0/event_timestamp] [get_bd_pins can_passive_monitor_0/timestamp]
 connect_bd_intf_net [get_bd_intf_pins axi_interconnect_0/M01_AXI] [get_bd_intf_pins axi_vdma_0/S_AXI_LITE]
 connect_bd_intf_net [get_bd_intf_pins axi_interconnect_0/M02_AXI] [get_bd_intf_pins v_tc_0/ctrl]
 connect_bd_intf_net [get_bd_intf_pins axi_vdma_0/M_AXI_MM2S] [get_bd_intf_pins axi_smc_0/S00_AXI]
@@ -186,6 +204,8 @@ foreach pin [list \
     multi_protocol_core_0/s_axi_aclk \
     spi_mode0_monitor_0/clk \
     uart_rx_monitor_0/clk \
+    i2c_passive_monitor_0/clk \
+    can_passive_monitor_0/clk \
     protocol_event_mux_0/clk \
     axi_vdma_0/s_axi_lite_aclk \
     axi_vdma_0/m_axi_mm2s_aclk \
@@ -211,6 +231,8 @@ foreach pin [list \
     multi_protocol_core_0/s_axi_aresetn \
     spi_mode0_monitor_0/rst_n \
     uart_rx_monitor_0/rst_n \
+    i2c_passive_monitor_0/rst_n \
+    can_passive_monitor_0/rst_n \
     protocol_event_mux_0/rst_n \
     axi_vdma_0/axi_resetn \
     axi_smc_0/aresetn \
@@ -240,6 +262,10 @@ set spi_mosi [create_bd_port -dir I SPI_MOSI]
 set spi_miso [create_bd_port -dir I SPI_MISO]
 set uart_rx [create_bd_port -dir I UART_RX]
 set uart_tx [create_bd_port -dir O UART_TX]
+set i2c_scl [create_bd_port -dir I I2C_SCL]
+set i2c_sda [create_bd_port -dir I I2C_SDA]
+set can_tx [create_bd_port -dir O CAN_TX]
+set can_rx [create_bd_port -dir I CAN_RX]
 set uart_tx_idle [create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 xlconstant_uart_tx]
 set_property -dict [list CONFIG.CONST_WIDTH {1} CONFIG.CONST_VAL {1}] $uart_tx_idle
 connect_bd_net $lcd_data [get_bd_pins rgb888torgb565_0/rgb565_data]
@@ -255,6 +281,14 @@ connect_bd_net $spi_mosi [get_bd_pins spi_mode0_monitor_0/spi_mosi]
 connect_bd_net $spi_miso [get_bd_pins spi_mode0_monitor_0/spi_miso]
 connect_bd_net $uart_rx [get_bd_pins uart_rx_monitor_0/uart_rx]
 connect_bd_net $uart_tx [get_bd_pins xlconstant_uart_tx/dout]
+connect_bd_net $i2c_scl [get_bd_pins i2c_passive_monitor_0/i2c_scl]
+connect_bd_net $i2c_sda [get_bd_pins i2c_passive_monitor_0/i2c_sda]
+connect_bd_net $can_tx [get_bd_pins can_passive_monitor_0/can_tx]
+connect_bd_net $can_rx [get_bd_pins can_passive_monitor_0/can_rx_bus]
+connect_bd_net [get_bd_pins multi_protocol_core_0/can_ack_enable] [get_bd_pins can_passive_monitor_0/ack_enable]
+connect_bd_net [get_bd_pins multi_protocol_core_0/can_echo_enable] [get_bd_pins can_passive_monitor_0/echo_enable]
+connect_bd_net [get_bd_pins multi_protocol_core_0/can_tx_request] [get_bd_pins can_passive_monitor_0/tx_request]
+connect_bd_net [get_bd_pins can_passive_monitor_0/can_rx_level] [get_bd_pins multi_protocol_core_0/can_rx_level]
 
 make_bd_pins_external [get_bd_pins multi_protocol_core_0/led_heartbeat]
 make_bd_pins_external [get_bd_pins multi_protocol_core_0/led_ps_active]

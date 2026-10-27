@@ -22,14 +22,10 @@ static inline int stm32_fault_case_to_error(uint32_t case_id, ErrorCode *code)
     case 2095U: mapped = ERROR_UART_PARITY; break;
     case 3091U: mapped = ERROR_I2C_ADDRESS_NACK; break;
     case 3092U: mapped = ERROR_I2C_BUSY_NACK; break;
-    case 3093U: mapped = ERROR_I2C_SDA_STUCK; break;
-    case 3094U: mapped = ERROR_I2C_SCL_STUCK; break;
     case 3095U: mapped = ERROR_I2C_MISSING_STOP; break;
     case 4091U: mapped = ERROR_CAN_ACK; break;
-    case 4092U: mapped = ERROR_CAN_BIT; break;
     case 4093U: mapped = ERROR_CAN_STUFF; break;
     case 4094U: mapped = ERROR_CAN_CRC; break;
-    case 4095U: mapped = ERROR_CAN_FORM; break;
     case 4096U: mapped = ERROR_CAN_BUS_OFF; break;
     default: return 0;
     }

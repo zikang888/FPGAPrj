@@ -7,7 +7,7 @@ if(!(Test-Path -LiteralPath $Compiler)){throw "Set -Compiler to a working host g
 Push-Location -LiteralPath $projectRoot
 try {
     foreach($name in @('test_history','session_lifecycle','manual_capture','ui_protocol_select',
-                       'spi_trace','event_audit','error_model','event_view','pixel_scroll','ui_counter_semantics')) {
+                       'spi_trace','protocol_trace','waveform_view','event_audit','error_model','event_view','pixel_scroll','ui_counter_semantics','ui_workflow','history_gesture','home_trace_hold')) {
         $exe=Join-Path $outputRoot "$name.exe"
         & $Compiler -std=c99 -Wall -Wextra -Wpedantic -Werror -I software/tests/stubs "software/tests/${name}_test.c" -o $exe
         if($LASTEXITCODE -ne 0){throw "Compile failed: $name"}

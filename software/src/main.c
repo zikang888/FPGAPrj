@@ -36,8 +36,27 @@
 #define REG_UART_STOP_ERRORS (CORE_BASE + 0x007CU)
 #define REG_UART_BREAK_ERRORS (CORE_BASE + 0x0080U)
 #define REG_UART_SHORT_TRANSACTIONS (CORE_BASE + 0x0084U)
+#define REG_I2C_EVENT_COUNT (CORE_BASE + 0x0094U)
+#define REG_I2C_DATA_COUNT (CORE_BASE + 0x0098U)
+#define REG_I2C_ADDRESS_NACKS (CORE_BASE + 0x009CU)
+#define REG_I2C_BUSY_NACKS (CORE_BASE + 0x00A0U)
+#define REG_I2C_SDA_STUCK (CORE_BASE + 0x00A4U)
+#define REG_I2C_SCL_STUCK (CORE_BASE + 0x00A8U)
+#define REG_I2C_MISSING_STOP (CORE_BASE + 0x00ACU)
+#define REG_I2C_STATS_CTRL (CORE_BASE + 0x00B4U)
+#define REG_CAN_EVENT_COUNT (CORE_BASE + 0x00B8U)
+#define REG_CAN_FRAME_COUNT (CORE_BASE + 0x00BCU)
+#define REG_CAN_ACK_ERRORS (CORE_BASE + 0x00C0U)
+#define REG_CAN_BIT_ERRORS (CORE_BASE + 0x00C4U)
+#define REG_CAN_STUFF_ERRORS (CORE_BASE + 0x00C8U)
+#define REG_CAN_CRC_ERRORS (CORE_BASE + 0x00CCU)
+#define REG_CAN_FORM_ERRORS (CORE_BASE + 0x00D0U)
+#define REG_CAN_BUS_OFF (CORE_BASE + 0x00D4U)
+#define REG_CAN_STATS_CTRL (CORE_BASE + 0x00DCU)
 #define REG_CORE_REJECTED (CORE_BASE + 0x1014U)
+#define REG_CAPTURE_TOTAL (CORE_BASE + 0x101CU)
 #define COUNTER_POLL_TICKS ((uint64_t)COUNTS_PER_SECOND / 5U)
+#define HOME_CAPTURE_QUIET_TICKS ((uint64_t)COUNTS_PER_SECOND / 50U)
 
 #define EXPECTED_ID     0x4D505254U
 #define SCRATCH_TEST    0xA5A55A5AU
@@ -74,6 +93,12 @@ static void clear_test_display(PlatformUiStatus *s)
     s->spi_response_mismatches = 0U;
     s->uart_event_count = s->uart_data_count = s->uart_stop_errors = 0U;
     s->uart_break_errors = s->uart_short_transactions = 0U;
+    s->i2c_event_count = s->i2c_data_count = 0U;
+    s->i2c_address_nacks = s->i2c_busy_nacks = 0U;
+    s->i2c_sda_stuck = s->i2c_scl_stuck = s->i2c_missing_stop = 0U;
+    s->can_event_count = s->can_frame_count = 0U;
+    s->can_ack_errors = s->can_bit_errors = s->can_stuff_errors = 0U;
+    s->can_crc_errors = s->can_form_errors = s->can_bus_off = 0U;
     s->test_id = s->test_events = s->test_errors = 0U;
     s->test_running = s->retained_tail = s->capture_source = 0U;
     s->test_failed = 0U;
@@ -115,10 +140,39 @@ static void refresh_test(PlatformUiStatus *s)
                                 ERROR_ORIGIN_PL, s->uart_break_errors);
         (void)error_model_report(&s->error_model, ERROR_UART_SHORT_TRANSACTION,
                                 ERROR_ORIGIN_PL, s->uart_short_transactions);
+    } else if (s->selected_protocol == UI_PROTOCOL_I2C) {
+        s->i2c_event_count = Xil_In32(REG_I2C_EVENT_COUNT);
+        s->i2c_data_count = Xil_In32(REG_I2C_DATA_COUNT);
+        s->i2c_address_nacks = Xil_In32(REG_I2C_ADDRESS_NACKS);
+        s->i2c_busy_nacks = Xil_In32(REG_I2C_BUSY_NACKS);
+        s->i2c_missing_stop = Xil_In32(REG_I2C_MISSING_STOP);
+        (void)error_model_report(&s->error_model, ERROR_I2C_ADDRESS_NACK,
+                                ERROR_ORIGIN_PL, s->i2c_address_nacks);
+        (void)error_model_report(&s->error_model, ERROR_I2C_BUSY_NACK,
+                                ERROR_ORIGIN_PL, s->i2c_busy_nacks);
+        (void)error_model_report(&s->error_model, ERROR_I2C_MISSING_STOP,
+                                ERROR_ORIGIN_PL, s->i2c_missing_stop);
+    } else if (s->selected_protocol == UI_PROTOCOL_CAN) {
+        s->can_event_count = Xil_In32(REG_CAN_EVENT_COUNT);
+        s->can_frame_count = Xil_In32(REG_CAN_FRAME_COUNT);
+        s->can_ack_errors = Xil_In32(REG_CAN_ACK_ERRORS);
+        s->can_stuff_errors = Xil_In32(REG_CAN_STUFF_ERRORS);
+        s->can_crc_errors = Xil_In32(REG_CAN_CRC_ERRORS);
+        s->can_bus_off = Xil_In32(REG_CAN_BUS_OFF);
+        (void)error_model_report(&s->error_model, ERROR_CAN_ACK,
+                                ERROR_ORIGIN_PL, s->can_ack_errors);
+        /* A separate passive transceiver has no local TX intent to compare,
+         * so a transmitter bit error is intentionally reported as unknown. */
+        (void)error_model_report(&s->error_model, ERROR_CAN_STUFF,
+                                ERROR_ORIGIN_PL, s->can_stuff_errors);
+        (void)error_model_report(&s->error_model, ERROR_CAN_CRC,
+                                ERROR_ORIGIN_PL, s->can_crc_errors);
+        /* Bus-off is controller state and cannot be proven by a passive tap. */
     }
     s->test_errors = s->external_loss_count;
     for (i = 0U; i < ERROR_CODE_COUNT; ++i)
-        if (s->error_model.item[i].origin != ERROR_ORIGIN_NONE)
+        if (s->error_model.item[i].origin != ERROR_ORIGIN_NONE &&
+            error_model_code_is_fault((ErrorCode)i))
             s->test_errors += s->error_model.item[i].count;
 }
 
@@ -145,8 +199,10 @@ static void end_test(PlatformUiStatus *s, CaptureDemoSnapshot *snapshot)
     record->total_events = s->test_events;
     record->error_count = s->test_errors;
     record->external_loss = s->external_loss_count;
-    record->data_count = s->selected_protocol == UI_PROTOCOL_UART ?
-                         s->uart_data_count : Xil_In32(CORE_BASE + 0x44U);
+    record->data_count = s->selected_protocol == UI_PROTOCOL_UART ? s->uart_data_count :
+                         s->selected_protocol == UI_PROTOCOL_I2C ? s->i2c_data_count :
+                         s->selected_protocol == UI_PROTOCOL_CAN ? s->can_frame_count :
+                         Xil_In32(CORE_BASE + 0x44U);
     record->errors = s->error_model;
     record->snapshot_valid = saved != 0;
     record->overwritten = s->retained_tail;
@@ -172,10 +228,12 @@ static void begin_test(PlatformUiStatus *s, CaptureDemoSnapshot *snapshot)
     /* One deliberate reset at the start of a test, never on page switching. */
     Xil_Out32(CORE_BASE + 0x64U, 1U);
     Xil_Out32(CORE_BASE + 0x90U, 1U);
+    Xil_Out32(REG_I2C_STATS_CTRL, 1U);
+    Xil_Out32(REG_CAN_STATS_CTRL, 1U);
     g_external_base = Xil_In32(REG_EXT_DROPPED);
     s->test_id = g_next_test++;
     XTime_GetTime(&g_test_start);
-    if (capture_session_arm(s->selected_protocol == UI_PROTOCOL_SPI ? 2U : 1U)
+    if (capture_session_arm(ui_protocol_event_id(s->selected_protocol))
         != XST_SUCCESS) {
         xil_printf("TEST START FAILED: manual capture capability required\r\n");
         s->test_failed = 1U;
@@ -210,9 +268,13 @@ static PlatformUiAction console_action(const PlatformUiStatus *s)
         if (!strcmp(line,"view history")) return PLATFORM_UI_ACTION_HISTORY;
         if (!strcmp(line,"view events")) return PLATFORM_UI_ACTION_EVENTS;
         if (!strcmp(line,"view home")) return PLATFORM_UI_ACTION_HOME;
+        if (!strcmp(line,"capture again") && !s->test_running &&
+            s->capture_source != 1U) return PLATFORM_UI_ACTION_CAPTURE_HOME;
         if (!strcmp(line,"view errors")) return PLATFORM_UI_ACTION_ERRORS;
         if (!strcmp(line,"protocol uart")) return PLATFORM_UI_ACTION_SELECT_UART;
         if (!strcmp(line,"protocol spi")) return PLATFORM_UI_ACTION_SELECT_SPI;
+        if (!strcmp(line,"protocol i2c")) return PLATFORM_UI_ACTION_SELECT_I2C;
+        if (!strcmp(line,"protocol can")) return PLATFORM_UI_ACTION_SELECT_CAN;
         if (!strcmp(line,"status"))
             xil_printf("TEST STATUS id=%lu running=%u events=%lu errors=%lu history=%lu\r\n",
                        (unsigned long)s->test_id, s->test_running,
@@ -222,19 +284,69 @@ static PlatformUiAction console_action(const PlatformUiStatus *s)
     return PLATFORM_UI_ACTION_NONE;
 }
 
+static u32 g_home_capture_total;
+static XTime g_home_capture_last_event;
+
+/* HOME uses a protocol-filtered manual capture and freezes it after 20 ms of
+ * bus silence.  Unlike the legacy trigger-only path, this works for normal
+ * SPI, UART, I2C and CAN traffic, not just events marked as errors/triggers. */
+static int arm_home_capture(PlatformUiStatus *status, XTime now)
+{
+    if (status->test_running != 0U ||
+        !ui_protocol_live(status->selected_protocol,status->capabilities) ||
+        capture_session_arm(ui_protocol_event_id(status->selected_protocol))
+            != XST_SUCCESS)
+        return XST_FAILURE;
+    g_home_capture_total = 0U;
+    g_home_capture_last_event = now;
+    /* Re-arming the same completed capture must keep its displayed cache.
+     * Protocol changes and formal tests clear capture_source separately. */
+    if (status->capture_source != 2U) platform_ui_set_event_cache(0);
+    status->capture_source = 1U;
+    status->test_failed = 0U;
+    return XST_SUCCESS;
+}
+
+/* Returns 1 when a new HOME snapshot is ready, 0 while waiting, -1 on error. */
+static int poll_home_capture(PlatformUiStatus *status,
+                             CaptureDemoSnapshot *snapshot, XTime now)
+{
+    static CaptureDemoCache pending_cache;
+    CaptureDemoSnapshot pending_snapshot;
+    u32 total = Xil_In32(REG_CAPTURE_TOTAL);
+    if (total != g_home_capture_total) {
+        g_home_capture_total = total;
+        g_home_capture_last_event = now;
+    }
+    if (total == 0U ||
+        (uint64_t)(now - g_home_capture_last_event) <
+            HOME_CAPTURE_QUIET_TICKS)
+        return 0;
+    if (capture_session_freeze(&pending_snapshot) != XST_SUCCESS ||
+        capture_demo_cache_snapshot(&pending_cache,&pending_snapshot) != XST_SUCCESS)
+        return -1;
+    g_live_cache = pending_cache;
+    *snapshot = pending_snapshot;
+    status->capture_source = 2U;
+    platform_ui_set_event_cache(&g_live_cache);
+    return 1;
+}
+
 int main(void)
 {
     PlatformUiStatus status;
     CaptureDemoSnapshot demo, live;
     PlatformUiPage page = PLATFORM_UI_PAGE_HOME;
     PlatformUiAction action;
+    int home_capture_result;
+    u8 home_capture_updated;
     XTime now, last_poll;
     memset(&status,0,sizeof(status));
     memset(&demo,0,sizeof(demo));
     memset(&live,0,sizeof(live));
     status.selected_protocol = UI_PROTOCOL_SPI;
     if (uart_init() != XST_SUCCESS) while (1) {}
-    xil_printf("PS READY: TEST SESSION UI 20261020\r\n");
+    xil_printf("PS READY: FOUR PROTOCOL WORKFLOW UI 20261023\r\n");
     status.id = Xil_In32(REG_SYS_ID);
     status.version = Xil_In32(REG_VERSION);
     status.capabilities = Xil_In32(REG_CAPABILITIES);
@@ -252,10 +364,14 @@ int main(void)
     clear_test_display(&status);
     platform_ui_set_history(&g_history);
     Xil_Out32(REG_LED_CTRL,0U);
-    platform_ui_render_page(page,&status,status.capture_ok ? &demo : 0);
     XTime_GetTime(&last_poll);
-    xil_printf("UI READY. Commands: protocol spi/uart; test start/stop; view events/errors/history/home; status\r\n");
+    if (arm_home_capture(&status,last_poll) == XST_SUCCESS)
+        xil_printf("HOME CAPTURE ARMED protocol=%s\r\n",
+                   ui_protocol_name(status.selected_protocol));
+    platform_ui_render_page(page,&status,status.capture_ok ? &demo : 0);
+    xil_printf("UI READY. Commands: protocol spi/uart/i2c/can; test start/stop; view events/errors/history/home; status\r\n");
     while (1) {
+        home_capture_updated = 0U;
         XTime_GetTime(&now);
         if (status.test_running &&
             ui_counter_poll_due((uint64_t)now,(uint64_t)last_poll,COUNTER_POLL_TICKS)) {
@@ -270,6 +386,19 @@ int main(void)
         else if (action == PLATFORM_UI_ACTION_EVENTS) page = PLATFORM_UI_PAGE_EVENTS;
         else if (action == PLATFORM_UI_ACTION_ERRORS) page = PLATFORM_UI_PAGE_ERRORS;
         else if (action == PLATFORM_UI_ACTION_HISTORY) page = PLATFORM_UI_PAGE_HISTORY;
+        else if (action == PLATFORM_UI_ACTION_CAPTURE_HOME) {
+            if (arm_home_capture(&status,now) == XST_SUCCESS) {
+                page = PLATFORM_UI_PAGE_HOME;
+                xil_printf("HOME CAPTURE ARMED protocol=%s\r\n",
+                           ui_protocol_name(status.selected_protocol));
+            } else {
+                status.capture_source = 0U;
+                status.test_failed = 1U;
+                platform_ui_set_event_cache(0);
+                xil_printf("HOME CAPTURE ARM ERROR protocol=%s\r\n",
+                           ui_protocol_name(status.selected_protocol));
+            }
+        }
         else if (action == PLATFORM_UI_ACTION_CAPTURE_LIVE) {
             begin_test(&status,&live);
             page = PLATFORM_UI_PAGE_EVENTS;
@@ -284,9 +413,30 @@ int main(void)
                 clear_test_display(&status);
                 status.selected_protocol = selected;
                 platform_ui_set_event_cache(&g_demo_cache);
+                if (arm_home_capture(&status,now) == XST_SUCCESS)
+                    xil_printf("HOME CAPTURE ARMED protocol=%s\r\n",
+                               ui_protocol_name(status.selected_protocol));
             }
         }
-        if (action != PLATFORM_UI_ACTION_NONE)
+        /* A manual EVENTS test also has capture_source=1, but test_running
+         * keeps the two capture state machines independent. */
+        if (status.capture_source == 1U && status.test_running == 0U) {
+            home_capture_result = poll_home_capture(&status,&live,now);
+            if (home_capture_result > 0) {
+                home_capture_updated = 1U;
+                xil_printf("HOME SNAPSHOT READY: protocol=%s id=%lu count=%lu\r\n",
+                           ui_protocol_name(status.selected_protocol),
+                           (unsigned long)live.snapshot_id,
+                           (unsigned long)live.count);
+            } else if (home_capture_result < 0) {
+                status.capture_source = 0U;
+                status.test_failed = 1U;
+                platform_ui_set_event_cache(0);
+                home_capture_updated = 1U;
+                xil_printf("HOME CAPTURE STATUS ERROR\r\n");
+            }
+        }
+        if (action != PLATFORM_UI_ACTION_NONE || home_capture_updated != 0U)
             platform_ui_render_page(page,&status,status.capture_source == 2U ? &live :
                                     status.capture_source == 1U ? 0 : &demo);
         platform_ui_tick();

@@ -1,0 +1,128 @@
+﻿{
+    "fpga_baseline":  "0d9fde5",
+    "branch":  "codex/ui-four-protocol-20261023",
+    "stm32_reference":  "d17568e (read only; not imported)",
+    "files":  [
+                  {
+                      "sha256":  "5ACB8B5DAD60B482253E3AE73F2B7C0FCC2F520E6C97BF97F007405CA6B5E134",
+                      "name":  "multi_protocol_bd_wrapper.bit",
+                      "bytes":  4045685
+                  },
+                  {
+                      "sha256":  "4ED7A6C7F6B556BDCE96D14D624F3989F6E9922CF2F66BA1CE7A10796771256E",
+                      "name":  "platform_app.elf",
+                      "bytes":  847020
+                  },
+                  {
+                      "sha256":  "47D35117FE590757D5F887986AE68B1E64F5CDCFC7EEB480825AF9543BF91399",
+                      "name":  "ps7_init.tcl",
+                      "bytes":  34511
+                  },
+                  {
+                      "sha256":  "F78185211F0BC0809668C0747000414FCB385F0A63AF1650E386A344F7A2B9B9",
+                      "name":  "system.hdf",
+                      "bytes":  426167
+                  }
+              ],
+    "validation":  "OFFLINE_ONLY_NOT_BOARD_TESTED",
+    "source_files":  [
+                         {
+                             "sha256":  "BCA61B5EF1FD5542702A95253741B8BC11757621D65BE4F6CE82AE51D6592827",
+                             "name":  "software/src/capture_demo.c"
+                         },
+                         {
+                             "sha256":  "3E8C607A1044E959EDF76DBEBFF2640A0FAD5B7C3500F80F01A80846E1EB16F2",
+                             "name":  "software/src/capture_demo.h"
+                         },
+                         {
+                             "sha256":  "E74C4252C89FE450E52BAFC70D8AD5ACDF1D11A41F9E3BBB0A9C2DEF29FC13AD",
+                             "name":  "software/src/error_model.h"
+                         },
+                         {
+                             "sha256":  "906B93FC4AD04CD64C61F56B1BA9631E0CC49078357B95F5E431CC3E603CC8E4",
+                             "name":  "software/src/event_audit.h"
+                         },
+                         {
+                             "sha256":  "83992711B48794414BAE5C16EACE33AA474872A305AA07B240F74525EB739BAA",
+                             "name":  "software/src/event_diagnostics.h"
+                         },
+                         {
+                             "sha256":  "4A1E5D2DCED1D0C49E34D117340BD61126703F4D8C9D78141BE2A4554C1563FD",
+                             "name":  "software/src/event_view.h"
+                         },
+                         {
+                             "sha256":  "F6F98DE4FB64FE4466106588626B1D8DC0001037C45B21D6F7A0D1CE3CE5F7DA",
+                             "name":  "software/src/font.h"
+                         },
+                         {
+                             "sha256":  "AEBED4D15DF2F60041FBE930CEAAA2E6DD8D5D7FE0FC11CE3974839C9B84C90B",
+                             "name":  "software/src/main.c"
+                         },
+                         {
+                             "sha256":  "82380D8FBFAE7C886773883CA6BC668CEE57EC71C594AB6F05D4E8F224B623B9",
+                             "name":  "software/src/pixel_scroll.h"
+                         },
+                         {
+                             "sha256":  "66FC24651519F6FABE76EA3983D8B7A3B0E352530DBF0B146C435234C093F2BF",
+                             "name":  "software/src/platform_ui.c"
+                         },
+                         {
+                             "sha256":  "44193507E75C93502001C0447BE401AE91652FBE225ACAB83F63581C1190C661",
+                             "name":  "software/src/platform_ui.h"
+                         },
+                         {
+                             "sha256":  "B04CFDD59BA146DFBD80BCFFE09E61E05E2D988A70D3C680E33A0F64FAAC49F8",
+                             "name":  "software/src/protocol_trace.h"
+                         },
+                         {
+                             "sha256":  "1FA1F97C32AB9460E2C0810E5D059B96AB0B99FCB3D1616800AA6D1A8CB96C11",
+                             "name":  "software/src/ps_gpio.c"
+                         },
+                         {
+                             "sha256":  "D866B53299E1A84CD966E016FBB1C7F47BEBEF360A69FA231D18C3CAC5F16455",
+                             "name":  "software/src/ps_gpio.h"
+                         },
+                         {
+                             "sha256":  "24C2C81D80FCD8C3FB32F49D9098455AAAF16CAD5C252BF30AC22F1DF84F8BD4",
+                             "name":  "software/src/ps_iic.c"
+                         },
+                         {
+                             "sha256":  "C397C239F2629DB4E928062B0A91AA05537701E06EF3053071EE3C5C0035D146",
+                             "name":  "software/src/ps_iic.h"
+                         },
+                         {
+                             "sha256":  "84AAAB45A95D0F84C31DC83652860D3FFFF76978BE588474470075A4AAD8FD44",
+                             "name":  "software/src/spi_trace.h"
+                         },
+                         {
+                             "sha256":  "F642F6828DAA0DA71746AB7364A7EE8298B505AE9A64EC2966E1986248C28FFB",
+                             "name":  "software/src/stm32_fault_bridge.h"
+                         },
+                         {
+                             "sha256":  "4C86EEAAB2D3EB7478DD6F488C5F7EB38F4F5CF2BCDF009859DED78AAECBB383",
+                             "name":  "software/src/test_history.h"
+                         },
+                         {
+                             "sha256":  "A702031994D356CC23FB6F45C292A8791E1C791CBF752E421164C1B3FDBDE86E",
+                             "name":  "software/src/touch.c"
+                         },
+                         {
+                             "sha256":  "ED842A521D2F1866CBC4D88AAD8C0203158514C07397241156A580FA45ED1E5E",
+                             "name":  "software/src/touch.h"
+                         },
+                         {
+                             "sha256":  "BD835D8903B4E73C28A77331E6EA74F2EB4728610AAB58B991DF9730F7C9830C",
+                             "name":  "software/src/ui_counter_semantics.h"
+                         },
+                         {
+                             "sha256":  "8DEDBAD4C30631E498DBB9C4EE9F61A60BF62E7A2DEED0976995D47CB3837F69",
+                             "name":  "software/src/ui_protocol_select.h"
+                         },
+                         {
+                             "sha256":  "CABA9B0DE03B60322DFB71C1A9DA3F9AD217C6632E8F55C520E165FDE6A6CE59",
+                             "name":  "software/src/ui_workflow.h"
+                         }
+                     ],
+    "created":  "2026-10-24T00:13:47+08:00",
+    "checks":  "12 host tests + production renderer/touch tests; repeated regression passed"
+}

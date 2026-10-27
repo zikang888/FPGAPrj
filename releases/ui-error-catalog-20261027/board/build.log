@@ -1,0 +1,31 @@
+'Building file: D:/fpga_class/FPGAPrj/ab_new_board_test_20261017/software/src/main.c'
+'Building file: D:/fpga_class/FPGAPrj/ab_new_board_test_20261017/software/src/platform_ui.c'
+'Invoking: ARM v7 gcc compiler'
+arm-none-eabi-gcc -Wall -O3 -g3 -c -fmessage-length=0 -MT"repo_src/main.o" -mcpu=cortex-a9 -mfpu=vfpv3 -mfloat-abi=hard -I../../platform_bsp/ps7_cortexa9_0/include -MMD -MP -MF"repo_src/main.d" -MT"repo_src/main.o" -o "repo_src/main.o" "D:/fpga_class/FPGAPrj/ab_new_board_test_20261017/software/src/main.c"
+'Invoking: ARM v7 gcc compiler'
+arm-none-eabi-gcc -Wall -O3 -g3 -c -fmessage-length=0 -MT"repo_src/platform_ui.o" -mcpu=cortex-a9 -mfpu=vfpv3 -mfloat-abi=hard -I../../platform_bsp/ps7_cortexa9_0/include -MMD -MP -MF"repo_src/platform_ui.d" -MT"repo_src/platform_ui.o" -o "repo_src/platform_ui.o" "D:/fpga_class/FPGAPrj/ab_new_board_test_20261017/software/src/platform_ui.c"
+In file included from D:/fpga_class/FPGAPrj/ab_new_board_test_20261017/software/src/main.c:14:0:
+../../platform_bsp/ps7_cortexa9_0/include/xtime_l.h:87:9: note: #pragma message: For the sleep routines, Global timer is being used
+ #pragma message ("For the sleep routines, Global timer is being used")
+         ^~~~~~~
+'Finished building: D:/fpga_class/FPGAPrj/ab_new_board_test_20261017/software/src/main.c'
+' '
+a9-linaro-pre-build-step
+process_begin: CreateProcess(NULL, a9-linaro-pre-build-step, ...) failed.
+make (e=2): ϵͳ�Ҳ���ָ�����ļ���
+
+make: [makefile:57: pre-build] Error 2 (ignored)
+' '
+'Finished building: D:/fpga_class/FPGAPrj/ab_new_board_test_20261017/software/src/platform_ui.c'
+' '
+'Building target: platform_app.elf'
+'Invoking: ARM v7 gcc linker'
+arm-none-eabi-gcc -mcpu=cortex-a9 -mfpu=vfpv3 -mfloat-abi=hard -Wl,-build-id=none -specs=Xilinx.spec -Wl,-T -Wl,../src/lscript.ld -L../../platform_bsp/ps7_cortexa9_0/lib -o "platform_app.elf"  ./repo_src/capture_demo.o ./repo_src/main.o ./repo_src/platform_ui.o ./repo_src/ps_gpio.o ./repo_src/ps_iic.o ./repo_src/touch.o   -Wl,--start-group,-lxil,-lgcc,-lc,--end-group
+'Finished building target: platform_app.elf'
+' '
+'Invoking: ARM v7 Print Size'
+arm-none-eabi-size platform_app.elf  |tee "platform_app.elf.size"
+   text	   data	    bss	    dec	    hex	filename
+ 140752	   2104	  68704	 211560	  33a68	platform_app.elf
+'Finished building: platform_app.elf.size'
+' '

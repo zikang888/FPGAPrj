@@ -13,7 +13,7 @@ void platform_ui_set_event_cache(const CaptureDemoCache *cache) { (void)cache; }
 void platform_ui_set_history(const TestHistory *history) { observed_history=history; }
 int capture_session_arm(u8 protocol)
 {
-    assert(protocol==1U || protocol==2U);
+    assert(protocol>=1U && protocol<=4U);
     mock_count=0U;
     mock_regs[0x101CU/4U]=0U;
     mock_regs[0x1004U/4U]=0x11U;
@@ -76,5 +76,15 @@ int main(void)
     assert(s.test_failed && !test_history_get(&g_history,0)->snapshot_valid);
     mock_copy_failure=0;
     begin_test(&s,&snap);assert(!s.test_failed && s.test_running);
+    end_test(&s,&snap);
+    s.selected_protocol=UI_PROTOCOL_I2C;s.capabilities=0x1FFU;
+    begin_test(&s,&snap);
+    mock_regs[0xA0U/4U]=16U; /* EEPROM busy NACKs are informational. */
+    mock_regs[0x101CU/4U]=73U;mock_count=73U;
+    end_test(&s,&snap);
+    assert(s.i2c_busy_nacks==16U && s.test_errors==0U);
+    assert(test_history_get(&g_history,0)->error_count==0U);
+    assert(error_model_get(&test_history_get(&g_history,0)->errors,
+                           ERROR_I2C_BUSY_NACK).count==16U);
     return 0;
 }

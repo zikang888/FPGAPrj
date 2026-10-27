@@ -1,0 +1,165 @@
+{
+  "created": "2026-10-27",
+  "toolchain": "Vivado/SDK 2018.3",
+  "status": "BOARD_PROGRAMMED_FRAMEBUFFER_VERIFIED_TOUCH_REGRESSION_HOST_PASS",
+  "retired_errors": [
+    "I2C SDA STUCK",
+    "I2C SCL STUCK",
+    "CAN FORM ERROR",
+    "CAN TX BIT"
+  ],
+  "abi": {
+    "SYS_ID": "0x4D505254",
+    "VERSION": "0x00010008",
+    "CAPABILITIES": "0x000001FF"
+  },
+  "files": [
+    {
+      "name": "board/build.log",
+      "bytes": 2382,
+      "sha256": "c334b90e532074ec06998c460e8b480e3f238872ab6217780057f7814bd7dc76"
+    },
+    {
+      "name": "board/can_errors.png",
+      "bytes": 7959,
+      "sha256": "f7501d3891f3fd6b56040c3ac9bc014969bb94d141bfade382d629d7f37684fe"
+    },
+    {
+      "name": "board/checks.log",
+      "bytes": 556,
+      "sha256": "93a9ad52ac35973edbcb1fe616db5e3d2c4549e5ced7cbdb80ae8a740df8eca6"
+    },
+    {
+      "name": "board/download.log",
+      "bytes": 1138,
+      "sha256": "b1b6059ec133f54f4b205c064735d41a8fc8a6a6e95de5d0ffe2637e709a67d1"
+    },
+    {
+      "name": "board/i2c_errors.png",
+      "bytes": 7914,
+      "sha256": "459b2d824d5bf60aedcfa614d4af2b2e04fccfcfe18ee718ebb4195ededed410"
+    },
+    {
+      "name": "multi_protocol_bd_wrapper.bit",
+      "bytes": 4045685,
+      "sha256": "5acb8b5dad60b482253e3ae73f2b7c0fcc2f520e6c97bf97f007405ca6b5e134"
+    },
+    {
+      "name": "platform_app.elf",
+      "bytes": 855884,
+      "sha256": "fee5215e6443a57b67068d2a45fd0b31c493e9730c6af5ff97ecaa6ee2091514"
+    },
+    {
+      "name": "ps7_init.tcl",
+      "bytes": 34511,
+      "sha256": "47d35117fe590757d5f887986ae68b1e64f5cdcfc7eeb480825af9543bf91399"
+    },
+    {
+      "name": "system.hdf",
+      "bytes": 426167,
+      "sha256": "f78185211f0bc0809668c0747000414fcb385f0a63af1650e386a344f7a2b9b9"
+    }
+  ],
+  "source_files": [
+    {
+      "name": "software/src/capture_demo.c",
+      "sha256": "bca61b5ef1fd5542702a95253741b8bc11757621d65be4f6ce82ae51d6592827"
+    },
+    {
+      "name": "software/src/capture_demo.h",
+      "sha256": "3e8c607a1044e959edf76dbebff2640a0fad5b7c3500f80f01a80846e1eb16f2"
+    },
+    {
+      "name": "software/src/error_model.h",
+      "sha256": "51cce741a0504b40bc60bce4f78e9562f98be7c232e4143077c26c9c2ad3213f"
+    },
+    {
+      "name": "software/src/event_audit.h",
+      "sha256": "42351bbc6a45c010a71fc184aadc8a12933f65c270ee37ff6e7232a2a9a1bf4a"
+    },
+    {
+      "name": "software/src/event_diagnostics.h",
+      "sha256": "4efe766626704aec68a8b1d29fe18524c6fe61daf01c6acacd68a94c17019149"
+    },
+    {
+      "name": "software/src/event_view.h",
+      "sha256": "3394c5f5c58e4462147ec7a8e25f6f177e428d9f81475114ed921062e282cb64"
+    },
+    {
+      "name": "software/src/font.h",
+      "sha256": "f6f98de4fb64fe4466106588626b1d8dc0001037c45b21d6f7a0d1ce3ce5f7da"
+    },
+    {
+      "name": "software/src/main.c",
+      "sha256": "dd70423f074a08b59904e7f6ab6fe5ad73138325a47024bd68090000ddc363d8"
+    },
+    {
+      "name": "software/src/pixel_scroll.h",
+      "sha256": "82380d8fbfae7c886773883ca6bc668cee57ec71c594ab6f05d4e8f224b623b9"
+    },
+    {
+      "name": "software/src/platform_ui.c",
+      "sha256": "3d7a2065b00e7393c246a76adb91dcf9c39a5e32c8ed8398f40433c88b3121cb"
+    },
+    {
+      "name": "software/src/platform_ui.h",
+      "sha256": "44193507e75c93502001c0447be401ae91652fbe225acab83f63581c1190c661"
+    },
+    {
+      "name": "software/src/protocol_trace.h",
+      "sha256": "b04cfdd59ba146dfbd80bcffe09e61e05e2d988a70d3c680e33a0f64faac49f8"
+    },
+    {
+      "name": "software/src/ps_gpio.c",
+      "sha256": "1fa1f97c32ab9460e2c0810e5d059b96ab0b99fcb3d1616800aa6d1a8cb96c11"
+    },
+    {
+      "name": "software/src/ps_gpio.h",
+      "sha256": "d866b53299e1a84cd966e016fbb1c7f47bebef360a69fa231d18c3cac5f16455"
+    },
+    {
+      "name": "software/src/ps_iic.c",
+      "sha256": "24c2c81d80fcd8c3fb32f49d9098455aaaf16cad5c252bf30ac22f1df84f8bd4"
+    },
+    {
+      "name": "software/src/ps_iic.h",
+      "sha256": "c397c239f2629db4e928062b0a91aa05537701e06ef3053071ee3c5c0035d146"
+    },
+    {
+      "name": "software/src/spi_trace.h",
+      "sha256": "84aaab45a95d0f84c31dc83652860d3ffff76978be588474470075a4aad8fd44"
+    },
+    {
+      "name": "software/src/stm32_fault_bridge.h",
+      "sha256": "89b3b977a675a5e7f26aa66e93604b246c517d685bdcd9cc8e73102ad58c3593"
+    },
+    {
+      "name": "software/src/test_history.h",
+      "sha256": "4c86eeaab2d3eb7478dd6f488c5f7eb38f4f5cf2bcdf009859ded78aaecbb383"
+    },
+    {
+      "name": "software/src/touch.c",
+      "sha256": "a702031994d356cc23fb6f45c292a8791e1c791cbf752e421164c1b3fdbde86e"
+    },
+    {
+      "name": "software/src/touch.h",
+      "sha256": "ed842a521d2f1866cbc4d88aad8c0203158514c07397241156a580fa45ed1e5e"
+    },
+    {
+      "name": "software/src/ui_counter_semantics.h",
+      "sha256": "bd835d8903b4e73c28a77331e6ea74f2eb4728610aab58b991df9730f7c9830c"
+    },
+    {
+      "name": "software/src/ui_protocol_select.h",
+      "sha256": "8dedbad4c30631e498dbb9c4ee9f61a60bf62e7a2deed0976995d47cb3837f69"
+    },
+    {
+      "name": "software/src/ui_workflow.h",
+      "sha256": "72227632cd4ec103b63ab712a8fbbc01da484039164792bd719a902b6dcbdd92"
+    },
+    {
+      "name": "software/src/waveform_view.h",
+      "sha256": "a691ba834d8fd806ed498368e2c2e01a22d94639800b348d08332928d4a238e7"
+    }
+  ]
+}

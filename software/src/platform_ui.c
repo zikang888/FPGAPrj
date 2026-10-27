@@ -3,8 +3,11 @@
 #include "event_view.h"
 #include "event_audit.h"
 #include "spi_trace.h"
+#include "protocol_trace.h"
+#include "waveform_view.h"
 #include "event_diagnostics.h"
 #include "ui_counter_semantics.h"
+#include "ui_workflow.h"
 
 #include "font.h"
 #include "touch.h"
@@ -44,6 +47,10 @@
 #define EVENTS_Y0    122U
 #define EVENTS_Y1    407U
 #define EVENT_ROW_PX 35U
+#define HISTORY_LIST_Y0 122U
+#define HISTORY_LIST_Y1 377U
+#define HISTORY_ROW_PX 44U
+#define HISTORY_DRAG_PX 10U
 
 static XAxiVdma g_vdma;
 #ifndef PLATFORM_UI_HOST_PREVIEW
@@ -68,6 +75,7 @@ static const CaptureDemoCache *g_event_cache;
 static const TestHistory *g_history;
 static u32 g_history_selected;
 static u32 g_history_scroll;
+static u32 g_history_list_scroll;
 static u8 g_history_detail;
 static u8 g_history_errors;
 static EventAudit g_event_audit;
@@ -374,6 +382,7 @@ static void draw_header(const char *title, const PlatformUiStatus *status,
                         status->test_failed != 0U ? "ERROR" :
                         status->capture_ok == 0U ? "IDLE" :
                         status->test_running != 0U ? "RECORD" :
+                        status->capture_source == 1U ? "ARMED" :
                         status->capture_source == 2U ? "SAVED" : "DEMO";
 
     fill(0U, 0U, 799U, 41U, C_HEADER);
@@ -405,13 +414,11 @@ static void draw_nav_button(u16 x0, u16 x1, const char *label, u8 active)
 
 static void draw_navigation(PlatformUiPage page)
 {
-    draw_nav_button(12U, 188U, "HOME", page == PLATFORM_UI_PAGE_HOME);
-    draw_nav_button(196U, 384U, "SELF TEST",
-                    page == PLATFORM_UI_PAGE_SELF_TEST);
-    draw_nav_button(392U, 580U, "EVENTS",
-                    page == PLATFORM_UI_PAGE_EVENTS || page == PLATFORM_UI_PAGE_HISTORY);
-    draw_nav_button(588U, 787U, "ERRORS",
-                    page == PLATFORM_UI_PAGE_ERRORS);
+    draw_nav_button(12U,160U,"HOME",page==PLATFORM_UI_PAGE_HOME);
+    draw_nav_button(168U,316U,"TESTS",page==PLATFORM_UI_PAGE_EVENTS);
+    draw_nav_button(324U,472U,"ERRORS",page==PLATFORM_UI_PAGE_ERRORS);
+    draw_nav_button(480U,628U,"HISTORY",page==PLATFORM_UI_PAGE_HISTORY);
+    draw_nav_button(636U,787U,"STATUS",page==PLATFORM_UI_PAGE_SELF_TEST);
 }
 
 static void hex8(u16 x, u16 y, u8 value, u32 fg, u32 bg)
@@ -421,20 +428,32 @@ static void hex8(u16 x, u16 y, u8 value, u32 fg, u32 bg)
     glyph((u16)(x + 8U), y, digits[value & 0xFU], fg, bg);
 }
 
+static int home_trace_available(const PlatformUiStatus *status)
+{
+    return !status->test_running &&
+           (status->capture_source==1U || status->capture_source==2U) &&
+           g_event_cache!=0 && g_event_cache->valid;
+}
+
 static void draw_home_status(const PlatformUiStatus *status)
 {
-    const char *source = status->test_running ? "RECORDING" :
-                         status->capture_source == 2U ? "SAVED TEST" : "NO TEST";
+    const char *source = status->test_failed ? "CAPTURE FAILED" :
+                         status->test_running ? "TEST RECORDING" :
+                         status->capture_source == 1U ?
+                         (home_trace_available(status) ? "WAIT / PREVIOUS" : "WAIT DATA") :
+                         status->capture_source == 2U ? "DATA RECEIVED" : "NO CAPTURE";
     fill(14U, 52U, 786U, 100U, C_PANEL);
     outline(14U, 52U, 786U, 100U, C_BORDER);
-    text(30U, 59U, "PLATFORM", C_MUTED, C_PANEL);
-    text(30U, 78U, all_checks_passed(status) != 0U ? "READY" : "CHECK",
-         all_checks_passed(status) != 0U ? C_GREEN : C_WARN, C_PANEL);
-    text(286U, 59U, "LIVE CAPTURE", C_MUTED, C_PANEL);
+    text(30U, 59U, "INPUT MODE", C_MUTED, C_PANEL);
+    text(30U,78U,status->selected_protocol==UI_PROTOCOL_CAN ? "CAN NODE" :
+         "LISTEN ONLY",C_CYAN,C_PANEL);
+    text(286U, 59U, "CAPTURE STATE", C_MUTED, C_PANEL);
     text(286U, 78U, source, C_CYAN, C_PANEL);
-    text(574U, 59U, "EXTERNAL LOSS", C_MUTED, C_PANEL);
-    dec32(574U, 78U, status->external_loss_count,
-          status->external_loss_count == 0U ? C_GREEN : C_WARN, C_PANEL);
+    fill(574U,58U,776U,94U,C_BUTTON);
+    outline(574U,58U,776U,94U,C_BORDER);
+    text(586U,69U,status->test_running ? "OPEN TESTS TO END" :
+         status->capture_source==1U ? "WAIT FOR STM32" : "CAPTURE AGAIN",
+         status->capture_source==1U ? C_MUTED : C_CYAN,C_BUTTON);
 }
 
 static void draw_protocol_tabs(const PlatformUiStatus *status)
@@ -452,33 +471,153 @@ static void draw_protocol_tabs(const PlatformUiStatus *status)
         fill(x0, 112U, x1, 115U, active != 0U ? C_CYAN : C_BORDER);
         text((u16)(x0 + 14U), 123U, ui_protocol_name(protocol), C_TEXT, bg);
         text((u16)(x0 + 14U), 145U,
-             live != 0U ? "PL READY" : "NOT WIRED",
+             live != 0U ? "SUPPORTED" : "NOT IN BIT",
              live != 0U ? C_GREEN : C_MUTED, bg);
     }
 }
 
-static void draw_spi_wave_lane(const u8 bytes[SPI_TRACE_BYTES], u16 high_y,
+static int home_fault_label(const PlatformUiStatus *status, char label[8])
+{
+    static const u32 protocol_ids[UI_PROTOCOL_COUNT]={2U,1U,3U,4U};
+    u32 i;
+    if(!home_trace_available(status))
+        return 0;
+    for(i=0U;i<g_event_cache->count;++i) {
+        EventView event=event_view_decode(g_event_cache->event_word[i]);
+        if(event.protocol!=protocol_ids[status->selected_protocol]) continue;
+        if(event_diagnostic_label(&g_event_cache->event_word[0][0],
+                                  g_event_cache->count,i,label)) {
+            if(event.protocol==2U && event.event_type==0x3FU)
+                strcpy(label,"PARTIAL");
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static void draw_home_fault_notice(const PlatformUiStatus *status)
+{
+    char label[8];
+    const char *name;
+    if(!home_fault_label(status,label)) return;
+    name=!strcmp(label,"BADSTOP")?"BAD STOP":
+         !strcmp(label,"ADDRNCK")?"ADDRESS NACK":
+         !strcmp(label,"BUSYNCK")?"BUSY NACK":label;
+    fill(270U,181U,778U,210U,C_PANEL);
+    outline(270U,181U,778U,210U,C_WARN);
+    text(280U,190U,"!",C_WARN,C_PANEL);
+    text(300U,190U,name,C_WARN,C_PANEL);
+    text(460U,190U,"DECODED / SEE ERRORS",C_MUTED,C_PANEL);
+}
+
+static void draw_wave_fault(u16 x,u16 end_x,u16 high_y,u16 low_y)
+{
+    outline((u16)(x-2U),(u16)(high_y-3U),end_x,
+            (u16)(low_y+3U),C_WARN);
+    text((u16)((x+end_x)/2U-4U),(u16)(high_y-18U),"!",C_WARN,C_PANEL);
+}
+
+static void draw_fault_sequence(const PlatformUiStatus *status)
+{
+    static const u32 ids[UI_PROTOCOL_COUNT]={2U,1U,3U,4U};
+    u32 i,n=0U,shown=0U;
+    for(i=0U;i<g_event_cache->count;++i)
+        if(event_view_decode(g_event_cache->event_word[i]).protocol==ids[status->selected_protocol]) ++n;
+    text(30U,231U,"EVENT SEQUENCE - NOT A SAMPLED WAVEFORM",C_WARN,C_PANEL);
+    hline(70U,730U,285U,C_BORDER);
+    for(i=0U;i<g_event_cache->count && shown<6U;++i) {
+        EventView event=event_view_decode(g_event_cache->event_word[i]);
+        char label[8]; int fault; u16 x;
+        if(event.protocol!=ids[status->selected_protocol]) continue;
+        x=(u16)(92U+shown*(n>1U?600U/((n>6U?6U:n)-1U):0U));
+        fault=event_diagnostic_label(&g_event_cache->event_word[0][0],g_event_cache->count,i,label);
+        if(event.protocol==2U && event.event_type==0x3FU) strcpy(label,"PARTIAL");
+        vline(x,271U,297U,fault?C_WARN:C_CYAN);
+        text((u16)(x-24U),310U,label,fault?C_WARN:C_TEXT,C_PANEL);
+        dec32((u16)(x-4U),250U,i,C_MUTED,C_PANEL);
+        ++shown;
+    }
+    text(30U,351U,"REAL EVENTS; VOLTAGE LEVELS NOT RECORDED",C_MUTED,C_PANEL);
+    text(30U,380U,n>6U?"MORE EVENTS IN EVENTS PAGE":"EVENT TIMES AND FLAGS: OPEN EVENTS",C_CYAN,C_PANEL);
+}
+
+static void draw_capture_help(const PlatformUiStatus *status)
+{
+    char label[8];
+    const char *wiring[UI_PROTOCOL_COUNT] = {
+        "STM32 PA4/5/7/6 > FPGA U11/U12/U10/U9",
+        "STM32 PD8 TX > FPGA W5 RX; 115200 / 8N1",
+        "PB6 / PB7 > EEPROM + FPGA AA6 / V8; 100 KHZ",
+        "SECOND TRANSCEIVER: W8 TXD / AA11 RXD; 500 KBIT/S"
+    };
+    if(home_fault_label(status,label)) {
+        draw_fault_sequence(status);
+        return;
+    }
+    text(74U,240U,status->test_failed ? "CAPTURE FAILED - CHECK STATUS" :
+         status->test_running ? "TEST RECORDING - OPEN TESTS, THEN STOP & SAVE" :
+         status->capture_source==1U ? "WAITING FOR STM32 DATA" :
+         "NO COMPLETE MESSAGE IN THIS CAPTURE",C_TEXT,C_PANEL);
+    text(74U,274U,status->test_running ? "SAVED EVENTS AND ERRORS APPEAR AFTER STOP" :
+         status->capture_source==1U ? "SEND DATA; THIS VIEW FREEZES AFTER THE NEXT BURST" :
+         "TAP CAPTURE AGAIN; SEND ONE MESSAGE FROM STM32",C_CYAN,C_PANEL);
+    text(74U,310U,wiring[status->selected_protocol],C_MUTED,C_PANEL);
+    text(74U,350U,"FOR ERROR COUNTS: TESTS > START NEW > SEND > STOP & SAVE",
+         C_MUTED,C_PANEL);
+}
+
+/* All traces use a 608px plot (76% of the 800px LCD). The horizontal
+ * coordinate is a decoded bit index, not a measured sample timestamp. */
+static void draw_trace_grid(u32 total_bits, u8 two_lanes)
+{
+    u32 division, dash;
+    u16 y;
+    for (division=0U; division<=4U; ++division) {
+        u32 tick=total_bits*division/4U;
+        u16 x=wave_x(tick,total_bits);
+        for (dash=224U; dash<332U; dash+=8U)
+            vline(x,(u16)dash,(u16)(dash+2U),C_GRID);
+        dec32((u16)(x-4U),340U,tick,C_MUTED,C_PANEL);
+    }
+    for (y=231U; y<=323U; y=(u16)(y+(y==255U?44U:24U))) {
+        if (!two_lanes && y>255U) break;
+        for (dash=144U; dash<752U; dash+=10U)
+            hline((u16)dash,(u16)(dash+2U),y,C_GRID);
+        text(124U,(u16)(y-4U),(y==231U || y==299U)?"1":"0",C_MUTED,C_PANEL);
+    }
+    hline(144U,752U,335U,C_BORDER);
+    text(30U,340U,"BIT / FIT",C_MUTED,C_PANEL);
+}
+
+static void draw_spi_wave_lane(const u8 *bytes, u32 count, u16 high_y,
                                u16 low_y, u32 color)
 {
     u32 bit;
     u8 previous = 0U;
-    for (bit = 0U; bit < SPI_TRACE_BYTES * 8U; ++bit) {
+    for (bit = 0U; bit < count * 8U; ++bit) {
         u8 level = (u8)((bytes[bit / 8U] >> (7U - bit % 8U)) & 1U);
-        u16 x = (u16)(196U + bit * 15U);
+        u16 x = wave_x(bit,count*8U);
         u16 y = level != 0U ? high_y : low_y;
         if (bit != 0U && level != previous) vline(x, high_y, low_y, color);
-        hline(x, (u16)(x + 15U), y, color);
+        hline(x,wave_x(bit+1U,count*8U), y, color);
         previous = level;
     }
 }
 
 static void draw_uart_trace(const PlatformUiStatus *status)
 {
-    u32 i, frame=0U, bit;
+    u32 i, frame=0U, bit, frames=0U;
     text(30U,190U,"UART RX FRAMES",C_CYAN,C_PANEL);
     text(280U,190U,"DECODED - NOT SAMPLED",C_MUTED,C_PANEL);
     hline(30U,770U,214U,C_BORDER);
-    if(status->capture_source==2U && g_event_cache!=0 && g_event_cache->valid) {
+    if(home_trace_available(status))
+        for(i=0U;i<g_event_cache->count && frames<4U;++i) {
+            EventView e=event_view_decode(g_event_cache->event_word[i]);
+            if(e.protocol==1U && (e.event_type==1U ||
+               (e.event_type==0x3FU && (e.flags>>8)==1U))) ++frames;
+        }
+    if(frames) {draw_trace_grid(frames*10U,0U);text(30U,300U,"HEX",C_MUTED,C_PANEL);}
+    if(home_trace_available(status)) {
         for(i=0U;i<g_event_cache->count && frame<4U;++i) {
             EventView event=event_view_decode(g_event_cache->event_word[i]);
             u8 previous=1U;
@@ -487,35 +626,124 @@ static void draw_uart_trace(const PlatformUiStatus *status)
             for(bit=0U;bit<10U;++bit) {
                 u8 level=bit==0U?0U:bit==9U?(bad_stop?0U:1U):
                          (u8)((event.flags>>(bit-1U))&1U);
-                u16 x=(u16)(180U+frame*120U+bit*12U);
-                if(level!=previous) vline(x,245U,277U,C_CYAN);
-                hline(x,(u16)(x+12U),level?245U:277U,C_CYAN);
+                u16 x=wave_x(frame*10U+bit,frames*10U);
+                if(level!=previous) vline(x,231U,255U,C_CYAN);
+                hline(x,wave_x(frame*10U+bit+1U,frames*10U),level?231U:255U,C_CYAN);
                 previous=level;
             }
-            hex8((u16)(222U+frame*120U),319U,(u8)event.flags,C_TEXT,C_PANEL);
-            text((u16)(188U+frame*120U),354U,bad_stop?"BAD STOP":"8N1",bad_stop?C_RED:C_GREEN,C_PANEL);
+            if(bad_stop) draw_wave_fault(wave_x(frame*10U+9U,frames*10U),wave_x((frame+1U)*10U,frames*10U),231U,255U);
+            hex8((u16)(wave_x(frame*10U+5U,frames*10U)-8U),300U,(u8)event.flags,C_TEXT,C_PANEL);
+            text((u16)(wave_x(frame*10U+5U,frames*10U)-32U),370U,bad_stop?"BAD STOP":"8N1",bad_stop?C_RED:C_GREEN,C_PANEL);
             ++frame;
         }
     }
     if(frame==0U) {
-        text(210U,248U,status->test_running?"RECORDING - END TEST TO VIEW":
-             "START TEST, SEND UART, END & SAVE",C_TEXT,C_PANEL);
-        text(210U,287U,"BREAK / SHORT DETAILS ARE IN EVENTS",C_MUTED,C_PANEL);
-    } else text(30U,248U,"RX",C_CYAN,C_PANEL);
+        draw_capture_help(status);
+    } else text(30U,232U,"RX",C_CYAN,C_PANEL);
+}
+
+static void draw_i2c_trace(const PlatformUiStatus *status)
+{
+    I2cTrace trace;
+    u32 byte_index, bit;
+    u32 first=0U, i, j;
+    u32 shown = 0U;
+    u8 previous = 1U;
+    int have_trace = 0;
+    if (home_trace_available(status)) {
+        /* Prefer the transaction containing a captured NACK, rather than
+         * displaying the successful address probe preceding an injected fault. */
+        for(i=0U;i<g_event_cache->count;++i) {
+            EventView event=event_view_decode(g_event_cache->event_word[i]);
+            if(event.protocol!=3U || event.event_type!=1U ||
+               (event.flags&0x8000U)==0U) continue;
+            for(j=i;j>0U;--j) {
+                EventView start=event_view_decode(g_event_cache->event_word[j-1U]);
+                if(start.protocol==3U && start.event_type==0U &&
+                   start.transaction_id==event.transaction_id) {first=j-1U;break;}
+            }
+            break;
+        }
+        have_trace = i2c_trace_extract(&g_event_cache->event_word[first][0],
+                                       g_event_cache->count-first,&trace);
+    }
+    text(30U,190U,"I2C BYTE TRACE",C_CYAN,C_PANEL);
+    text(302U,190U,"DECODED - NOT SAMPLED",C_MUTED,C_PANEL);
+    hline(30U,770U,214U,C_BORDER);
+    if (!have_trace) {
+        draw_capture_help(status);
+        return;
+    }
+    shown = trace.count;
+    draw_trace_grid(shown*9U,1U);
+    text(30U,232U,"SCL",C_CYAN,C_PANEL);
+    text(30U,300U,"SDA",C_GREEN,C_PANEL);
+    for (byte_index=0U;byte_index<shown;++byte_index) {
+        for (bit=0U;bit<9U;++bit) {
+            u32 lane_bit=byte_index*9U+bit;
+            u16 x=wave_x(lane_bit,shown*9U);
+            u16 end=wave_x(lane_bit+1U,shown*9U);
+            u16 middle=(u16)((x+end)/2U);
+            u8 level=bit==8U ? (u8)trace.nack[byte_index] :
+                     (u8)((trace.data[byte_index]>>(7U-bit))&1U);
+            hline(x,middle,255U,C_CYAN);
+            vline(middle,231U,255U,C_CYAN);
+            hline(middle,end,231U,C_CYAN);
+            vline(end,231U,255U,C_CYAN);
+            hline(x,end,level?299U:323U,C_GREEN);
+            if (level!=previous) vline(x,299U,323U,C_GREEN);
+            previous=level;
+        }
+        if(trace.nack[byte_index])
+            draw_wave_fault(wave_x(byte_index*9U+8U,shown*9U),wave_x((byte_index+1U)*9U,shown*9U),299U,323U);
+        hex8((u16)((wave_x(byte_index*9U,shown*9U)+wave_x((byte_index+1U)*9U,shown*9U))/2U-8U),360U,trace.data[byte_index],
+             C_TEXT,C_PANEL);
+        text((u16)((wave_x(byte_index*9U,shown*9U)+wave_x((byte_index+1U)*9U,shown*9U))/2U-16U),383U,
+             trace.nack[byte_index]?"NACK":"ACK",trace.nack[byte_index]?C_RED:C_GREEN,
+             C_PANEL);
+    }
+    text(30U,360U,"HEX",C_MUTED,C_PANEL);
+}
+
+static void draw_can_trace(const PlatformUiStatus *status)
+{
+    CanTrace trace;
+    u32 byte_index, shown;
+    int have_trace = 0;
+    if (home_trace_available(status))
+        have_trace = can_trace_extract(&g_event_cache->event_word[0][0],
+                                       g_event_cache->count,&trace);
+    text(30U,190U,"CAN PAYLOAD BITS",C_CYAN,C_PANEL);
+    text(302U,190U,"DECODED - NOT SAMPLED",C_MUTED,C_PANEL);
+    hline(30U,770U,214U,C_BORDER);
+    if (!have_trace) {
+        draw_capture_help(status);
+        return;
+    }
+    shown=trace.count;
+    draw_trace_grid(shown*8U,0U);
+    text(30U,232U,"DATA",C_CYAN,C_PANEL);
+    draw_spi_wave_lane(trace.data,shown,231U,255U,C_CYAN);
+    text(30U,300U,"ID",C_MUTED,C_PANEL);
+    hex32(72U,300U,(u32)trace.identifier,C_TEXT,C_PANEL);
+    text(250U,300U,"DLC",C_MUTED,C_PANEL);
+    dec32(290U,300U,trace.dlc,C_TEXT,C_PANEL);
+    text(30U,355U,"DATA",C_MUTED,C_PANEL);
+    for(byte_index=0U;byte_index<shown;++byte_index)
+        hex8((u16)(wave_x(byte_index*8U+4U,shown*8U)-8U),370U,trace.data[byte_index],C_CYAN,C_PANEL);
+    text(30U,390U,"PAYLOAD ONLY: NO STUFF / CRC",C_MUTED,C_PANEL);
 }
 
 static void render_home_page(const PlatformUiStatus *status,
                              const CaptureDemoSnapshot *snapshot)
 {
-    SpiTrace trace;
+    WaveSpi trace;
     u32 byte_index;
     int have_trace = 0;
 
     if (status->selected_protocol == UI_PROTOCOL_SPI &&
-        status->capture_source == 2U && g_event_cache != 0 &&
-        g_event_cache->valid != 0U && snapshot != 0 &&
-        g_event_cache->snapshot_id == snapshot->snapshot_id) {
-        have_trace = spi_trace_extract(&g_event_cache->event_word[0][0],
+        home_trace_available(status)) {
+        have_trace = wave_spi_extract(&g_event_cache->event_word[0][0],
                                        g_event_cache->count, &trace);
     }
 
@@ -527,6 +755,16 @@ static void render_home_page(const PlatformUiStatus *status,
     if (status->selected_protocol == UI_PROTOCOL_UART &&
         ui_protocol_live(UI_PROTOCOL_UART,status->capabilities)) {
         draw_uart_trace(status);
+        return;
+    }
+    if (status->selected_protocol == UI_PROTOCOL_I2C &&
+        ui_protocol_live(UI_PROTOCOL_I2C,status->capabilities)) {
+        draw_i2c_trace(status);
+        return;
+    }
+    if (status->selected_protocol == UI_PROTOCOL_CAN &&
+        ui_protocol_live(UI_PROTOCOL_CAN,status->capabilities)) {
+        draw_can_trace(status);
         return;
     }
     if (status->selected_protocol != UI_PROTOCOL_SPI) {
@@ -542,16 +780,8 @@ static void render_home_page(const PlatformUiStatus *status,
     text(30U, 190U, "SPI BYTE TRACE", C_CYAN, C_PANEL);
     text(302U, 190U, "DECODED - NOT SAMPLED", C_MUTED, C_PANEL);
     hline(30U, 770U, 214U, C_BORDER);
-    if (have_trace == 0) {
-        text(274U, 244U,
-             status->capture_source == 1U ? "WAITING FOR BUS DATA" :
-             status->capture_source == 2U ? "NO COMPLETE TRANSACTION" :
-             "NO REAL BUS CAPTURE", C_TEXT, C_PANEL);
-        text(250U, 274U,
-             status->capture_source == 1U ? "END & SAVE IN EVENTS TO VIEW" :
-             status->capture_source == 2U ? "CHECK EVENTS FOR DETAILS" :
-             "TAP HERE TO ARM LIVE CAPTURE", C_CYAN, C_PANEL);
-        text(194U, 310U, "DEMO EVENTS ARE NOT BUS WAVEFORMS", C_MUTED, C_PANEL);
+    if (have_trace == 0 || trace.count == 0U) {
+        draw_capture_help(status);
         return;
     }
 
@@ -559,21 +789,20 @@ static void render_home_page(const PlatformUiStatus *status,
     text(30U, 300U, "MISO", C_GREEN, C_PANEL);
     text(84U, 232U, "TX", C_MUTED, C_PANEL);
     text(84U, 300U, "RX", C_MUTED, C_PANEL);
-    for (byte_index = 0U; byte_index <= SPI_TRACE_BYTES; ++byte_index) {
-        u16 x = (u16)(196U + byte_index * 120U);
-        vline(x, 224U, 340U, C_GRID);
-    }
-    draw_spi_wave_lane(trace.mosi, 231U, 255U, C_CYAN);
-    draw_spi_wave_lane(trace.miso, 299U, 323U, C_GREEN);
+    draw_trace_grid(trace.count*8U,1U);
+    draw_spi_wave_lane(trace.mosi, trace.count, 231U, 255U, C_CYAN);
+    draw_spi_wave_lane(trace.miso, trace.count, 299U, 323U, C_GREEN);
     text(30U, 355U, "TX", C_CYAN, C_PANEL);
     text(30U, 381U, "RX", C_GREEN, C_PANEL);
-    for (byte_index = 0U; byte_index < SPI_TRACE_BYTES; ++byte_index) {
-        u16 x = (u16)(242U + byte_index * 120U);
+    for (byte_index = 0U; byte_index < trace.count; ++byte_index) {
+        u16 x = (u16)(wave_x(byte_index*8U+4U,trace.count*8U)-8U);
         hex8(x, 355U, trace.mosi[byte_index], C_CYAN, C_PANEL);
         hex8(x, 381U, trace.miso[byte_index], C_GREEN, C_PANEL);
     }
-    text(692U, 355U, "HEX", C_MUTED, C_PANEL);
-    text(692U, 381U, "HEX", C_MUTED, C_PANEL);
+    if(trace.mosi[0]==0x9FU && trace.total>4U)
+        draw_wave_fault(wave_x(32U,trace.count*8U),752U,231U,323U);
+    else if(trace.mosi[0]==0x9FU && trace.closed && trace.total<4U)
+        draw_wave_fault(746U,756U,231U,323U);
 }
 
 static void draw_check_row(u16 y, const char *label, u32 value, u8 passed)
@@ -632,7 +861,7 @@ static void render_self_test_page(const PlatformUiStatus *status,
          C_CYAN, C_PANEL);
     text(582U, 365U,
          ui_protocol_live(status->selected_protocol, status->capabilities) ?
-         "SPI LISTENER READY" : "LISTENER NOT WIRED", C_MUTED, C_PANEL);
+         "LISTENER READY" : "LISTENER NOT WIRED", C_MUTED, C_PANEL);
 }
 
 static void draw_error_metric(u16 x0, u16 x1, u16 y,
@@ -649,7 +878,7 @@ static void draw_error_metric(u16 x0, u16 x1, u16 y,
     else
         text((u16)(x0 + 14U), (u16)(y + 36U), "--", accent, C_PANEL);
     text((u16)(x1 - 90U), (u16)(y + 36U),
-         known == 0U ? "NO DATA" : value == 0U ? "OK" : "FAULT",
+         known == 0U ? "UNKNOWN" : value == 0U ? "OK" : "FAULT",
          accent, C_PANEL);
 }
 
@@ -658,7 +887,7 @@ static void draw_spi_checker_tile(const PlatformUiStatus *status)
     u8 fault = status->spi_boundary_errors != 0U ||
                status->spi_duplicates != 0U ||
                status->spi_sequence_errors != 0U;
-    u32 accent = fault != 0U ? C_RED : C_GREEN;
+    u32 accent = status->test_id==0U ? C_MUTED : fault != 0U ? C_RED : C_GREEN;
     fill(14U, 207U, 390U, 276U, C_PANEL);
     outline(14U, 207U, 390U, 276U, C_BORDER);
     fill(14U, 207U, 18U, 276U, accent);
@@ -683,6 +912,33 @@ static void draw_planned_case(u16 x, u16 y, const char *label,
               reading.count == 0U ? C_GREEN : C_RED, C_PANEL);
 }
 
+static void draw_error_summary(const PlatformUiStatus *status,const char *mode,
+                               const char *rate)
+{
+    u8 bad=(u8)(status->test_failed || status->external_loss_count ||
+               error_model_has_fault(&status->error_model));
+    u8 has_data=(u8)(status->test_id!=0U && status->test_events!=0U);
+    u32 accent=bad ? C_RED : has_data ? C_GREEN : C_MUTED;
+    fill(14U,52U,786U,116U,C_PANEL);
+    outline(14U,52U,786U,116U,accent);
+    text(30U,61U,mode,C_MUTED,C_PANEL);
+    text(30U,86U,ui_test_result(status),accent,C_PANEL);
+    text(584U,61U,rate,C_CYAN,C_PANEL);
+    text(584U,86U,"LOST",C_MUTED,C_PANEL);
+    dec32(630U,86U,status->external_loss_count,
+          status->external_loss_count?C_RED:C_MUTED,C_PANEL);
+}
+
+static void draw_error_help(const PlatformUiStatus *status)
+{
+    fill(14U,360U,786U,407U,C_PANEL);
+    text(28U,368U,ui_error_advice(status),C_CYAN,C_PANEL);
+    text(28U,391U,status->selected_protocol==UI_PROTOCOL_CAN ?
+         "BUS-OFF: READ STM32 STATUS. UNKNOWN DOES NOT MEAN ZERO." :
+         "UNKNOWN = NOT MEASURED. START NEW RESETS THIS TEST ONLY.",
+         C_MUTED,C_PANEL);
+}
+
 static void render_errors_page(const PlatformUiStatus *status,
                                const CaptureDemoSnapshot *snapshot)
 {
@@ -694,6 +950,18 @@ static void render_errors_page(const PlatformUiStatus *status,
                                                    ERROR_UART_BREAK);
     ErrorObservation uart_short = error_model_get(&status->error_model,
                                                    ERROR_UART_SHORT_TRANSACTION);
+    ErrorObservation i2c_addr = error_model_get(&status->error_model,
+                                                 ERROR_I2C_ADDRESS_NACK);
+    ErrorObservation i2c_busy = error_model_get(&status->error_model,
+                                                 ERROR_I2C_BUSY_NACK);
+    ErrorObservation i2c_stop = error_model_get(&status->error_model,
+                                                 ERROR_I2C_MISSING_STOP);
+    ErrorObservation can_ack = error_model_get(&status->error_model,
+                                                ERROR_CAN_ACK);
+    ErrorObservation can_stuff = error_model_get(&status->error_model,
+                                                  ERROR_CAN_STUFF);
+    ErrorObservation can_crc = error_model_get(&status->error_model,
+                                                ERROR_CAN_CRC);
     u32 snapshot_errors = 0U;
     u8 snapshot_known = 0U;
     u8 fault;
@@ -730,6 +998,53 @@ static void render_errors_page(const PlatformUiStatus *status,
              C_CYAN, C_PANEL);
         return;
     }
+    if (status->selected_protocol == UI_PROTOCOL_I2C) {
+        fault = (u8)(status->external_loss_count != 0U ||
+                     i2c_addr.count != 0U || i2c_stop.count != 0U);
+        fill(14U, 52U, 786U, 116U, C_PANEL);
+        outline(14U, 52U, 786U, 116U, fault ? C_RED : C_GREEN);
+        text(30U, 61U, "I2C PASSIVE MONITOR", C_MUTED, C_PANEL);
+        text(30U, 86U, fault ? "ERROR DETECTED" : "NO DETECTED ERRORS",
+             fault ? C_RED : C_GREEN, C_PANEL);
+        text(614U, 61U, "100 KHZ", C_CYAN, C_PANEL);
+        draw_error_summary(status,"I2C TEST RESULT","100 KHZ");
+        draw_error_metric(14U,390U,128U,"DEVICE DID NOT ACK",i2c_addr.count,
+                          i2c_addr.origin!=ERROR_ORIGIN_NONE);
+        draw_error_metric(406U,786U,128U,"EEPROM BUSY (INFO)",i2c_busy.count,
+                          i2c_busy.origin!=ERROR_ORIGIN_NONE);
+        if(i2c_busy.origin!=ERROR_ORIGIN_NONE) {
+            fill(420U,160U,776U,186U,C_PANEL);
+            dec32(420U,164U,i2c_busy.count,C_CYAN,C_PANEL);
+            text(696U,164U,"INFO",C_CYAN,C_PANEL);
+        }
+        draw_error_metric(14U,390U,207U,"STOP NOT RECEIVED",i2c_stop.count,
+                          i2c_stop.origin!=ERROR_ORIGIN_NONE);
+        draw_error_metric(406U,786U,207U,"EVENT LOSS",
+                          status->external_loss_count,status->test_id!=0U);
+        draw_error_help(status);
+        return;
+    }
+    if (status->selected_protocol == UI_PROTOCOL_CAN) {
+        fault = (u8)(status->external_loss_count != 0U || can_ack.count != 0U ||
+                     can_stuff.count != 0U || can_crc.count != 0U);
+        fill(14U,52U,786U,116U,C_PANEL);
+        outline(14U,52U,786U,116U,fault ? C_RED : C_GREEN);
+        text(30U,61U,"CAN ACTIVE LISTENER",C_MUTED,C_PANEL);
+        text(30U,86U,fault ? "ERROR DETECTED" : "NO DETECTED ERRORS",
+             fault ? C_RED : C_GREEN,C_PANEL);
+        text(602U,61U,"500 KBIT/S",C_CYAN,C_PANEL);
+        draw_error_summary(status,"CAN TEST RESULT","500 KBIT/S");
+        draw_error_metric(14U,390U,128U,"NO ACK RECEIVED",can_ack.count,
+                          can_ack.origin!=ERROR_ORIGIN_NONE);
+        draw_error_metric(406U,786U,128U,"BIT STUFFING",can_stuff.count,
+                          can_stuff.origin!=ERROR_ORIGIN_NONE);
+        draw_error_metric(14U,390U,207U,"CRC CHECK FAILED",can_crc.count,
+                          can_crc.origin!=ERROR_ORIGIN_NONE);
+        draw_error_metric(406U,786U,207U,"EVENT LOSS",
+                          status->external_loss_count,status->test_id!=0U);
+        draw_error_help(status);
+        return;
+    }
     if (status->selected_protocol == UI_PROTOCOL_UART) {
         fault = (u8)(status->external_loss_count != 0U ||
                      uart_stop.count != 0U || uart_break.count != 0U ||
@@ -740,17 +1055,18 @@ static void render_errors_page(const PlatformUiStatus *status,
         text(30U, 86U, fault != 0U ? "ERROR DETECTED" : "NO DETECTED ERRORS",
              fault != 0U ? C_RED : C_GREEN, C_PANEL);
         text(592U, 61U, "115200 8N1", C_CYAN, C_PANEL);
-        draw_error_metric(14U, 390U, 128U, "UART STOP BIT",
+        draw_error_summary(status,"UART TEST RESULT","115200 8N1");
+        draw_error_metric(14U, 390U, 128U, "BAD STOP BIT",
                           uart_stop.count,
                           uart_stop.origin != ERROR_ORIGIN_NONE);
-        draw_error_metric(406U, 786U, 128U, "UART BREAK",
+        draw_error_metric(406U, 786U, 128U, "RX HELD LOW (BREAK)",
                           uart_break.count,
                           uart_break.origin != ERROR_ORIGIN_NONE);
-        draw_error_metric(14U, 390U, 207U, "UART SHORT TXN",
+        draw_error_metric(14U, 390U, 207U, "TOO FEW BYTES",
                           uart_short.count,
                           uart_short.origin != ERROR_ORIGIN_NONE);
         draw_error_metric(406U, 786U, 207U, "EXTERNAL EVENT LOSS",
-                          status->external_loss_count, 1U);
+                          status->external_loss_count, status->test_id!=0U);
         fill(14U, 288U, 786U, 407U, C_PANEL);
         outline(14U, 288U, 786U, 407U, C_BORDER);
         text(28U, 297U, "PASSIVE RX: W5; RESERVED TX IDLE: AA9",
@@ -759,10 +1075,7 @@ static void render_errors_page(const PlatformUiStatus *status,
         dec32(120U, 328U, status->uart_event_count, C_TEXT, C_PANEL);
         text(250U, 328U, "DATA BYTES", C_MUTED, C_PANEL);
         dec32(390U, 328U, status->uart_data_count, C_TEXT, C_PANEL);
-        text(28U, 364U, "BAUD MISMATCH MAY APPEAR AS DATA/STOP ERRORS",
-             C_MUTED, C_PANEL);
-        text(28U, 385U, "PARITY CHECK DISABLED FOR 8N1",
-             C_MUTED, C_PANEL);
+        draw_error_help(status);
         return;
     }
     fill(14U, 52U, 786U, 116U, C_PANEL);
@@ -772,11 +1085,12 @@ static void render_errors_page(const PlatformUiStatus *status,
          fault != 0U ? C_RED : C_GREEN, C_PANEL);
     text(592U, 61U, "SOURCE", C_MUTED, C_PANEL);
     text(592U, 86U, source, C_CYAN, C_PANEL);
+    draw_error_summary(status,"SPI TEST RESULT","JEDEC 9F");
 
     draw_error_metric(14U, 390U, 128U, "SPI PARTIAL BYTE",
                       partial.count, partial.origin != ERROR_ORIGIN_NONE);
     draw_error_metric(406U, 786U, 128U, "EXTERNAL EVENT LOSS",
-                      status->external_loss_count, 1U);
+                      status->external_loss_count, status->test_id!=0U);
     draw_spi_checker_tile(status);
     draw_error_metric(406U, 786U, 207U, "SNAPSHOT ERROR EVENTS",
                       snapshot_errors, snapshot_known);
@@ -828,9 +1142,10 @@ static void draw_events_chrome(const PlatformUiStatus *status,
     dec32(180U,13U,status->test_events,C_CYAN,C_HEADER);
     text(440U,13U,"ERR",C_MUTED,C_HEADER);
     dec32(477U,13U,status->test_errors,status->test_errors ? C_RED : C_GREEN,C_HEADER);
-    draw_test_button(14U,230U,"NEW TEST / RESET",
+    draw_test_button(14U,230U,"START NEW / RESET",
+                     !status->test_running &&
                      ui_protocol_live(status->selected_protocol,status->capabilities));
-    draw_test_button(244U,480U,"END & SAVE",status->test_running);
+    draw_test_button(244U,480U,"STOP & SAVE",status->test_running);
     draw_test_button(580U,786U,"HISTORY",1U);
     fill(14U,92U,786U,120U,C_HEADER);
     text(28U,99U,"MARK",C_MUTED,C_HEADER);
@@ -886,6 +1201,14 @@ static void draw_event_row_at(const u32 *words, u32 event_index,
         hex8(312U,(u16)(y+8U),(u8)view.flags,C_CYAN,row_bg);
         text(340U,(u16)(y+8U),"R",C_MUTED,row_bg);
         hex8(350U,(u16)(y+8U),(u8)(view.flags>>8),C_GREEN,row_bg);
+    } else if(view.protocol==3U && view.event_type==1U) {
+        text(294U,(u16)(y+8U),(view.flags & 0x8000U) ? "NACK" : "ACK",
+             (view.flags & 0x8000U) ? C_RED : C_GREEN,row_bg);
+        hex8(350U,(u16)(y+8U),(u8)view.flags,C_TEXT,row_bg);
+    } else if(view.protocol==4U && view.event_type==1U) {
+        text(294U,(u16)(y+8U),"B",C_MUTED,row_bg);
+        dec32(306U,(u16)(y+8U),(u8)(view.flags>>8),C_MUTED,row_bg);
+        hex8(350U,(u16)(y+8U),(u8)view.flags,C_TEXT,row_bg);
     } else hex32(294U,(u16)(y+8U),view.flags,C_MUTED,row_bg);
     dec32(414U,(u16)(y+8U),view.transaction_id,C_TEXT,row_bg);
     {
@@ -902,17 +1225,28 @@ static u32 max_scroll_px(u32 count)
                             EVENTS_Y1 - EVENTS_Y0 + 1U);
 }
 
-static void draw_scroll_indicator(u32 count,u32 scroll)
+static void draw_scroll_indicator_region(u32 count,u32 row_px,u16 y0,u16 y1,u32 scroll)
 {
-    u32 height=EVENTS_Y1-EVENTS_Y0+1U;
-    u32 maximum=max_scroll_px(count);
+    u32 height=y1-y0+1U;
+    u32 maximum=pixel_scroll_max(count,row_px,height);
     u32 thumb, y;
     if(maximum==0U) return;
-    thumb=height*height/(count*EVENT_ROW_PX);
+    thumb=height*height/(count*row_px);
     if(thumb<20U) thumb=20U;
-    y=EVENTS_Y0+(height-thumb)*scroll/maximum;
-    fill(779U,EVENTS_Y0,786U,EVENTS_Y1,C_GRID);
+    y=y0+(height-thumb)*scroll/maximum;
+    fill(779U,y0,786U,y1,C_GRID);
     fill(780U,(u16)y,785U,(u16)(y+thumb-1U),C_CYAN);
+}
+
+static void draw_scroll_indicator(u32 count,u32 scroll)
+{
+    draw_scroll_indicator_region(count,EVENT_ROW_PX,EVENTS_Y0,EVENTS_Y1,scroll);
+}
+
+static u32 history_list_max_scroll(void)
+{
+    return pixel_scroll_max(g_history!=0?g_history->count:0U,HISTORY_ROW_PX,
+                            HISTORY_LIST_Y1-HISTORY_LIST_Y0+1U);
 }
 
 static void draw_events_region(const PlatformUiStatus *status,
@@ -965,16 +1299,16 @@ static void render_events_page(const PlatformUiStatus *status,
         fill(14U,EVENTS_Y0,786U,EVENTS_Y1,C_PANEL);
         text(252U,160U,"RECORDING THIS TEST",C_CYAN,C_PANEL);
         text(150U,201U,"1. SEND ONE OR MORE STM32 TESTS",C_TEXT,C_PANEL);
-        text(150U,233U,"2. TAP END & SAVE WHEN FINISHED",C_TEXT,C_PANEL);
+        text(150U,233U,"2. TAP STOP & SAVE WHEN FINISHED",C_TEXT,C_PANEL);
         text(150U,265U,"3. REVIEW EVENTS / ERRORS / HISTORY",C_TEXT,C_PANEL);
         text(150U,315U,"EVENT COUNTS UPDATE WHILE RECORDING",C_MUTED,C_PANEL);
-        text(150U,345U,"LIST OPENS AFTER END; LAST 256 RETAINED",C_MUTED,C_PANEL);
+        text(150U,345U,"LIST OPENS AFTER STOP; LAST 256 RETAINED",C_MUTED,C_PANEL);
         return;
     }
     if (status->test_id == 0U) {
         fill(14U,EVENTS_Y0,786U,EVENTS_Y1,C_PANEL);
-        text(225U,213U,"TAP NEW TEST BEFORE SENDING DATA",C_TEXT,C_PANEL);
-        text(190U,253U,"EACH NEW TEST RESETS ITS ERROR COUNTS",C_CYAN,C_PANEL);
+        text(190U,213U,"1. START NEW   2. SEND   3. STOP & SAVE",C_TEXT,C_PANEL);
+        text(190U,253U,"START NEW RESETS THIS TEST'S ERROR COUNTS",C_CYAN,C_PANEL);
         text(190U,293U,"PREVIOUS RESULTS REMAIN IN HISTORY",C_MUTED,C_PANEL);
         return;
     }
@@ -1000,7 +1334,7 @@ static void render_history_page(const PlatformUiStatus *status,
     draw_test_button(14U,230U,g_history_detail ? "BACK TO LIST" : "LIVE EVENTS",1U);
     fill(244U,50U,786U,84U,C_PANEL);
     if (!g_history_detail) {
-        text(260U,60U,"TAP A RUN TO REOPEN SAVED EVENTS",C_CYAN,C_PANEL);
+        text(260U,60U,"SWIPE TO SCROLL; TAP TO OPEN",C_CYAN,C_PANEL);
         fill(14U,92U,786U,120U,C_HEADER);
         text(28U,99U,"TEST",C_MUTED,C_HEADER);
         text(110U,99U,"BUS",C_MUTED,C_HEADER);
@@ -1008,14 +1342,19 @@ static void render_history_page(const PlatformUiStatus *status,
         text(305U,99U,"ERRORS",C_MUTED,C_HEADER);
         text(415U,99U,"SAVED",C_MUTED,C_HEADER);
         text(525U,99U,"TIME MS",C_MUTED,C_HEADER);
+        fill(14U,HISTORY_LIST_Y0,786U,HISTORY_LIST_Y1,C_PANEL);
+        if (g_history_list_scroll>history_list_max_scroll())
+            g_history_list_scroll=history_list_max_scroll();
         if (g_history == 0 || g_history->count == 0U) {
             text(260U,230U,"NO COMPLETED TESTS YET",C_MUTED,C_PANEL);
             return;
         }
-        for (i=0U;i<g_history->count;++i) {
-            u16 y=(u16)(122U+i*32U);
+        set_clip(14U,HISTORY_LIST_Y0,786U,HISTORY_LIST_Y1);
+        for (i=g_history_list_scroll/HISTORY_ROW_PX;i<g_history->count;++i) {
+            u16 y=(u16)(HISTORY_LIST_Y0+i*HISTORY_ROW_PX-g_history_list_scroll);
+            if(y>HISTORY_LIST_Y1) break;
             record=test_history_get(g_history,i);
-            fill(14U,y,786U,(u16)(y+29U),(i&1U)?C_BG:C_PANEL);
+            fill(14U,y,786U,(u16)(y+HISTORY_ROW_PX-3U),(i&1U)?C_BG:C_PANEL);
             dec32(28U,(u16)(y+7U),record->id,C_TEXT,(i&1U)?C_BG:C_PANEL);
             text(110U,(u16)(y+7U),ui_protocol_name((UiProtocol)record->protocol),C_CYAN,(i&1U)?C_BG:C_PANEL);
             dec32(195U,(u16)(y+7U),record->total_events,C_TEXT,(i&1U)?C_BG:C_PANEL);
@@ -1025,6 +1364,9 @@ static void render_history_page(const PlatformUiStatus *status,
             if(!record->snapshot_valid) text(652U,(u16)(y+7U),"NO SNAP",C_RED,(i&1U)?C_BG:C_PANEL);
             else if(record->overwritten) text(652U,(u16)(y+7U),"TAIL256",C_WARN,(i&1U)?C_BG:C_PANEL);
         }
+        clear_clip();
+        draw_scroll_indicator_region(g_history->count,HISTORY_ROW_PX,
+                                    HISTORY_LIST_Y0,HISTORY_LIST_Y1,g_history_list_scroll);
         text(50U,392U,"NEWEST FIRST; HISTORY CLEARS AFTER POWER-OFF",C_MUTED,C_BG);
         return;
     }
@@ -1037,35 +1379,31 @@ static void render_history_page(const PlatformUiStatus *status,
     dec32(502U,60U,record->error_count,record->error_count?C_RED:C_GREEN,C_PANEL);
     draw_test_button(580U,786U,g_history_errors?"EVENT LIST":"ERROR DETAILS",1U);
     if(g_history_errors) {
-        ErrorCode codes[4];
-        const char *labels[4];
-        if(record->protocol==UI_PROTOCOL_UART) {
-            codes[0]=ERROR_UART_STOP_BIT;codes[1]=ERROR_UART_BREAK;
-            codes[2]=ERROR_UART_SHORT_TRANSACTION;codes[3]=ERROR_CODE_COUNT;
-            labels[0]="UART STOP BIT";labels[1]="UART BREAK";
-            labels[2]="UART SHORT TXN";labels[3]="EXTERNAL EVENT LOSS";
-        } else {
-            codes[0]=ERROR_SPI_PARTIAL_BYTE;codes[1]=ERROR_SPI_SHORT_TRANSACTION;
-            codes[2]=ERROR_SPI_EXTRA_BYTES;codes[3]=ERROR_SPI_RESPONSE_MISMATCH;
-            labels[0]="SPI PARTIAL BYTE";labels[1]="SPI SHORT TXN";
-            labels[2]="SPI EXTRA BYTE";labels[3]="SPI BAD RESPONSE";
-        }
-        for(i=0U;i<4U;++i) {
+        ErrorCode codes[6];
+        const char *labels[6];
+        unsigned int n=ui_error_catalog((UiProtocol)record->protocol,codes,labels);
+        fill(14U,92U,786U,407U,C_PANEL);
+        for(i=0U;i<n;++i) {
             ErrorObservation reading=error_model_get(&record->errors,codes[i]);
+            u16 tile_y=(u16)(105U+(i/2U)*79U);
             draw_error_metric((i&1U)?406U:14U,(i&1U)?786U:390U,
-                              i<2U?105U:184U,labels[i],
-                              codes[i]==ERROR_CODE_COUNT?record->external_loss:reading.count,
-                              codes[i]==ERROR_CODE_COUNT || reading.origin!=ERROR_ORIGIN_NONE);
+                              tile_y,labels[i],reading.count,
+                              reading.origin!=ERROR_ORIGIN_NONE);
+            if(codes[i]==ERROR_I2C_BUSY_NACK && reading.origin!=ERROR_ORIGIN_NONE) {
+                u16 left=(i&1U)?420U:28U;
+                fill(left,(u16)(tile_y+32U),(i&1U)?776U:380U,
+                     (u16)(tile_y+60U),C_PANEL);
+                dec32(left,(u16)(tile_y+36U),reading.count,C_CYAN,C_PANEL);
+                text((i&1U)?696U:300U,(u16)(tile_y+36U),"INFO",C_CYAN,C_PANEL);
+            }
         }
-        fill(14U,270U,786U,407U,C_PANEL);
-        outline(14U,270U,786U,407U,C_BORDER);
-        text(30U,290U,"SAVED RESULT - UNAFFECTED BY NEW TESTS",C_CYAN,C_PANEL);
-        text(30U,325U,"EVENTS",C_MUTED,C_PANEL);
-        dec32(112U,325U,record->total_events,C_TEXT,C_PANEL);
-        text(250U,325U,"DATA BYTES",C_MUTED,C_PANEL);
-        dec32(350U,325U,record->data_count,C_TEXT,C_PANEL);
-        text(30U,360U,"EXTERNAL LOSS",C_MUTED,C_PANEL);
-        dec32(170U,360U,record->external_loss,record->external_loss?C_RED:C_GREEN,C_PANEL);
+        text(30U,353U,"SAVED RESULT - NOT CHANGED BY A NEW TEST",C_CYAN,C_PANEL);
+        text(30U,385U,"EVENTS",C_MUTED,C_PANEL);
+        dec32(94U,385U,record->total_events,C_TEXT,C_PANEL);
+        text(250U,385U,"BYTES",C_MUTED,C_PANEL);
+        dec32(306U,385U,record->data_count,C_TEXT,C_PANEL);
+        text(500U,385U,"LOST",C_MUTED,C_PANEL);
+        dec32(548U,385U,record->external_loss,record->external_loss?C_RED:C_MUTED,C_PANEL);
         return;
     }
     fill(14U,92U,786U,120U,C_HEADER);
@@ -1092,6 +1430,7 @@ void platform_ui_set_history(const TestHistory *history)
     g_history_detail=0U;
     g_history_errors=0U;
     g_history_scroll=0U;
+    g_history_list_scroll=0U;
 }
 
 void platform_ui_set_event_cache(const CaptureDemoCache *cache)
@@ -1124,6 +1463,7 @@ void platform_ui_tick(void)
             render_history_page(&g_requested_status, snapshot);
         } else {
             render_home_page(&g_requested_status, snapshot);
+            draw_home_fault_notice(&g_requested_status);
         }
         draw_navigation(g_requested_page);
         present_status = present_frame_region(0U, FB_H - 1U);
@@ -1192,6 +1532,21 @@ void platform_ui_update_counters(const PlatformUiStatus *status)
         g_requested_status.uart_break_errors == status->uart_break_errors &&
         g_requested_status.uart_short_transactions ==
             status->uart_short_transactions &&
+        g_requested_status.i2c_event_count == status->i2c_event_count &&
+        g_requested_status.i2c_data_count == status->i2c_data_count &&
+        g_requested_status.i2c_address_nacks == status->i2c_address_nacks &&
+        g_requested_status.i2c_busy_nacks == status->i2c_busy_nacks &&
+        g_requested_status.i2c_sda_stuck == status->i2c_sda_stuck &&
+        g_requested_status.i2c_scl_stuck == status->i2c_scl_stuck &&
+        g_requested_status.i2c_missing_stop == status->i2c_missing_stop &&
+        g_requested_status.can_event_count == status->can_event_count &&
+        g_requested_status.can_frame_count == status->can_frame_count &&
+        g_requested_status.can_ack_errors == status->can_ack_errors &&
+        g_requested_status.can_bit_errors == status->can_bit_errors &&
+        g_requested_status.can_stuff_errors == status->can_stuff_errors &&
+        g_requested_status.can_crc_errors == status->can_crc_errors &&
+        g_requested_status.can_form_errors == status->can_form_errors &&
+        g_requested_status.can_bus_off == status->can_bus_off &&
         error_model_equal(&g_requested_status.error_model,
                           &status->error_model))
         return;
@@ -1213,6 +1568,21 @@ void platform_ui_update_counters(const PlatformUiStatus *status)
     g_requested_status.uart_break_errors = status->uart_break_errors;
     g_requested_status.uart_short_transactions =
         status->uart_short_transactions;
+    g_requested_status.i2c_event_count = status->i2c_event_count;
+    g_requested_status.i2c_data_count = status->i2c_data_count;
+    g_requested_status.i2c_address_nacks = status->i2c_address_nacks;
+    g_requested_status.i2c_busy_nacks = status->i2c_busy_nacks;
+    g_requested_status.i2c_sda_stuck = status->i2c_sda_stuck;
+    g_requested_status.i2c_scl_stuck = status->i2c_scl_stuck;
+    g_requested_status.i2c_missing_stop = status->i2c_missing_stop;
+    g_requested_status.can_event_count = status->can_event_count;
+    g_requested_status.can_frame_count = status->can_frame_count;
+    g_requested_status.can_ack_errors = status->can_ack_errors;
+    g_requested_status.can_bit_errors = status->can_bit_errors;
+    g_requested_status.can_stuff_errors = status->can_stuff_errors;
+    g_requested_status.can_crc_errors = status->can_crc_errors;
+    g_requested_status.can_form_errors = status->can_form_errors;
+    g_requested_status.can_bus_off = status->can_bus_off;
     g_requested_status.error_model = status->error_model;
     g_counter_render_pending = 1U;
     g_render_pending = 1U;
@@ -1244,7 +1614,11 @@ PlatformUiAction platform_ui_poll_action(void)
     static u8 tracking;
     static u8 dragging_events;
     static u8 drag_moved;
+    static u8 tracking_history_list;
     static u16 last_y;
+    static u16 last_x,press_x,press_y;
+    static u32 pressed_history_row,pressed_history_id;
+    static PlatformUiPage touch_page;
     u16 x;
     u16 y;
     u32 next_scroll;
@@ -1255,6 +1629,18 @@ PlatformUiAction platform_ui_poll_action(void)
     if (TouchInfo.Touch_Num == 0U) {
         if (tracking == 0U) return PLATFORM_UI_ACTION_NONE;
         tracking = 0U;
+        if(tracking_history_list && !drag_moved &&
+           g_requested_page==touch_page && !g_history_detail &&
+           last_x>=14U && last_x<=786U &&
+           last_y>=HISTORY_LIST_Y0 && last_y<=HISTORY_LIST_Y1) {
+            u32 row=(g_history_list_scroll+last_y-HISTORY_LIST_Y0)/HISTORY_ROW_PX;
+            const TestHistoryEntry *record=test_history_get(g_history,row);
+            if(row==pressed_history_row && record!=0 && record->id==pressed_history_id) {
+                g_history_selected=row;g_history_detail=1U;g_history_scroll=0U;
+                g_history_errors=0U;g_render_full=1U;g_render_pending=1U;
+            }
+        }
+        tracking_history_list=0U;
         if (dragging_events != 0U && drag_moved != 0U) {
             /* Refresh VIEW metadata after the last pixel-aligned drag frame. */
             g_render_pending = 1U;
@@ -1268,7 +1654,24 @@ PlatformUiAction platform_ui_poll_action(void)
     x = (u16)(((u32)TouchInfo.Tp_X[0] * FB_W) / GT911_RAW_WIDTH);
     y = (u16)(((u32)TouchInfo.Tp_Y[0] * FB_H) / GT911_RAW_HEIGHT);
     if (tracking != 0U) {
-        if (dragging_events != 0U) {
+        if(g_requested_page!=touch_page) {
+            tracking_history_list=0U;dragging_events=0U;
+            last_x=x;last_y=y;
+            return PLATFORM_UI_ACTION_NONE;
+        }
+        if(tracking_history_list) {
+            u8 was_dragging=drag_moved;
+            u32 dx=x>press_x?x-press_x:press_x-x;
+            u32 dy=y>press_y?y-press_y:press_y-y;
+            if(dx>=HISTORY_DRAG_PX || dy>=HISTORY_DRAG_PX) drag_moved=1U;
+            if(drag_moved) {
+                next_scroll=pixel_scroll_drag(g_history_list_scroll,
+                    was_dragging?(int)last_y:(int)press_y,(int)y,history_list_max_scroll());
+                if(next_scroll!=g_history_list_scroll) {
+                    g_history_list_scroll=next_scroll;g_render_pending=1U;
+                }
+            }
+        } else if (dragging_events != 0U) {
             u32 current_scroll = g_scroll_px;
             if (g_requested_page == PLATFORM_UI_PAGE_HISTORY) {
                 const TestHistoryEntry *record = test_history_get(g_history,g_history_selected);
@@ -1285,12 +1688,15 @@ PlatformUiAction platform_ui_poll_action(void)
                 g_render_pending = 1U;
             }
         }
-        last_y = y;
+        last_y = y;last_x=x;
         return PLATFORM_UI_ACTION_NONE;
     }
 
     tracking = 1U;
-    last_y = y;
+    last_y = press_y = y;
+    last_x = press_x = x;
+    touch_page=g_requested_page;
+    tracking_history_list=0U;
     drag_moved = 0U;
     if (g_requested_page == PLATFORM_UI_PAGE_HISTORY) {
         if (g_history_detail && y >= 50U && y <= 84U && x >= 580U && x <= 786U) {
@@ -1302,11 +1708,13 @@ PlatformUiAction platform_ui_poll_action(void)
             g_history_detail=0U; g_render_full=1U; g_render_pending=1U;
             return PLATFORM_UI_ACTION_NONE;
         }
-        if (!g_history_detail && y >= 122U && y < 378U && g_history != 0) {
-            u32 row = (y - 122U) / 32U;
+        if (!g_history_detail && x>=14U && x<=786U &&
+            y>=HISTORY_LIST_Y0 && y<=HISTORY_LIST_Y1 && g_history!=0) {
+            u32 row=(g_history_list_scroll+y-HISTORY_LIST_Y0)/HISTORY_ROW_PX;
             if (row < g_history->count) {
-                g_history_selected=row; g_history_detail=1U; g_history_scroll=0U;g_history_errors=0U;
-                g_render_full=1U; g_render_pending=1U;
+                const TestHistoryEntry *record=test_history_get(g_history,row);
+                pressed_history_row=row;pressed_history_id=record->id;
+                tracking_history_list=1U;
             }
             return PLATFORM_UI_ACTION_NONE;
         }
@@ -1332,21 +1740,23 @@ PlatformUiAction platform_ui_poll_action(void)
         if (x >= 580U && x <= 786U) return PLATFORM_UI_ACTION_HISTORY;
         if (x >= 244U && x <= 480U && g_requested_status.test_running)
             return PLATFORM_UI_ACTION_END_TEST;
-        if (x >= 14U && x <= 230U &&
+        if (x >= 14U && x <= 230U && !g_requested_status.test_running &&
             ui_protocol_live(g_requested_status.selected_protocol,g_requested_status.capabilities))
             return PLATFORM_UI_ACTION_CAPTURE_LIVE;
     }
     if (g_requested_page == PLATFORM_UI_PAGE_HOME &&
         ui_protocol_live(g_requested_status.selected_protocol,
                          g_requested_status.capabilities) &&
-        g_requested_status.capture_source == 0U &&
-        y >= 176U && y <= 407U && x >= 14U && x <= 786U)
-        return PLATFORM_UI_ACTION_CAPTURE_LIVE;
+        g_requested_status.test_running == 0U &&
+        g_requested_status.capture_source != 1U &&
+        (y >= 58U && y <= 94U && x >= 574U && x <= 776U))
+        return PLATFORM_UI_ACTION_CAPTURE_HOME;
     if (y < 414U || y > 479U) return PLATFORM_UI_ACTION_NONE;
-    if (x >= 12U && x <= 188U) return PLATFORM_UI_ACTION_HOME;
-    if (x >= 196U && x <= 384U) return PLATFORM_UI_ACTION_SELF_TEST;
-    if (x >= 392U && x <= 580U) return PLATFORM_UI_ACTION_EVENTS;
-    if (x >= 588U && x <= 799U) return PLATFORM_UI_ACTION_ERRORS;
+    if (x >= 12U && x <= 160U) return PLATFORM_UI_ACTION_HOME;
+    if (x >= 168U && x <= 316U) return PLATFORM_UI_ACTION_EVENTS;
+    if (x >= 324U && x <= 472U) return PLATFORM_UI_ACTION_ERRORS;
+    if (x >= 480U && x <= 628U) return PLATFORM_UI_ACTION_HISTORY;
+    if (x >= 636U && x <= 787U) return PLATFORM_UI_ACTION_SELF_TEST;
     return PLATFORM_UI_ACTION_NONE;
 }
 

@@ -1,0 +1,145 @@
+{
+  "created": "2026-10-26",
+  "status": "BOARD_UI_AND_FAULT_CAPTURE_VERIFIED_WITH_PROTOCOL_LIMITATIONS",
+  "toolchain": "Vivado/SDK 2018.3",
+  "abi": {
+    "SYS_ID": "0x4D505254",
+    "VERSION": "0x00010008",
+    "CAPABILITIES": "0x000001FF"
+  },
+  "files": [
+    {
+      "name": "multi_protocol_bd_wrapper.bit",
+      "bytes": 4045685,
+      "sha256": "5acb8b5dad60b482253e3ae73f2b7c0fcc2f520e6c97bf97f007405ca6b5e134"
+    },
+    {
+      "name": "system.hdf",
+      "bytes": 426167,
+      "sha256": "f78185211f0bc0809668c0747000414fcb385f0a63af1650e386a344f7a2b9b9"
+    },
+    {
+      "name": "ps7_init.tcl",
+      "bytes": 34511,
+      "sha256": "47d35117fe590757d5f887986ae68b1e64f5cdcfc7eeb480825af9543bf91399"
+    },
+    {
+      "name": "platform_app.elf",
+      "bytes": 858804,
+      "sha256": "bbd1317b9223f537b6f014d3a6dc84592a8cb21f4906beeec458645ab388fc5d"
+    }
+  ],
+  "source_files": [
+    {
+      "name": "software/src/capture_demo.c",
+      "sha256": "bca61b5ef1fd5542702a95253741b8bc11757621d65be4f6ce82ae51d6592827"
+    },
+    {
+      "name": "software/src/capture_demo.h",
+      "sha256": "3e8c607a1044e959edf76dbebff2640a0fad5b7c3500f80f01a80846e1eb16f2"
+    },
+    {
+      "name": "software/src/error_model.h",
+      "sha256": "e74c4252c89fe450e52bafc70d8ad5acdf1d11a41f9e3bbb0a9c2def29fc13ad"
+    },
+    {
+      "name": "software/src/event_audit.h",
+      "sha256": "906b93fc4ad04cd64c61f56b1ba9631e0cc49078357b95f5e431cc3e603cc8e4"
+    },
+    {
+      "name": "software/src/event_diagnostics.h",
+      "sha256": "83992711b48794414bae5c16eace33aa474872a305aa07b240f74525eb739baa"
+    },
+    {
+      "name": "software/src/event_view.h",
+      "sha256": "4a1e5d2dced1d0c49e34d117340bd61126703f4d8c9d78141be2a4554c1563fd"
+    },
+    {
+      "name": "software/src/font.h",
+      "sha256": "f6f98de4fb64fe4466106588626b1d8dc0001037c45b21d6f7a0d1ce3ce5f7da"
+    },
+    {
+      "name": "software/src/main.c",
+      "sha256": "aebed4d15df2f60041fbe930ceaaa2e6dd8d5d7fe0fc11ce3974839c9b84c90b"
+    },
+    {
+      "name": "software/src/pixel_scroll.h",
+      "sha256": "82380d8fbfae7c886773883ca6bc668cee57ec71c594ab6f05d4e8f224b623b9"
+    },
+    {
+      "name": "software/src/platform_ui.c",
+      "sha256": "2bc5645f6074930e35285fe7cd8ad382a6db03887f01e59d327200fa278ebbeb"
+    },
+    {
+      "name": "software/src/platform_ui.h",
+      "sha256": "44193507e75c93502001c0447be401ae91652fbe225acab83f63581c1190c661"
+    },
+    {
+      "name": "software/src/protocol_trace.h",
+      "sha256": "b04cfdd59ba146dfbd80bcffe09e61e05e2d988a70d3c680e33a0f64faac49f8"
+    },
+    {
+      "name": "software/src/ps_gpio.c",
+      "sha256": "1fa1f97c32ab9460e2c0810e5d059b96ab0b99fcb3d1616800aa6d1a8cb96c11"
+    },
+    {
+      "name": "software/src/ps_gpio.h",
+      "sha256": "d866b53299e1a84cd966e016fbb1c7f47bebef360a69fa231d18c3cac5f16455"
+    },
+    {
+      "name": "software/src/ps_iic.c",
+      "sha256": "24c2c81d80fcd8c3fb32f49d9098455aaaf16cad5c252bf30ac22f1df84f8bd4"
+    },
+    {
+      "name": "software/src/ps_iic.h",
+      "sha256": "c397c239f2629db4e928062b0a91aa05537701e06ef3053071ee3c5c0035d146"
+    },
+    {
+      "name": "software/src/spi_trace.h",
+      "sha256": "84aaab45a95d0f84c31dc83652860d3ffff76978be588474470075a4aad8fd44"
+    },
+    {
+      "name": "software/src/stm32_fault_bridge.h",
+      "sha256": "f642f6828daa0da71746ab7364a7ee8298b505ae9a64ec2966e1986248c28ffb"
+    },
+    {
+      "name": "software/src/test_history.h",
+      "sha256": "4c86eeaab2d3eb7478dd6f488c5f7eb38f4f5cf2bcdf009859ded78aaecbb383"
+    },
+    {
+      "name": "software/src/touch.c",
+      "sha256": "a702031994d356cc23fb6f45c292a8791e1c791cbf752e421164c1b3fdbde86e"
+    },
+    {
+      "name": "software/src/touch.h",
+      "sha256": "ed842a521d2f1866cbc4d88aad8c0203158514c07397241156a580fa45ed1e5e"
+    },
+    {
+      "name": "software/src/ui_counter_semantics.h",
+      "sha256": "bd835d8903b4e73c28a77331e6ea74f2eb4728610aab58b991df9730f7c9830c"
+    },
+    {
+      "name": "software/src/ui_protocol_select.h",
+      "sha256": "8dedbad4c30631e498dbb9c4ee9f61a60bf62e7a2deed0976995d47cb3837f69"
+    },
+    {
+      "name": "software/src/ui_workflow.h",
+      "sha256": "caba9b0de03b60322dfb71c1a9da3f9ad217c6632e8f55c520e165fde6a6ce59"
+    },
+    {
+      "name": "software/src/waveform_view.h",
+      "sha256": "a691ba834d8fd806ed498368e2c2e01a22d94639800b348d08332928d4a238e7"
+    }
+  ],
+  "validation": [
+    "13 host tests and production renderer/touch regression passed",
+    "ARM build and matched-ABI JTAG ELF download passed",
+    "28 board capture cases; 45 captured transaction diagrams"
+  ],
+  "limitations": [
+    "Decoded waveform reconstruction, not sampled electrical waveform",
+    "Six menu fault injectors unsupported or require extra wiring",
+    "I2C EEPROM_RW failed; UART RX does not provide TX echo",
+    "Intermittent CAN baseline errors retained; not all-protocol pass"
+  ]
+}
