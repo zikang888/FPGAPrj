@@ -2,6 +2,8 @@
 
 ## 打开与编译
 
+2026-10-30 新增 `common/src/mc_mixed.c`，规范 Keil 工程已纳入；CubeMX 再生成时须保留。四协议混合流量与屏幕预设见 [说明](../../docs/hardware/stm32_mixed_traffic.md)，测试见 [记录](../../docs/test-results/2026-10-30-mixed-traffic.md)。无新增引脚/常驻定时器，CAN 按槽复用原 normal/RAW 后端。
+
 Keil MDK-ARM 入口：
 
 ```text

@@ -9,10 +9,10 @@ UART_HandleTypeDef huart1, huart3;
 GPIO_TypeDef test_board_gpio[3];
 static GPIO_PinState key, led;
 static uint32_t ticks;
-static unsigned int spi_calls, uart_calls, i2c_calls, can_calls, fault_calls, submits;
+static unsigned int spi_calls, uart_calls, i2c_calls, can_calls, fault_calls, submits, i2c_reads;
 static uint8_t echo[16], eeprom[16];
 static char rows[8][24], console[32768];
-static int echo_error, probe_error, restore_error, keep_pending;
+static int echo_error, probe_error, restore_error, keep_pending, write_error;
 
 uint32_t HAL_GetTick(void) { return ticks; }
 void HAL_Delay(uint32_t delay) { ticks += delay; }
@@ -45,19 +45,27 @@ static int transfer_spi(void *ctx, const uint8_t *tx, uint8_t *rx, size_t length
     return MC_OK;
 }
 static int uart_write(void *ctx, const uint8_t *data, size_t length, uint32_t timeout)
-{ (void)ctx; (void)timeout; ++uart_calls; memcpy(echo, data, length); return MC_OK; }
+{ (void)ctx; (void)timeout; ++uart_calls; memcpy(echo, data, length); return write_error ? MC_ERR_IO : MC_OK; }
 static int uart_read(void *ctx, uint8_t *data, size_t length, uint32_t timeout)
 { (void)ctx; (void)timeout; memcpy(data, echo, length); return echo_error ? MC_ERR_TIMEOUT : MC_OK; }
 static int i2c_write(void *ctx, uint8_t addr, uint16_t mem, const uint8_t *data, size_t length, uint32_t timeout)
 { (void)ctx; (void)addr; (void)mem; (void)timeout; ++i2c_calls; memcpy(eeprom, data, length); return MC_OK; }
 static int i2c_read(void *ctx, uint8_t addr, uint16_t mem, uint8_t *data, size_t length, uint32_t timeout)
-{ (void)ctx; (void)addr; (void)mem; (void)timeout; memcpy(data, eeprom, length); return MC_OK; }
+{ (void)ctx; (void)addr; (void)mem; (void)timeout; ++i2c_reads; memcpy(data, eeprom, length); return MC_OK; }
 static int can_send(void *ctx, uint32_t id, const uint8_t *data, size_t length, uint32_t timeout)
 { (void)ctx; (void)id; (void)timeout; ++can_calls; memcpy(echo, data, length); return MC_OK; }
 static int can_receive(void *ctx, uint32_t *id, uint8_t *data, size_t *length, uint32_t timeout)
 { (void)ctx; (void)timeout; *id = 0x321U; *length = 8U; memcpy(data, echo, 8U); return MC_OK; }
 static int partial(void *ctx, uint8_t value, uint8_t bits)
 { (void)ctx; (void)value; (void)bits; ++fault_calls; return MC_OK; }
+static int bad_stop(void *ctx, uint8_t value, uint32_t baud)
+{ (void)ctx; (void)value; (void)baud; ++fault_calls; return MC_OK; }
+static int break_tx(void *ctx, uint32_t bits, uint32_t baud)
+{ (void)ctx; (void)bits; (void)baud; ++fault_calls; return MC_OK; }
+static int i2c_probe(void *ctx, uint8_t addr, uint32_t timeout)
+{ (void)ctx; (void)timeout; return addr == 0x50U ? MC_OK : MC_ERR_IO; }
+static int no_stop(void *ctx, uint8_t addr, uint32_t duration)
+{ (void)ctx; (void)addr; (void)duration; ++fault_calls; return MC_OK; }
 static int log_text(void *ctx, const char *text, size_t length)
 { (void)ctx; return HAL_UART_Transmit(&huart1, (uint8_t *)(uintptr_t)text, (uint16_t)length, 100U) == HAL_OK ? MC_OK : MC_ERR_IO; }
 mc_platform_t mc_stm32f407_make_platform(mc_stm32f407_context_t *ctx)
@@ -68,6 +76,8 @@ mc_platform_t mc_stm32f407_make_platform(mc_stm32f407_context_t *ctx)
     port.uart_write = uart_write; port.uart_read = uart_read;
     port.i2c_mem_write = i2c_write; port.i2c_mem_read = i2c_read;
     port.can_send = can_send; port.can_receive = can_receive; port.spi_emit_incomplete = partial;
+    port.uart_emit_bad_stop = bad_stop; port.uart_emit_break = break_tx;
+    port.i2c_probe = i2c_probe; port.i2c_emit_no_stop = no_stop;
     return port;
 }
 static int begin(void *ctx, mc_can_mode_t mode) { (void)ctx; (void)mode; return MC_OK; }
@@ -115,6 +125,75 @@ static void normal(mc_ui_protocol_t protocol, unsigned int index)
 {
     g_menu.protocol = protocol; g_menu.item = index; g_menu.in_submenu = 1U;
     hold();
+}
+
+static void drain_mixed(void)
+{
+    unsigned int limit = 20000U;
+    while (g_mixed.state == MC_MIX_RUNNING && limit-- != 0U) { ++ticks; mc_board_app_poll(); }
+}
+
+static int test_mixed_board(void)
+{
+    const mc_fault_id_t faults[] = {MC_FAULT_SPI_PARTIAL, MC_FAULT_SPI_SHORT, MC_FAULT_SPI_EXTRA,
+        MC_FAULT_UART_BAD_STOP, MC_FAULT_UART_BREAK, MC_FAULT_I2C_ADDRESS_NACK, MC_FAULT_I2C_NO_STOP,
+        MC_FAULT_CAN_STUFF, MC_FAULT_CAN_CRC, MC_FAULT_CAN_FORM};
+    mc_mix_config_t config = {MC_FAULT_SPI_PARTIAL, MC_MIX_ONCE, 5U, 100U, 3U, 1U};
+    unsigned int i, before;
+    probe_error = 0; echo_error = 1; /* mixed UART must not wait for echo */
+    for (i = 0U; i < sizeof(faults)/sizeof(faults[0]); ++i) {
+        config.fault = faults[i]; console[0] = '\0'; before = submits;
+#if !MC_BUILD_CAN_RAW_GPIO
+        if (config.fault >= MC_FAULT_CAN_NO_ACK) {
+            CHECK(start_mixed(&config) == MC_ERR_UNSUPPORTED && submits == before && !g_mixed.held);
+            continue;
+        }
+#endif
+        CHECK(start_mixed(&config) == MC_OK && g_mix_view && g_mixed.held);
+        before = spi_calls;
+        run_command("spi pattern 1"); CHECK(spi_calls == before); /* exclusive for the whole run */
+        drain_mixed();
+        CHECK(g_mixed.state == MC_MIX_DONE && g_mixed.completed == 5U && !g_mixed.held);
+        CHECK(g_mixed.normal_ok == 4U && g_mixed.fault_attempts == 1U && g_mixed.fault_ok == 1U);
+        CHECK(strstr(rows[0], "MIX DONE") != NULL && led == GPIO_PIN_SET);
+        CHECK(strstr(console, "\"index\":3") != NULL && strstr(console, "\"phase\":\"end\"") != NULL);
+        CHECK(strstr(console, "\"physical_verified\":false") != NULL);
+        tap(); CHECK(!g_mix_view);
+    }
+    before = i2c_calls; config.fault = MC_FAULT_I2C_NO_STOP; config.mode = MC_MIX_NORMAL; config.value = 0U;
+    CHECK(start_mixed(&config) == MC_OK); drain_mixed();
+    CHECK(g_mixed.normal_ok == 5U && i2c_calls == before && i2c_reads >= 5U); /* no EEPROM writes */
+    tap();
+    config.fault = MC_FAULT_CAN_CRC;
+    CHECK(start_mixed(&config) == MC_OK); drain_mixed(); /* pure CAN normal allowed in BOTH profiles */
+    CHECK(g_mixed.normal_ok == 5U && !g_mixed.fault_attempts); tap();
+    run_command("mix start 4 5 100 once 3"); CHECK(g_mixed.state == MC_MIX_RUNNING);
+    drain_mixed(); CHECK(g_mixed.state == MC_MIX_DONE); tap();
+    run_command("mix start 4 5 100 random 2 7"); drain_mixed();
+    CHECK(g_mixed.fault_attempts == 2U && g_mixed.state == MC_MIX_DONE); tap();
+    run_command("mix start 4 5 100 every 2"); drain_mixed();
+    CHECK(g_mixed.fault_attempts == 2U && g_mixed.state == MC_MIX_DONE); tap();
+    run_command("mix start 4 1000 100 once 500");
+    hold(); CHECK(g_mixed.state == MC_MIX_STOPPED && !g_mixed.held); tap();
+    /* A child CAN restore failure must keep every old protocol locked. */
+    config.fault = MC_FAULT_CAN_CRC; config.mode = MC_MIX_NORMAL;
+    keep_pending = 1; CHECK(start_mixed(&config) == MC_OK);
+    mc_board_app_poll(); mc_board_app_poll(); CHECK(g_mixed.waiting && g_can_session.held);
+    restore_error = 1; run_command("mix stop"); CHECK(g_mixed.held && g_can_session.held);
+    before = spi_calls; run_command("spi pattern 1"); CHECK(spi_calls == before);
+    tap(); CHECK(g_mix_view); restore_error = 0; hold(); CHECK(!g_mixed.held && !g_can_session.held); tap();
+    keep_pending = 0; write_error = 1;
+    run_command("mix start 4 5 100 normal 0"); drain_mixed();
+    CHECK(g_mixed.state == MC_MIX_ERROR && g_mixed.completed == 1U && g_mixed.failed == 1U);
+    CHECK(!g_mixed.held && led == GPIO_PIN_RESET); tap(); write_error = 0;
+    /* New third menu level does not transmit on entry or BACK. */
+    run_command("fault select 0"); before = spi_calls; hold();
+    CHECK(g_fault_options && spi_calls == before);
+    g_fault_option = 6U; hold(); CHECK(!g_fault_options && spi_calls == before);
+    hold(); CHECK(g_fault_options); g_fault_option = 1U; hold();
+    CHECK(g_mix_view && g_mixed.state == MC_MIX_RUNNING && g_mixed.config.total == 100U && g_mixed.config.value == 50U);
+    hold(); CHECK(g_mixed.state == MC_MIX_STOPPED); tap();
+    return 0;
 }
 
 int main(void)
@@ -172,6 +251,7 @@ int main(void)
     keep_pending = 0;
 #if MC_BUILD_CAN_RAW_GPIO
     run_command("fault select 16"); hold();
+    CHECK(g_fault_options && !g_can_view); hold(); /* SINGLE in the new options page */
     CHECK(g_can_backend == 1 && g_can_view && g_raw_session.config.mode == MC_CAN_RAW_STUFF);
     CHECK(g_raw_session.state != MC_CAN_RUNNING && !g_raw_session.held);
     tap(); CHECK(!g_can_view && g_menu.protocol == MC_UI_CAN);
@@ -185,6 +265,7 @@ int main(void)
     CHECK(g_live_session.state != MC_CAN_RUNNING && !g_live_session.held);
     tap(); CHECK(!g_can_view && g_menu.protocol == MC_UI_CAN);
 #endif
-    puts("Actual board app: one-shot dispatch, navigation, results, CLI and CAN ownership PASS (mock I/O)");
+    CHECK(test_mixed_board() == 0);
+    puts("Actual board app: mixed ALL protocols/visible faults, presets, old one-shot/CLI, stop/recovery and ownership PASS (mock I/O)");
     return 0;
 }

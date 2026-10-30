@@ -37,6 +37,7 @@ docs/protocol-rules/protocol_rules.yaml
 - SPI JSONL 同时记录 `data`（实际 RX）和 `tx`（实际发送），日志失败会反馈到测试结果。
 - 四协议母菜单＋正常/错误事件子菜单：6 个正常测试入口、图片指定的 10 项错误，另设 BACK；其余 10 项仅从屏幕隐藏，底层 20 项原故障和 `fault` 串口命令不变。PA0 短按切换、长按进入/执行/返回，见 [菜单说明](../docs/hardware/stm32_fault_menu_oled.md)。
 - 128×64 SSD1306 4 线 SPI OLED 页面，使用 PB12/PB13/PB15、PC4/PC5。
+- 四协议混合测试：原 10 种屏幕错误支持指定位置、周期、可复现随机注入及纯正常基线；错误项进入运行方式页选 SINGLE 或混合预设，显示进度/注入尝试、支持停止和恢复。原正常入口不变；[完整用法](../docs/hardware/stm32_mixed_traffic.md)。
 - USART1 使用中断接收缓冲，整行回显；连续快速发送不再逐字节阻塞发送。
 - 可选同步脉冲接口。
 - SPI 残帧、UART 错误停止位/Break 的 GPIO 波形钩子已绑定；CAN 故障版提供 RAW 错误语料，实时位错误仍需独立同步注入。

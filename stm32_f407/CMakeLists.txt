@@ -8,6 +8,7 @@ add_library(mc_protocol_common
     common/src/mc_cli_rx.c
     common/src/mc_button.c
     common/src/mc_ui_menu.c
+    common/src/mc_mixed.c
     common/src/mc_protocol_runner.c
     common/src/mc_truth_log.c
     common/src/mc_faults.c
@@ -24,6 +25,20 @@ else()
 endif()
 
 enable_testing()
+add_executable(mc_mixed_tests tests/test_mixed.c)
+target_link_libraries(mc_mixed_tests PRIVATE mc_protocol_common)
+if(MSVC)
+    target_compile_options(mc_mixed_tests PRIVATE /W4)
+else()
+    target_compile_options(mc_mixed_tests PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endif()
+add_test(NAME mc_mixed_tests COMMAND mc_mixed_tests)
+find_program(MC_POWERSHELL NAMES pwsh powershell)
+if(MC_POWERSHELL)
+    add_test(NAME mc_mixed_capture_tests COMMAND ${MC_POWERSHELL} -NoProfile -File
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_mixed_capture.ps1 -Tool
+        ${CMAKE_CURRENT_SOURCE_DIR}/tools/check_mixed_capture.ps1)
+endif()
 add_executable(mc_button_tests tests/test_button.c)
 target_link_libraries(mc_button_tests PRIVATE mc_protocol_common)
 if(MSVC)

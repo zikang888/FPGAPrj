@@ -12,6 +12,7 @@
 #include "mc_build_profile.h"
 #include "mc_button.h"
 #include "mc_ui_menu.h"
+#include "mc_mixed.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -58,6 +59,14 @@ static int g_raw_from_menu;
 static int g_live_from_menu;
 static int g_can_view;
 static uint32_t g_can_display_ms;
+static mc_mixed_t g_mixed;
+static int g_mix_view;
+static uint32_t g_mix_display_ms;
+static int g_fault_options;
+static unsigned int g_fault_option;
+static uint32_t g_mix_first_txn;
+static void display_fault_options(void);
+static void display_mixed(void);
 static void print_can_status(void);
 static void run_command(const char *command);
 
@@ -139,6 +148,10 @@ static void print_help(void)
         "  fault list           List selectable fault cases\r\n"
         "  fault select N       Select case index N (0..19)\r\n"
         "  fault run [N]        Trigger selected/indexed case\r\n"
+        "  mix start N TOTAL GAP normal|once|every|random VALUE [SEED]\r\n"
+        "    N: visible fault index, TOTAL<=10000, GAP=100..60000ms\r\n"
+        "    normal VALUE=0; once=position; every=interval; random=count\r\n"
+        "  mix status|stop|recover\r\n"
         "  can test start MODE COUNT PERIOD [EVERY]\r\n"
         "    MODE: normal/echo/noack/bitrate, period >=50ms\r\n"
         "    noack/bitrate require MC_ENABLE_CAN_FAULTS\r\n"
@@ -161,6 +174,7 @@ static void display_fault_menu(void)
     unsigned int i;
     mc_ui_entry_t entry = mc_ui_menu_entry(g_menu.protocol, g_menu.item);
     const mc_fault_info_t *selected = entry.action == MC_UI_FAULT ? mc_fault_get(entry.fault) : NULL;
+    if (g_fault_options) { display_fault_options(); return; }
     mc_oled_clear();
     if (!g_menu.in_submenu) {
         mc_oled_text(0U, 0U, "PROTOCOL SELECT");
@@ -242,7 +256,7 @@ static void trigger_selected_fault(void)
     if (item == NULL) {
         return;
     }
-    if (g_can_session.held || g_raw_session.held || g_live_session.held) {
+    if (g_mixed.held || g_can_session.held || g_raw_session.held || g_live_session.held) {
         console_write("CAN session owns peripherals; stop/recover first\r\n> ");
         return;
     }
@@ -433,12 +447,236 @@ static void run_can_command(const char *command, int backend)
     g_can_display_ms = HAL_GetTick();
 }
 
+static const char *mix_state_name(void)
+{
+    static const char *const names[] = {"IDLE", "RUNNING", "DONE", "STOPPED", "ERROR"};
+    return names[(unsigned int)g_mixed.state];
+}
+
+static void display_fault_options(void)
+{
+    static const char *const labels[] = {
+        "SINGLE", "ONE IN 100", "ONE IN 1000", "EVERY 100",
+        "RANDOM 5 SEED 1", "NORMAL 1000", "BACK"
+    };
+    unsigned int i, base = (g_fault_option / 4U) * 4U;
+    char line[24];
+    mc_oled_clear();
+    mc_oled_text(0U, 0U, mc_fault_get(g_selected_fault)->label);
+    for (i = 0U; i < 4U && base + i < 7U; ++i) {
+        (void)snprintf(line, sizeof(line), "%c%s", base + i == g_fault_option ? '>' : ' ', labels[base+i]);
+        mc_oled_text(0U, (uint8_t)(i+1U), line);
+    }
+    mc_oled_text(0U, 5U, "TAP NEXT HOLD RUN");
+    (void)snprintf(line, sizeof(line), "LAST R %d", g_last_fault_result);
+    mc_oled_text(0U, 6U, g_has_fault_result ? line : "MIX GAP 100MS");
+    mc_oled_text(0U, 7U, "LOCAL ONLY NOT PL");
+    mc_oled_flush();
+}
+
+static void display_mixed(void)
+{
+    char line[24];
+    mc_oled_clear();
+    (void)snprintf(line, sizeof(line), "%s MIX %s", mc_fault_get(g_mixed.config.fault)->protocol, mix_state_name());
+    mc_oled_text(0U, 0U, line);
+    (void)snprintf(line, sizeof(line), "DONE %lu/%lu", (unsigned long)g_mixed.completed, (unsigned long)g_mixed.config.total);
+    mc_oled_text(0U, 1U, line);
+    (void)snprintf(line, sizeof(line), "INJ TRY %lu/%lu", (unsigned long)g_mixed.fault_attempts, (unsigned long)g_mixed.planned_faults);
+    mc_oled_text(0U, 2U, line);
+    (void)snprintf(line, sizeof(line), "LOCAL FOK %lu BAD %lu", (unsigned long)g_mixed.fault_ok, (unsigned long)g_mixed.failed);
+    mc_oled_text(0U, 3U, line);
+    (void)snprintf(line, sizeof(line), "IDX %lu %s", (unsigned long)g_mixed.index, g_mixed.is_fault ? "FAULT" : "NORMAL");
+    mc_oled_text(0U, 4U, line);
+    (void)snprintf(line, sizeof(line), "RUN %lu R %d", (unsigned long)g_mixed.run, g_mixed.last_result);
+    mc_oled_text(0U, 5U, line);
+    mc_oled_text(0U, 6U, g_mixed.held && g_mixed.state != MC_MIX_RUNNING ? "RESTORE FAILED" : "PHYSICAL/PL UNVERIFIED");
+    mc_oled_text(0U, 7U, g_mixed.state == MC_MIX_RUNNING ? "HOLD STOP" :
+                 (g_mixed.held ? "HOLD RETRY RESTORE" : "TAP BACK"));
+    mc_oled_flush();
+}
+
+static uint32_t mixed_now(void *context) { (void)context; return HAL_GetTick(); }
+
+static int mixed_record(void *context, const mc_mixed_t *s, const char *phase)
+{
+    /* Foreground only: static storage avoids growing the small MCU stack. */
+    static char line[768];
+    int length;
+    const mc_fault_info_t *fault = mc_fault_get(s->config.fault);
+    (void)context;
+    if (strcmp(phase, "slot_begin") == 0) { g_mix_first_txn = g_runner.next_transaction_id; }
+    length = snprintf(line, sizeof(line),
+        "{\"kind\":\"mixed\",\"phase\":\"%s\",\"run\":%lu,\"index\":%lu,\"total\":%lu,"
+        "\"protocol\":\"%s\",\"fault_index\":%u,\"fault_case\":%lu,\"mode\":%u,\"value\":%lu,\"seed\":%lu,\"gap_ms\":%lu,"
+        "\"planned\":%lu,\"fault_slot\":%u,\"attempts\":%lu,\"fault_ok\":%lu,\"normal_ok\":%lu,\"failed\":%lu,\"cancelled\":%lu,\"state\":%u,\"held\":%u,"
+        "\"result\":%d,\"restore\":%d,\"dispatch_ms\":%lu,\"started_ms\":%lu,\"ended_ms\":%lu,\"logged_ms\":%lu,"
+        "\"runner_first_txn\":%lu,\"runner_next_txn\":%lu,\"can_child_run\":%lu,\"can_backend\":%d,"
+        "\"physical_verified\":false,\"pl_verified\":false}\r\n",
+        phase, (unsigned long)s->run, (unsigned long)s->index, (unsigned long)s->config.total,
+        fault->protocol, (unsigned int)s->config.fault, (unsigned long)fault->case_id, (unsigned int)s->config.mode,
+        (unsigned long)s->config.value, (unsigned long)s->config.seed, (unsigned long)s->config.gap_ms,
+        (unsigned long)s->planned_faults, (unsigned int)s->is_fault, (unsigned long)s->fault_attempts,
+        (unsigned long)s->fault_ok, (unsigned long)s->normal_ok, (unsigned long)s->failed, (unsigned long)s->cancelled,
+        (unsigned int)s->state, (unsigned int)s->held,
+        s->last_result, s->restore_result, (unsigned long)s->dispatch_ms, (unsigned long)s->started_ms, (unsigned long)s->ended_ms, (unsigned long)HAL_GetTick(),
+        (unsigned long)g_mix_first_txn, (unsigned long)g_runner.next_transaction_id,
+        (unsigned long)(s->config.fault >= MC_FAULT_CAN_NO_ACK ? visible_can()->run : 0U), g_can_backend);
+    if (length < 0 || (size_t)length >= sizeof(line) || g_runner.platform.write_log == NULL) { return MC_ERR_IO; }
+    return g_runner.platform.write_log(g_runner.platform.context, line, (size_t)length);
+}
+
+static int mixed_io(const mc_mixed_t *s, const char *operation, const uint8_t *data, size_t count, int result)
+{
+    char hex[33], line[240];
+    static const char digits[] = "0123456789ABCDEF";
+    size_t i;
+    int length, logged;
+    for (i = 0U; i < count; ++i) { hex[i*2U] = digits[data[i] >> 4]; hex[i*2U+1U] = digits[data[i] & 15U]; }
+    hex[count*2U] = '\0';
+    length = snprintf(line, sizeof(line),
+        "{\"kind\":\"mixed_io\",\"run\":%lu,\"index\":%lu,\"operation\":\"%s\",\"data\":\"%s\",\"result\":%d}\r\n",
+        (unsigned long)s->run, (unsigned long)s->index, operation, hex, result);
+    if (length < 0 || (size_t)length >= sizeof(line) || g_runner.platform.write_log == NULL) { return MC_ERR_IO; }
+    logged = g_runner.platform.write_log(g_runner.platform.context, line, (size_t)length);
+    return result == MC_OK ? logged : result;
+}
+
+static int mixed_cancel(void *context)
+{
+    mc_can_session_t *sessions[] = {&g_can_session, &g_raw_session, &g_live_session};
+    unsigned int i;
+    int result = MC_OK;
+    (void)context;
+    for (i = 0U; i < 3U; ++i) {
+        int restored = MC_OK;
+        if (sessions[i]->state == MC_CAN_RUNNING) { restored = mc_can_session_stop(sessions[i]); }
+        else if (sessions[i]->held) { restored = mc_can_session_recover(sessions[i]); }
+        if (restored != MC_OK || sessions[i]->held) { result = restored != MC_OK ? restored : MC_ERR_BUSY; }
+    }
+    return result;
+}
+
+static int mixed_start_slot(void *context, const mc_mixed_t *s)
+{
+    mc_run_summary_t summary;
+    mc_platform_t *p = &g_runner.platform;
+    uint8_t data[16] = {0U};
+    unsigned int i;
+    int result;
+    (void)context;
+    if (s->config.fault >= MC_FAULT_CAN_NO_ACK) {
+        mc_can_config_t config;
+        mc_can_session_t *child = s->is_fault ? &g_raw_session : &g_can_session;
+        memset(&config, 0, sizeof(config));
+        config.mode = s->is_fault ? fault_raw_mode(s->config.fault) : MC_CAN_NORMAL;
+        config.count = 1U; config.period_ms = 100U; config.timeout_ms = 40U;
+        config.bitrate = 500000U; config.every = 1U;
+        g_can_backend = s->is_fault ? 1 : 0;
+        result = mc_can_session_start(child, &config);
+        return result == MC_OK ? MC_MIX_PENDING : result;
+    }
+    if (s->is_fault) { return mc_fault_run(&g_runner, s->config.fault); }
+    if (s->config.fault <= MC_FAULT_SPI_EXTRA) {
+        return mc_run_spi_jedec(&g_runner, 1001U, 1U, g_jedec_id, &summary);
+    }
+    if (s->config.fault <= MC_FAULT_UART_BREAK) {
+        if (p->uart_write == NULL) { return MC_ERR_UNSUPPORTED; }
+        result = p->sync_pulse == NULL ? MC_OK : p->sync_pulse(p->context, 2001U);
+        for (i = 0U; i < 8U; ++i) { data[i] = (uint8_t)i; }
+        if (result == MC_OK) { result = p->uart_write(p->context, data, 8U, 100U); }
+        return mixed_io(s, "UART_TX", data, 8U, result);
+    }
+    if (p->i2c_mem_read == NULL) { return MC_ERR_UNSUPPORTED; }
+    result = p->sync_pulse == NULL ? MC_OK : p->sync_pulse(p->context, 3001U);
+    if (result == MC_OK) { result = p->i2c_mem_read(p->context, 0x50U, 0x0100U, data, 16U, 100U); }
+    return mixed_io(s, "I2C_READ_0100", data, 16U, result);
+}
+
+static int mixed_poll_slot(void *context)
+{
+    mc_can_session_t *child = visible_can();
+    (void)context;
+    mc_can_session_tick(child, HAL_GetTick());
+    if (child->state == MC_CAN_RUNNING) { return MC_MIX_PENDING; }
+    if (child->held) { return child->restore_result != MC_OK ? child->restore_result : MC_ERR_BUSY; }
+    return child->state == MC_CAN_STOPPED ? MC_ERR_BUSY : child->last_result;
+}
+
+static int start_mixed(const mc_mix_config_t *config)
+{
+    int result = mc_mix_validate(config);
+    if (result != MC_OK) { return result; }
+    if (g_mixed.held || g_can_session.held || g_raw_session.held || g_live_session.held) { return MC_ERR_BUSY; }
+    if (config->fault >= MC_FAULT_CAN_NO_ACK && config->mode != MC_MIX_NORMAL && !MC_BUILD_CAN_RAW_GPIO) {
+        return MC_ERR_UNSUPPORTED; /* reject BEFORE the first normal frame */
+    }
+    if (config->fault <= MC_FAULT_SPI_EXTRA && !g_jedec_id_valid && probe_jedec_id() != MC_OK) { return MC_ERR_VERIFY; }
+    g_can_view = 0; g_normal_can_from_menu = 0; g_raw_from_menu = 0; g_live_from_menu = 0;
+    g_mix_first_txn = g_runner.next_transaction_id;
+    result = mc_mix_start(&g_mixed, config);
+    g_mix_view = 1; display_mixed(); g_mix_display_ms = HAL_GetTick();
+    HAL_GPIO_WritePin(USER_LED_GPIO_Port, USER_LED_Pin, GPIO_PIN_RESET);
+    return result;
+}
+
+static void run_mix_command(const char *args)
+{
+    mc_mix_config_t config;
+    int result;
+    char line[72];
+    if (strncmp(args, "start ", 6U) == 0) {
+        result = mc_mix_parse(args+6U, &config);
+        if (result == MC_OK) { result = start_mixed(&config); }
+    } else if (strcmp(args, "status") == 0) {
+        result = g_mixed.port.record(g_mixed.port.context, &g_mixed, "status");
+        if (result != MC_OK && g_mixed.state == MC_MIX_RUNNING) {
+            (void)mc_mix_stop(&g_mixed);
+            g_mixed.last_result = result; g_mixed.state = MC_MIX_ERROR;
+        }
+    } else if (strcmp(args, "stop") == 0) { result = mc_mix_stop(&g_mixed); }
+    else if (strcmp(args, "recover") == 0) { result = mc_mix_recover(&g_mixed); }
+    else { result = MC_ERR_ARGUMENT; }
+    (void)snprintf(line, sizeof(line), "MIX %s result=%d held=%u\r\n> ", mix_state_name(), result, (unsigned int)g_mixed.held);
+    console_write(line);
+    if (g_mixed.run != 0U) { g_mix_view = 1; display_mixed(); }
+}
+
+static void confirm_fault_option(void)
+{
+    mc_mix_config_t config;
+    int result;
+    if (g_fault_option == 6U) { g_fault_options = 0; display_fault_menu(); return; }
+    if (g_fault_option == 0U) {
+        mc_oled_text(0U, 6U, "RUNNING PLEASE WAIT"); mc_oled_flush();
+        trigger_selected_fault(); return;
+    }
+    memset(&config, 0, sizeof(config)); config.fault = g_selected_fault;
+    config.total = g_fault_option == 1U ? 100U : 1000U;
+    config.gap_ms = 100U; config.seed = 1U;
+    config.mode = g_fault_option <= 2U ? MC_MIX_ONCE :
+        (g_fault_option == 3U ? MC_MIX_EVERY : (g_fault_option == 4U ? MC_MIX_RANDOM : MC_MIX_NORMAL));
+    config.value = g_fault_option == 1U ? 50U : (g_fault_option == 2U ? 500U :
+                   (g_fault_option == 3U ? 100U : (g_fault_option == 4U ? 5U : 0U)));
+    result = start_mixed(&config);
+    if (result != MC_OK) {
+        g_last_fault_result = result; g_has_fault_result = 1;
+        if (!g_mix_view) { display_fault_options(); }
+    }
+}
+
 static void run_command(const char *command)
 {
     mc_run_summary_t summary;
     uint32_t iterations = parse_count(command);
     int result;
 
+    if (strncmp(command, "mix ", 4U) == 0) { run_mix_command(command+4U); return; }
+    if (g_mixed.held) {
+        console_write("Mixed run active/restore pending; use mix status|stop|recover\r\n> ");
+        return;
+    }
+    g_mix_view = 0; g_fault_options = 0;
     if (strncmp(command, "can test", 8U) == 0 &&
         (command[8] == ' ' || command[8] == '\0')) {
         run_can_command(command, 0);
@@ -520,7 +758,7 @@ static void run_command(const char *command)
 static void confirm_menu(void)
 {
     mc_ui_entry_t entry;
-    if (g_can_session.held || g_raw_session.held || g_live_session.held) {
+    if (g_mixed.held || g_can_session.held || g_raw_session.held || g_live_session.held) {
         console_write("CAN owns resources; stop/recover first\r\n> ");
         return;
     }
@@ -532,10 +770,8 @@ static void confirm_menu(void)
     }
     if (entry.action == MC_UI_FAULT) {
         g_selected_fault = entry.fault;
-        g_menu_running = 1;
-        display_fault_menu();
-        g_menu_running = 0;
-        trigger_selected_fault();
+        g_fault_options = 1; g_fault_option = 0U;
+        display_fault_options();
         return;
     }
     ++g_normal_runs;
@@ -593,6 +829,7 @@ void mc_board_app_init(void)
 {
     mc_platform_t platform;
     mc_can_session_port_t can_port;
+    mc_mix_port_t mix_port;
     int can_result;
 
     memset(&g_port_context, 0, sizeof(g_port_context));
@@ -614,6 +851,11 @@ void mc_board_app_init(void)
     mc_can_session_init(&g_raw_session, &can_port);
     can_port=mc_can_live_hal_port(&g_live_hal,&hcan1,&huart1);
     mc_can_session_init(&g_live_session,&can_port);
+    memset(&mix_port, 0, sizeof(mix_port));
+    mix_port.now_ms = mixed_now; mix_port.start_slot = mixed_start_slot;
+    mix_port.poll_slot = mixed_poll_slot; mix_port.cancel = mixed_cancel; mix_port.record = mixed_record;
+    mc_mix_init(&g_mixed, &mix_port);
+    g_mix_view = 0; g_mix_display_ms = 0U; g_fault_options = 0; g_fault_option = 0U;
     g_can_backend = 0;
     g_raw_from_menu = 0;
     g_live_from_menu = 0;
@@ -702,7 +944,12 @@ void mc_board_app_poll(void)
                               HAL_GPIO_ReadPin(USER_KEY_GPIO_Port, USER_KEY_Pin) == GPIO_PIN_SET,
                               HAL_GetTick());
     if (key_event == MC_BUTTON_LONG) {
-        if (visible_can()->state == MC_CAN_RUNNING) {
+        if (g_mix_view) {
+            if (g_mixed.state == MC_MIX_RUNNING) { (void)mc_mix_stop(&g_mixed); }
+            else if (g_mixed.held) { (void)mc_mix_recover(&g_mixed); }
+            else { g_mix_view = 0; }
+            if (g_mix_view) { display_mixed(); } else { display_fault_menu(); }
+        } else if (visible_can()->state == MC_CAN_RUNNING) {
             (void)mc_can_session_stop(visible_can());
             print_can_status();
             display_can_session();
@@ -715,14 +962,21 @@ void mc_board_app_poll(void)
                 g_can_view = 0;
                 display_fault_menu();
             }
+        } else if (g_fault_options) {
+            confirm_fault_option();
         } else {
             confirm_menu();
         }
     } else if (key_event == MC_BUTTON_SHORT) {
-        if (!g_can_session.held && !g_raw_session.held && !g_live_session.held) {
+        if (g_mix_view) {
+            if (!g_mixed.held) { g_mix_view = 0; display_fault_menu(); }
+        } else if (!g_can_session.held && !g_raw_session.held && !g_live_session.held) {
             if (g_can_view) {
                 g_can_view = 0;
                 display_fault_menu();
+            } else if (g_fault_options) {
+                g_fault_option = (g_fault_option + 1U) % 7U;
+                g_has_fault_result = 0; display_fault_options();
             } else {
                 mc_ui_menu_next(&g_menu);
                 g_has_fault_result = 0;
@@ -730,7 +984,18 @@ void mc_board_app_poll(void)
             }
         }
     }
-    if (visible_can()->state == MC_CAN_RUNNING) {
+    if (g_mixed.state == MC_MIX_RUNNING) {
+        mc_mix_tick(&g_mixed);
+        if (g_mixed.state != MC_MIX_RUNNING ||
+            (!g_mixed.waiting && (uint32_t)(HAL_GetTick() - g_mix_display_ms) >= 250U)) {
+            display_mixed(); g_mix_display_ms = HAL_GetTick();
+        }
+        if (g_mixed.state != MC_MIX_RUNNING) {
+            HAL_GPIO_WritePin(USER_LED_GPIO_Port, USER_LED_Pin,
+                              g_mixed.state == MC_MIX_DONE && g_mixed.last_result == MC_OK ? GPIO_PIN_SET : GPIO_PIN_RESET);
+        }
+    }
+    if (!g_mixed.held && !g_mix_view && visible_can()->state == MC_CAN_RUNNING) {
         mc_can_session_tick(visible_can(), HAL_GetTick());
         if (visible_can()->state != MC_CAN_RUNNING) { print_can_status(); }
         if (visible_can()->state != MC_CAN_RUNNING ||

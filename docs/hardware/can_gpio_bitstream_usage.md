@@ -28,6 +28,8 @@ BUILD rev=源提交前7位 CAN_FAULTS=1 CAN_RAW_GPIO=1 RAW_TX=PD1
 
 ## 3. 命令与菜单
 
+2026-10-30 新屏幕需先进入错误的运行方式页，再确认 SINGLE 才执行原一次 RAW；也可选混合预设，在正常 bxCAN 背景中替换指定槽为 RAW。原串口命令不改；见 [混合流量说明](stm32_mixed_traffic.md)。
+
 | 操作 | 作用 |
 |---|---|
 | `can raw start valid 125000 1 100` | 125 kbit/s，发一个合法标准帧语料 |
