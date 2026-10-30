@@ -33,6 +33,8 @@ ctest --test-dir stm32_f407/build --output-on-failure
 
 默认版及 CAN 故障版开发构建均已通过 ARMCC 5.06 update 2，0 error / 0 warning。正式发布从干净源提交执行 `build_profiles.ps1 -Profile all -Release`，HEX/source/SHA-256 见 [发布目录](../../stm32_f407/firmware/releases/README.md)，不覆盖旧固件。
 
+正式构建已完成：固件源提交 `3072a36790db1ebd3ead2e21f91a3a8d3582177d`，两配置均 0 error / 0 warning。默认 Code/RO/RW/ZI 为 37970/5310/116/6836，故障为 46002/6198/116/8092；[本次 HEX 与 manifest](../../stm32_f407/firmware/releases/2026-10-30-3072a36/README.md)。发布提交补充离线工具测试：本地 I/O 失败并不否定用户独立波形确认；只要求确认记录对应已开始的计划故障槽，而不把 R=0 当成物理证据。15/15 复跑通过。
+
 ## 未完成的实板验收
 
 本次未连接或烧录实板。应逐协议执行：NORMAL 1000 零注入误报基线；ONE IN 1000 定位第 500 个逻辑事务；EVERY 100 恢复验证；固定 seed 随机；逐步缩短间隔。同步采集 MCU 日志、原始总线、FPGA 事件。检查真实 SCLK/位宽、I2C STOP 恢复、CAN RX FIFO/终端/ACK 和 RAW 切换空闲间隙、OLED/日志造成的实际时长及按钮响应。

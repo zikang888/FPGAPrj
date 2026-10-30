@@ -66,9 +66,10 @@ function Error-Keys([string]$Path, [bool]$RequireScheduled) {
     foreach ($taskError in (Read-JsonLines $Path | Where-Object { $_.run -eq $RunId })) {
         if ($null -eq $taskError.index -or $null -eq $taskError.fault_index -or
             [int]$taskError.index -lt 1 -or [int]$taskError.index -gt $taskPlan.total) { throw 'Invalid normalized error record' }
-        if ($RequireScheduled -and (-not $taskLocalFaultOK.ContainsKey([int]$taskError.index) -or
-            [int]$taskError.fault_index -ne $taskLocalFaultOK[[int]$taskError.index])) {
-            throw 'Confirmed injected error must reference a locally completed intended fault slot'
+        if ($RequireScheduled -and (-not $taskStarted.ContainsKey([int]$taskError.index) -or
+            -not $taskExpected.ContainsKey([int]$taskError.index) -or
+            [int]$taskError.fault_index -ne $taskExpected[[int]$taskError.index])) {
+            throw 'Confirmed injected error must reference an attempted intended fault slot; local R=0 is not physical evidence'
         }
         '{0}:{1}' -f [int]$taskError.index,[int]$taskError.fault_index
     }

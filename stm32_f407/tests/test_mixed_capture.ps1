@@ -21,6 +21,14 @@ try {
         $taskReport.matched.Count -ne 1 -or $taskReport.unexpected.Count -ne 1 -or $taskReport.duplicate_reports -ne 1) { throw 'Intent comparison failed' }
     $taskReport = (& $Tool -McuLog $taskMcu -RunId 1 -FpgaErrors $taskFpga -ConfirmedErrors $taskPhysical | ConvertFrom-Json)
     if ($taskReport.comparison -ne 'against_user_supplied_physical_confirmations' -or $taskReport.physical_verified_by_this_tool) { throw 'Evidence boundary failed' }
+    # Physical confirmation is independent of local success: an I/O error may
+    # occur after a measurable malformed transaction was already emitted.
+    $taskFailedLines = [string[]]$taskLines.Clone()
+    $taskFailedLines[4] = $taskFailedLines[4].Replace('"result":0','"result":-2')
+    $taskFailedLines[7] = $taskFailedLines[7].Replace('"state":2','"state":4').Replace('"failed":0','"failed":1').Replace('"result":0','"result":-2')
+    [IO.File]::WriteAllLines($taskMcu, $taskFailedLines)
+    $taskReport = (& $Tool -McuLog $taskMcu -RunId 1 -FpgaErrors $taskFpga -ConfirmedErrors $taskPhysical | ConvertFrom-Json)
+    if ($taskReport.local_run_complete -or $taskReport.locally_ok_fault_slots.Count -ne 0 -or $taskReport.matched.Count -ne 1) { throw 'Local error incorrectly overrides independent physical evidence' }
     $taskLines[3] = $taskLines[3].Replace('"fault_slot":1','"fault_slot":0')
     [IO.File]::WriteAllLines($taskMcu, $taskLines)
     $taskRejected = $false
