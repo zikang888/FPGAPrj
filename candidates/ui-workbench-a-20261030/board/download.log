@@ -1,0 +1,116 @@
+PLATFORM_BIT D:/fpga_class/FPGAPrj/ab_new_board_test_20261017/candidates/ui-workbench-a-20261030/multi_protocol_bd_wrapper.bit
+PLATFORM_INIT D:/fpga_class/FPGAPrj/ab_new_board_test_20261017/candidates/ui-workbench-a-20261030/ps7_init.tcl
+APP_ELF D:/fpga_class/FPGAPrj/ab_new_board_test_20261017/candidates/ui-workbench-a-20261030/platform_app.elf
+TARGETS_BEGIN
+  1  APU
+     2  ARM Cortex-A9 MPCore #0 (Running)
+     3  ARM Cortex-A9 MPCore #1 (Running)
+  4  xc7z020
+TARGETS_END
+STOP_CPU0
+RESET_SYSTEM_FOR_CLEAN_REDOWNLOAD
+PROGRAM_BITSTREAM D:/fpga_class/FPGAPrj/ab_new_board_test_20261017/candidates/ui-workbench-a-20261030/multi_protocol_bd_wrapper.bit
+
+initializing
+  0%    0MB   0.0MB/s  ??:?? ETA
+ 27%    1MB   2.1MB/s  ??:?? ETA
+ 49%    1MB   1.9MB/s  ??:?? ETA
+ 70%    2MB   1.8MB/s  ??:?? ETA
+ 91%    3MB   1.7MB/s  ??:?? ETA
+100%    3MB   1.7MB/s  00:02    
+INIT_PS D:/fpga_class/FPGAPrj/ab_new_board_test_20261017/candidates/ui-workbench-a-20261030/ps7_init.tcl
+SYS_ID 40000000:   4D505254
+
+VERSION 40000004:   00010008
+
+CAPABILITIES 4000000C:   000001FF
+
+DOWNLOAD_ELF D:/fpga_class/FPGAPrj/ab_new_board_test_20261017/candidates/ui-workbench-a-20261030/platform_app.elf
+
+Downloading Program -- D:/fpga_class/FPGAPrj/ab_new_board_test_20261017/candidates/ui-workbench-a-20261030/platform_app.elf
+	section, .text: 0x00100000 - 0x001147ef
+	section, .init: 0x001147f0 - 0x00114807
+	section, .fini: 0x00114808 - 0x0011481f
+	section, .rodata: 0x00114820 - 0x0012243b
+	section, .data: 0x00122440 - 0x00122c6f
+	section, .eh_frame: 0x00122c70 - 0x00122c73
+	section, .mmu_tbl: 0x00124000 - 0x00127fff
+	section, .ARM.exidx: 0x00128000 - 0x00128007
+	section, .init_array: 0x00128008 - 0x0012800b
+	section, .fini_array: 0x0012800c - 0x0012800f
+	section, .bss: 0x00128020 - 0x00134497
+	section, .heap: 0x00134498 - 0x0013649f
+	section, .stack: 0x001364a0 - 0x00139c9f
+
+  0%    0MB   0.0MB/s  ??:?? ETA
+ 89%    0MB   0.2MB/s  ??:?? ETA
+100%    0MB   0.3MB/s  00:00    
+
+Setting PC to Program Start Address 0x00100000
+Successfully downloaded D:/fpga_class/FPGAPrj/ab_new_board_test_20261017/candidates/ui-workbench-a-20261030/platform_app.elf
+RUN_CPU0
+STOP_CPU0_FOR_READBACK
+CPU_REGISTERS_BEGIN
+             r0: 001380b8               r1: 00000000               r2: 00000000
+             r3: f8f00000               r4: 3c0ef027               r5: 00000000
+             r6: 00001388               r7: 001310e4               r8: 00000000
+             r9: 00128050              r10: 00138338              r11: 0012134c
+            r12: 3bff86ed               sp: 001380b8               lr: 0010f474
+             pc: 0010c194             cpsr: 800f005f              usr          
+            fiq                        irq                        abt          
+            und                        svc                        mon          
+            vfp                       cp15                    Jazelle          
+ gpv_qos301_cpu            gpv_qos301_dmac             gpv_qos301_iou          
+  gpv_trustzone                    l2cache                     mpcore          
+
+CPU_REGISTERS_END
+SYS_ID 40000000:   4D505254
+
+VERSION 40000004:   00010008
+
+CAPABILITIES 4000000C:   000001FF
+
+SCRATCH 4000002C:   A5A55A5A
+
+ARB_STATUS 40000034:   00000000
+
+EXT_DROPPED 40000038:   00000000
+
+SPI_EVENTS 4000003C:   00000001
+
+SPI_STARTS 40000040:   00000001
+
+SPI_DATA 40000044:   00000000
+
+SPI_ENDS 40000048:   00000000
+
+SPI_FRAME_ERRORS 4000004C:   00000000
+
+SPI_BOUNDARY_ERRORS 40000050:   00000000
+
+SPI_DUPLICATES 40000054:   00000000
+
+SPI_SEQUENCE_ERRORS 40000058:   00000000
+
+SPI_LAST_TXN 4000005C:   00000001
+
+SPI_STATS_STATUS 40000060:   00000007
+
+CAPTURE_STATUS 40001004:   00000011
+
+SNAPSHOT_ID 40001008:   00000001
+
+SNAPSHOT_COUNT 4000100C:   00000000
+
+TRIGGER_INDEX 40001010:   FFFFFFFF
+
+DROPPED_COUNT 40001014:   00000000
+
+EVENT_0_WORD_0 40006000:   00000000
+
+EVENT_8_WORD_0 40006080:   00000000
+
+EVENT_24_WORD_0 40006180:   00000000
+
+RESUME_CPU0
+ZYNQ_JTAG_BOARD_TEST_DONE

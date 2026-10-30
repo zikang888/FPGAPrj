@@ -1,0 +1,12 @@
+In file included from C:\Users\11914\Documents\Codex\2026-09-22\wo\work\ui-a-candidate\software\src\main.c:14:0:
+D:\fpga_class\FPGAPrj\ab_new_board_test_20261017\build\ui-workflow-20261023\sdk\platform_bsp\ps7_cortexa9_0\include/xtime_l.h:87:9: note: #pragma message: For the sleep routines, Global timer is being used
+ #pragma message ("For the sleep routines, Global timer is being used")
+         ^~~~~~~
+   text	   data	    bss	    dec	    hex	filename
+ 156744	   2104	  72832	 231680	  38900	C:\Users\11914\Documents\Codex\2026-09-22\wo\work\ui-a-candidate\build\arm\platform_app.elf
+
+Algorithm       Hash                                                                   Path
+---------       ----                                                                   ----
+SHA256          BFEFD75AAF1F0D5A4A2AE23FD9D53D40C46A0990DA3639A355456CBB70AD91C1       C:\Users\11914\Documents\Codex\2…
+UI_A_ARM_BUILD_PASS
+

@@ -57,13 +57,13 @@ static inline int ui_protocol_event_matches(UiProtocol selected,
 
 static inline uint16_t ui_protocol_tab_left(UiProtocol protocol)
 {
-    static const uint16_t left[UI_PROTOCOL_COUNT] = {14U, 205U, 396U, 587U};
+    static const uint16_t left[UI_PROTOCOL_COUNT] = {108U, 180U, 252U, 324U};
     return (unsigned int)protocol < UI_PROTOCOL_COUNT ? left[protocol] : 0U;
 }
 
 static inline uint16_t ui_protocol_tab_right(UiProtocol protocol)
 {
-    static const uint16_t right[UI_PROTOCOL_COUNT] = {195U, 386U, 577U, 786U};
+    static const uint16_t right[UI_PROTOCOL_COUNT] = {174U, 246U, 318U, 390U};
     return (unsigned int)protocol < UI_PROTOCOL_COUNT ? right[protocol] : 0U;
 }
 
@@ -71,7 +71,7 @@ static inline int ui_protocol_from_touch(uint16_t x, uint16_t y,
                                          UiProtocol *selected)
 {
     unsigned int i;
-    if (selected == 0 || y < 112U || y > 166U) return 0;
+    if (selected == 0 || y < 54U || y > 94U) return 0;
     for (i = 0U; i < UI_PROTOCOL_COUNT; ++i) {
         if (x >= ui_protocol_tab_left((UiProtocol)i) &&
             x <= ui_protocol_tab_right((UiProtocol)i)) {

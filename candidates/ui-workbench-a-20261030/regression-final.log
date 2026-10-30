@@ -1,0 +1,24 @@
+PASS test_history
+PASS session_lifecycle
+PASS manual_capture
+PASS ui_protocol_select
+PASS spi_trace
+PASS protocol_trace
+PASS waveform_view
+event audit tests passed
+PASS event_audit
+PASS error_model
+event view tests passed
+PASS event_view
+pixel_scroll_test PASS
+PASS pixel_scroll
+PASS ui_counter_semantics
+PASS ui_workflow
+PASS: history release-tap, drag, clamping, jitter, row offset, detail, back, stale touch and empty list
+PASS history_gesture
+PASS: four-protocol plot taps inert; capture button explicit; previous plot pixels retained while waiting
+PASS home_trace_hold
+PASS: A sidebar, dead areas, page protocol tabs, running lock, capture capability gates
+PASS workbench_a
+PASS: session UI rendering, buttons, history reopening and scrolling
+SESSION_CHECKS_PASS

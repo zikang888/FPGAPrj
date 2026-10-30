@@ -52,14 +52,14 @@ int main(int argc,char **argv)
     assert(platform_ui_init()==0);
     fill_history(8U);
     preview("history_gesture_top");
-    finger(180U,168U);
+    finger(180U,215U);
     if(g_history_detail) {
         fputs("FAIL: finger-down opened history before tap/drag discrimination\n",stderr);
         return 1;
     }
     release();
     assert(g_history_detail && g_history_selected==1U);
-    tap_at(80U,65U);assert(!g_history_detail);
+    tap_at(180U,74U);assert(!g_history_detail);
     /* A swipe opens nothing, even when it ends at a scroll boundary. */
     finger(300U,350U);finger(300U,180U);
     assert(!g_history_detail && g_history_list_scroll==history_list_max_scroll());
@@ -69,22 +69,22 @@ int main(int argc,char **argv)
     finger(300U,250U);finger(345U,250U);release();
     assert(!g_history_detail && g_history_list_scroll==saved_scroll);
     /* Scrolled row hit-testing includes the viewport offset. */
-    tap_at(180U,140U);
+    tap_at(180U,170U);
     assert(g_history_detail && g_history_selected==2U);
     finger(300U,350U);finger(300U,180U);release();
     assert(g_history_scroll==170U);
     preview("history_gesture_detail");
     tap_at(650U,65U);assert(g_history_errors);
     tap_at(650U,65U);assert(!g_history_errors);
-    tap_at(80U,65U);
+    tap_at(180U,74U);
     assert(!g_history_detail && g_history_list_scroll==saved_scroll);
     /* Drag back to the first row; clamp at zero without opening it. */
-    finger(300U,180U);finger(300U,350U);release();
+    finger(300U,220U);finger(300U,390U);release();
     assert(!g_history_detail && g_history_list_scroll==0U);
     /* Small jitter is a tap; cumulative movement is a drag. */
-    finger(180U,168U);finger(182U,170U);release();
+    finger(180U,215U);finger(182U,217U);release();
     assert(g_history_detail && g_history_selected==1U);
-    tap_at(80U,65U);
+    tap_at(180U,74U);
     finger(300U,350U);finger(300U,344U);
     assert(g_history_list_scroll==0U);
     finger(300U,338U);release();
@@ -93,20 +93,20 @@ int main(int argc,char **argv)
     finger(300U,250U);finger(330U,250U);finger(300U,250U);release();
     assert(!g_history_detail);
     /* A page switch or changed history must not complete a stale row tap. */
-    finger(180U,168U);
+    finger(180U,215U);
     platform_ui_render_page(PLATFORM_UI_PAGE_HOME,&status,0);release();
     assert(!g_history_detail);
     platform_ui_render_page(PLATFORM_UI_PAGE_HISTORY,&status,0);
-    finger(180U,168U);
+    finger(180U,215U);
     test_history_append(&history)->id=99U;
     release();assert(!g_history_detail);
     /* A fitting list must not scroll, but swipes still must not open rows. */
     fill_history(2U);
-    finger(180U,168U);finger(180U,220U);release();
+    finger(180U,215U);finger(180U,265U);release();
     assert(!g_history_detail && g_history_list_scroll==0U);
-    tap_at(180U,168U);assert(g_history_detail && g_history_selected==1U);
-    tap_at(80U,65U);fill_history(0U);
-    finger(180U,168U);finger(180U,220U);release();
+    tap_at(180U,215U);assert(g_history_detail && g_history_selected==1U);
+    tap_at(180U,74U);fill_history(0U);
+    finger(180U,215U);finger(180U,265U);release();
     assert(!g_history_detail);
     puts("PASS: history release-tap, drag, clamping, jitter, row offset, detail, back, stale touch and empty list");
     return 0;

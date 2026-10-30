@@ -5,7 +5,7 @@
 #include "../src/platform_ui.c"
 TouchData TouchInfo;
 void gt911_scan(TouchData *touch) { (void)touch; }
-static u8 old_plot[232U*FB_STRIDE];
+static u8 old_plot[266U*FB_STRIDE];
 static CaptureDemoCache cache;
 static PlatformUiAction tap(u16 x,u16 y)
 {
@@ -38,15 +38,15 @@ int main(void)
         platform_ui_set_event_cache(&cache);
         platform_ui_render_page(PLATFORM_UI_PAGE_HOME,&s,&snap);platform_ui_tick();
         assert(home_trace_available(&s));
-        memcpy(old_plot,(const u8*)g_frame_addr[g_display_frame]+176U*FB_STRIDE,sizeof(old_plot));
+        memcpy(old_plot,(const u8*)g_frame_addr[g_display_frame]+182U*FB_STRIDE,sizeof(old_plot));
         assert(tap(400U,260U)==PLATFORM_UI_ACTION_NONE);
-        assert(tap(15U,177U)==PLATFORM_UI_ACTION_NONE);
+        assert(tap(110U,184U)==PLATFORM_UI_ACTION_NONE);
         assert(tap(780U,405U)==PLATFORM_UI_ACTION_NONE);
         assert(tap(670U,76U)==PLATFORM_UI_ACTION_CAPTURE_HOME);
         s.capture_source=1U;
         platform_ui_render_page(PLATFORM_UI_PAGE_HOME,&s,0);platform_ui_tick();
         assert(home_trace_available(&s));
-        assert(memcmp(old_plot,(const u8*)g_frame_addr[g_display_frame]+176U*FB_STRIDE,sizeof(old_plot))==0);
+        assert(memcmp(old_plot,(const u8*)g_frame_addr[g_display_frame]+182U*FB_STRIDE,sizeof(old_plot))==0);
         assert(tap(670U,76U)==PLATFORM_UI_ACTION_NONE);
         s.test_running=1U;assert(!home_trace_available(&s));s.test_running=0U;
         platform_ui_set_event_cache(0);assert(!home_trace_available(&s));
