@@ -66,7 +66,7 @@ ctest --test-dir stm32_f407/build --output-on-failure
 
 主机测试只验证协议编排、比较和日志逻辑，不等价于 HAL 编译或实板通过。
 
-可烧录文件见 [版本化 HEX 发布目录](firmware/releases/README.md)，
+已发布 HEX 尚未包含 2026-10-31 的菜单变更；重新构建本分支才可获得新界面。可烧录文件见 [版本化 HEX 发布目录](firmware/releases/README.md)，
 其中记录来源提交、默认配置和 SHA-256；不要把旧集成分支中的构建输出当成本版固件。
 
 ## 与当前 FPGA 候选连接
