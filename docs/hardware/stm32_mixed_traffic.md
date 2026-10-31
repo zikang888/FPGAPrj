@@ -1,6 +1,6 @@
 # STM32 四协议正常流量中插入偶发错误
 
-日期：2026-10-30。目标：天空星 STM32F407VGT6，分支 `memberC/stm32-f407`。需要烧录 [本次最新 HEX](../../stm32_f407/firmware/releases/README.md)，旧 HEX 不会自动增加混合模式。未完成实板/FPGA 验收。
+日期：2026-10-30。目标：天空星 STM32F407VGT6，分支 `memberC/stm32-f407`。需要烧录包含所需功能的固件；发布情况见 [HEX 目录](../../stm32_f407/firmware/releases/README.md)。2026-10-31 菜单调整及 UART SHORT TXN 混合模式需要包含本次变更的新固件。未完成实板/FPGA 验收。
 
 ## 1. 流量与边界
 
@@ -9,13 +9,13 @@
 | 协议 | 混合模式正常背景 | 可混入错误（原 fault 索引） | 硬件前提 |
 |---|---|---|---|
 | SPI | 一笔 `9F 00 00 00`，复用 case 1001，对比已探测 JEDEC ID | Partial 0、Short 1、Extra 2 | W25Q128；FPGA 并接 PA4～PA7 且保持输入；short/extra 需要已知 4 字节预期 |
-| UART | USART3 按原一轮正常内容发送 `00 01 02 03 04 05 06 07`，**不等回送** | Bad Stop 4、Break 5 | PD8→对端 RX、共地；仍为 115200 8N1，错误结束后复用原恢复逻辑 |
+| UART | USART3 按原一轮正常内容发送 `00 01 02 03 04 05 06 07`，**不等回送** | Bad Stop 4、Break 5、Short TXN 7 | PD8→对端 RX、共地；仍为 115200 8N1，错误结束后复用原恢复逻辑 |
 | I2C | 读 AT24C256 0x50、0x0100 起 16 字节，**不写 EEPROM、不比较旧内容** | Address NACK 9、Missing STOP 13 | PB6 SCL/PB7 SDA、3.3 V 上拉；0x50 必须 ACK、0x51 应无设备；缺 STOP 保持 30 ms 后恢复 |
-| CAN | bxCAN 标准 ID 0x321、DLC 8、500 kbit/s、一次发送请求，不等应用层 echo | Stuff 16、CRC 17、Form 18 | PD0/PD1＋收发器、正确终端、另一个正常 ACK 节点；故障位置复用 PD1 RAW，需 CAN 故障版 |
+| CAN | bxCAN 标准 ID 0x321、DLC 8、500 kbit/s、一次发送请求，不等应用层 echo | Stuff 16、CRC 17；Form 18 仅串口混合模式 | PD0/PD1＋收发器、正确终端、另一个正常 ACK 节点；故障位置复用 PD1 RAW，需 CAN 故障版 |
 
 这里的 `index` 是 **1 起始逻辑事务位置**，不是所有协议通用的“线上帧号”。UART 正常槽含 8 个字节帧；I2C 读含寻址/重复 START，NACK 钩子含基线探测和目标探测；CAN 错误帧可能引起其他节点错误标志。不能把一个注入槽机械等同于 FPGA 只能输出一条事件。
 
-原正常菜单里的 UART ECHO、I2C 写读验证和 CAN ECHO **行为不改**；以上无回送/只读策略仅用于混合背景。原 20 个底层故障、冻结 case ID、协议 YAML、引脚/速率和 HAL 后端均不改；屏幕及混合模式只使用已选定的 10 个错误。
+原正常菜单里的 UART ECHO、I2C 写读验证和 CAN ECHO **行为不改**；以上无回送/只读策略仅用于混合背景。原 20 个底层故障、冻结 case ID、协议 YAML、引脚/速率和 HAL 后端均不改；屏幕显示 10 个错误；混合模式另保留隐藏的 CAN Form 索引 18 的串口入口，共支持 11 个错误。
 
 CAN 正常槽和错误槽分别启动一个原 normal/RAW 单帧会话，完成并恢复外设后才进入下一槽；不同时占用 CAN1/PD1。要求受控实验总线空闲、RX FIFO 无遗留帧，ACK 节点不要自动 echo 或主动持续广播。该实现是有间隔的混合序列，**不是无缝高速实时叠加**；没有新增硬件或启用原先关闭的宏。
 
@@ -50,7 +50,7 @@ mix stop
 mix recover
 ```
 
-- N：上表 10 个原错误索引之一，协议由其决定；隐藏错误不加入混合模式。
+- N：上表 11 个原错误索引之一，协议由其决定；CAN Form 18 虽从屏幕隐藏，仍可通过串口混合模式执行。
 - TOTAL：1～10000 个逻辑事务；GAP：100～60000 ms。
 - MODE=`normal`：VALUE 必须为 0；`once`：VALUE 是 1～TOTAL 的注入位置；`every`：VALUE 是注入间隔；`random`：VALUE 是精确注入次数。
 - SEED 只允许 random 使用，范围 1～4294967295，省略为 1；不是不可复现的硬件随机。固定种子不等于与现场随机故障具有相同统计分布。

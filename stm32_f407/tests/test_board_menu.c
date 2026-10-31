@@ -11,6 +11,7 @@ static GPIO_PinState key, led;
 static uint32_t ticks;
 static unsigned int spi_calls, uart_calls, i2c_calls, can_calls, fault_calls, submits, i2c_reads;
 static uint8_t echo[16], eeprom[16];
+static unsigned int uart_short_writes, uart_normal_writes;
 static char rows[8][24], console[32768];
 static int echo_error, probe_error, restore_error, keep_pending, write_error;
 
@@ -45,7 +46,7 @@ static int transfer_spi(void *ctx, const uint8_t *tx, uint8_t *rx, size_t length
     return MC_OK;
 }
 static int uart_write(void *ctx, const uint8_t *data, size_t length, uint32_t timeout)
-{ (void)ctx; (void)timeout; ++uart_calls; memcpy(echo, data, length); return write_error ? MC_ERR_IO : MC_OK; }
+{ (void)ctx; (void)timeout; ++uart_calls; if (length == 3U) { ++uart_short_writes; } if (length == 8U) { ++uart_normal_writes; } memcpy(echo, data, length); return write_error ? MC_ERR_IO : MC_OK; }
 static int uart_read(void *ctx, uint8_t *data, size_t length, uint32_t timeout)
 { (void)ctx; (void)timeout; memcpy(data, echo, length); return echo_error ? MC_ERR_TIMEOUT : MC_OK; }
 static int i2c_write(void *ctx, uint8_t addr, uint16_t mem, const uint8_t *data, size_t length, uint32_t timeout)
@@ -136,7 +137,7 @@ static void drain_mixed(void)
 static int test_mixed_board(void)
 {
     const mc_fault_id_t faults[] = {MC_FAULT_SPI_PARTIAL, MC_FAULT_SPI_SHORT, MC_FAULT_SPI_EXTRA,
-        MC_FAULT_UART_BAD_STOP, MC_FAULT_UART_BREAK, MC_FAULT_I2C_ADDRESS_NACK, MC_FAULT_I2C_NO_STOP,
+        MC_FAULT_UART_BAD_STOP, MC_FAULT_UART_BREAK, MC_FAULT_UART_MISSING_BYTES, MC_FAULT_I2C_ADDRESS_NACK, MC_FAULT_I2C_NO_STOP,
         MC_FAULT_CAN_STUFF, MC_FAULT_CAN_CRC, MC_FAULT_CAN_FORM};
     mc_mix_config_t config = {MC_FAULT_SPI_PARTIAL, MC_MIX_ONCE, 5U, 100U, 3U, 1U};
     unsigned int i, before;
@@ -160,6 +161,19 @@ static int test_mixed_board(void)
         CHECK(strstr(console, "\"physical_verified\":false") != NULL);
         tap(); CHECK(!g_mix_view);
     }
+    /* UART SHORT is visible, SINGLE sends three bytes, and the menu preset
+       interleaves an eight-byte UART background with one three-byte fault. */
+    run_command("fault select 7");
+    CHECK(g_menu.protocol == MC_UI_UART && g_menu.in_submenu && g_selected_fault == MC_FAULT_UART_MISSING_BYTES);
+    before = uart_short_writes; hold(); CHECK(g_fault_options); hold();
+    CHECK(uart_short_writes == before + 1U && g_last_fault_result == MC_OK);
+    before = uart_normal_writes; i = uart_short_writes; g_fault_option = 1U; hold();
+    CHECK(g_mix_view && g_mixed.config.fault == MC_FAULT_UART_MISSING_BYTES);
+    drain_mixed();
+    CHECK(g_mixed.state == MC_MIX_DONE && uart_normal_writes == before + 99U && uart_short_writes == i + 1U);
+    tap(); g_fault_options = 0;
+    run_command("fault select 18");
+    CHECK(g_menu.protocol == MC_UI_CAN && !g_menu.in_submenu && g_selected_fault == MC_FAULT_CAN_FORM);
     before = i2c_calls; config.fault = MC_FAULT_I2C_NO_STOP; config.mode = MC_MIX_NORMAL; config.value = 0U;
     CHECK(start_mixed(&config) == MC_OK); drain_mixed();
     CHECK(g_mixed.normal_ok == 5U && i2c_calls == before && i2c_reads >= 5U); /* no EEPROM writes */

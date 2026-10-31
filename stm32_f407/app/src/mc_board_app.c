@@ -149,7 +149,7 @@ static void print_help(void)
         "  fault select N       Select case index N (0..19)\r\n"
         "  fault run [N]        Trigger selected/indexed case\r\n"
         "  mix start N TOTAL GAP normal|once|every|random VALUE [SEED]\r\n"
-        "    N: visible fault index, TOTAL<=10000, GAP=100..60000ms\r\n"
+        "    N: supported fault index, TOTAL<=10000, GAP=100..60000ms\r\n"
         "    normal VALUE=0; once=position; every=interval; random=count\r\n"
         "  mix status|stop|recover\r\n"
         "  can test start MODE COUNT PERIOD [EVERY]\r\n"
@@ -580,7 +580,7 @@ static int mixed_start_slot(void *context, const mc_mixed_t *s)
     if (s->config.fault <= MC_FAULT_SPI_EXTRA) {
         return mc_run_spi_jedec(&g_runner, 1001U, 1U, g_jedec_id, &summary);
     }
-    if (s->config.fault <= MC_FAULT_UART_BREAK) {
+    if (s->config.fault <= MC_FAULT_UART_MISSING_BYTES) {
         if (p->uart_write == NULL) { return MC_ERR_UNSUPPORTED; }
         result = p->sync_pulse == NULL ? MC_OK : p->sync_pulse(p->context, 2001U);
         for (i = 0U; i < 8U; ++i) { data[i] = (uint8_t)i; }

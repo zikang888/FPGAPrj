@@ -1,6 +1,6 @@
 # STM32F407 正常/错误事件分级菜单与 SSD1306 OLED 接线
 
-状态：初版实现于 2026-10-12；2026-10-27 改为四协议母菜单，增加正常测试入口，随后按用户图片将屏幕错误项精简为 10 项；底层 20 个故障和串口保留。已完成主机测试，尚未烧录或完成波形实测。新界面须烧录 [最新发布 HEX](../../stm32_f407/firmware/releases/README.md)，旧 HEX 不会自动更新。协议规则由成员 C 维护，详见 `docs/protocol-rules/protocol_rules.yaml`。
+状态：四协议母菜单保留 10 个屏幕错误项；2026-10-31 恢复 UART SHORT TXN 并隐藏 CAN FORM ERROR，底层 20 个故障和串口保留。新界面须烧录包含本次变更的新固件，旧 HEX 不会自动更新；发布情况见 [HEX 发布目录](../../stm32_f407/firmware/releases/README.md)。协议规则由成员 C 维护，详见 `docs/protocol-rules/protocol_rules.yaml`。
 
 ## OLED 选择
 
@@ -49,16 +49,16 @@ OLED 使用独立 GPIO 软件 SPI，不占用连接板载 W25Q128 的 SPI1 PA4�
 
 纯菜单状态与映射在 `common/src/mc_ui_menu.c`，消抖/长按锁存在 `common/src/mc_button.c`，实际发送仍在原 runner、fault hooks、CAN 会话后端；规范 Keil 工程已加入新源文件。`mc_faults.c`、20 个故障 ID、协议规则、HAL 引脚初始化和接收环形缓冲不改。CAN 持有资源或恢复未成功时，仍阻止其他测试进入。两个新板级主机测试分别编译默认和故障宏配置，调用真实 `mc_board_app.c`、模拟按键和 I/O 验证，不等价于电气/时序实测。验证见 [本次记录](../test-results/2026-10-27-hierarchical-menu.md)。
 
-## 屏幕保留的错误事件（仅图片中的 10 项）
+## 屏幕保留的错误事件（10 项）
 
 | 母菜单 | 屏幕错误项 | 原串口索引 |
 |---|---|---|
 | SPI | PARTIAL BYTE、SHORT TXN、EXTRA BYTE | 0、1、2 |
-| UART | BAD STOP、BREAK | 4、5 |
+| UART | BAD STOP、BREAK、SHORT TXN | 4、5、7 |
 | I2C | ADDR NACK、NO STOP（图片中的 missing STOP） | 9、13 |
-| CAN | STUFF ERROR、CRC ERROR、FORM ERROR | 16、17、18 |
+| CAN | STUFF ERROR、CRC ERROR | 16、17 |
 
-正常测试 6 项、四协议母菜单、BACK 和按键方式均不变。SPI MISO CHECK，UART BAUD OFFSET/SHORT TXN/PARITY，I2C BUSY NACK/SDA LOW/SCL LOW，以及 CAN NO ACK/BIT/BUS OFF 仅从屏幕隐藏，不删除实现、不改用例编号或串口权限。CAN 屏幕错误项仍需故障版 HEX 和 RAW 接线；默认版不会因为可见而启用故障宏。
+正常测试 6 项、四协议母菜单、BACK 和按键方式均不变。SPI MISO CHECK，UART BAUD OFFSET/PARITY，I2C BUSY NACK/SDA LOW/SCL LOW，以及 CAN NO ACK/BIT/FORM/BUS OFF 仅从屏幕隐藏，不删除实现、不改用例编号或串口权限。CAN 屏幕错误项仍需故障版 HEX 和 RAW 接线；默认版不会因为可见而启用故障宏。
 
 ## 后台保留清单（20 项，并非屏幕显示清单）
 

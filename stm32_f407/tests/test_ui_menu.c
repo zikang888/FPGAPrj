@@ -11,10 +11,10 @@ int main(void)
     unsigned int p, i, normals = 0U;
     unsigned int seen[MC_FAULT_COUNT] = {0};
     const unsigned int expected[MC_FAULT_COUNT] = {
-        1U, 1U, 1U, 0U, 1U, 1U, 0U, 0U, 0U, 1U,
-        0U, 0U, 0U, 1U, 0U, 0U, 1U, 1U, 1U, 0U
+        1U, 1U, 1U, 0U, 1U, 1U, 0U, 1U, 0U, 1U,
+        0U, 0U, 0U, 1U, 0U, 0U, 1U, 1U, 0U, 0U
     };
-    const unsigned int counts[] = {6U, 4U, 4U, 6U};
+    const unsigned int counts[] = {6U, 5U, 4U, 5U};
     mc_ui_menu_init(&menu);
     CHECK(menu.protocol == MC_UI_SPI && !menu.in_submenu);
     /* Parent navigation is always output-free, including wraparound. */

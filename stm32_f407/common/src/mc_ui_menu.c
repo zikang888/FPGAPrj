@@ -2,12 +2,12 @@
 
 static const unsigned int k_first[] = {0U, 4U, 9U, 14U};
 /* Display whitelist only. All 20 backend/CLI fault IDs remain unchanged. */
-static const unsigned int k_fault_count[] = {3U, 2U, 2U, 3U};
+static const unsigned int k_fault_count[] = {3U, 3U, 2U, 2U};
 static const mc_fault_id_t k_visible_faults[][3] = {
     {MC_FAULT_SPI_PARTIAL, MC_FAULT_SPI_SHORT, MC_FAULT_SPI_EXTRA},
-    {MC_FAULT_UART_BAD_STOP, MC_FAULT_UART_BREAK, MC_FAULT_COUNT},
+    {MC_FAULT_UART_BAD_STOP, MC_FAULT_UART_BREAK, MC_FAULT_UART_MISSING_BYTES},
     {MC_FAULT_I2C_ADDRESS_NACK, MC_FAULT_I2C_NO_STOP, MC_FAULT_COUNT},
-    {MC_FAULT_CAN_STUFF, MC_FAULT_CAN_CRC, MC_FAULT_CAN_FORM}
+    {MC_FAULT_CAN_STUFF, MC_FAULT_CAN_CRC, MC_FAULT_COUNT}
 };
 static const unsigned int k_normal_count[] = {2U, 1U, 1U, 2U};
 static const mc_ui_entry_t k_normals[][2] = {

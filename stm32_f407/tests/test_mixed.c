@@ -42,7 +42,7 @@ int main(void)
     mc_mixed_t s, copy;
     mc_mix_config_t c = {MC_FAULT_SPI_PARTIAL, MC_MIX_ONCE, 1000U, 100U, 500U, 1U};
     const mc_fault_id_t ids[] = {MC_FAULT_SPI_PARTIAL, MC_FAULT_SPI_SHORT, MC_FAULT_SPI_EXTRA,
-        MC_FAULT_UART_BAD_STOP, MC_FAULT_UART_BREAK, MC_FAULT_I2C_ADDRESS_NACK, MC_FAULT_I2C_NO_STOP,
+        MC_FAULT_UART_BAD_STOP, MC_FAULT_UART_BREAK, MC_FAULT_UART_MISSING_BYTES, MC_FAULT_I2C_ADDRESS_NACK, MC_FAULT_I2C_NO_STOP,
         MC_FAULT_CAN_STUFF, MC_FAULT_CAN_CRC, MC_FAULT_CAN_FORM};
     unsigned int i;
     for (i = 0U; i < sizeof(ids)/sizeof(ids[0]); ++i) {
@@ -96,6 +96,6 @@ int main(void)
     c.gap_ms = 100U; c.seed = 0U; CHECK(mc_mix_validate(&c) == MC_ERR_ARGUMENT);
     c.seed = 1U; c.fault = MC_FAULT_CAN_BIT; CHECK(mc_mix_validate(&c) == MC_ERR_ARGUMENT);
     CHECK(mc_mix_stop(NULL) == MC_ERR_ARGUMENT && mc_mix_recover(NULL) == MC_ERR_ARGUMENT);
-    puts("Mixed scheduler: 10 faults, normal/once/every/random, exact random count, stop/restore, timing, logging and parser PASS");
+    puts("Mixed scheduler: 11 faults, normal/once/every/random, exact random count, stop/restore, timing, logging and parser PASS");
     return 0;
 }
