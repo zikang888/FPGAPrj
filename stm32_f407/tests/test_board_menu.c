@@ -14,6 +14,8 @@ static uint8_t echo[16], eeprom[16];
 static unsigned int uart_short_writes, uart_normal_writes;
 static char rows[8][24], console[32768];
 static int echo_error, probe_error, restore_error, keep_pending, write_error;
+static unsigned int busy_remaining, busy_writes, busy_probe_failures;
+static unsigned int busy_simulated_nacks = 2U;
 
 uint32_t HAL_GetTick(void) { return ticks; }
 void HAL_Delay(uint32_t delay) { ticks += delay; }
@@ -50,7 +52,7 @@ static int uart_write(void *ctx, const uint8_t *data, size_t length, uint32_t ti
 static int uart_read(void *ctx, uint8_t *data, size_t length, uint32_t timeout)
 { (void)ctx; (void)timeout; memcpy(data, echo, length); return echo_error ? MC_ERR_TIMEOUT : MC_OK; }
 static int i2c_write(void *ctx, uint8_t addr, uint16_t mem, const uint8_t *data, size_t length, uint32_t timeout)
-{ (void)ctx; (void)addr; (void)mem; (void)timeout; ++i2c_calls; memcpy(eeprom, data, length); return MC_OK; }
+{ (void)ctx; (void)addr; (void)timeout; ++i2c_calls; if (mem == 0x0120U) { ++busy_writes; busy_remaining = busy_simulated_nacks; } else { memcpy(eeprom, data, length); } return MC_OK; }
 static int i2c_read(void *ctx, uint8_t addr, uint16_t mem, uint8_t *data, size_t length, uint32_t timeout)
 { (void)ctx; (void)addr; (void)mem; (void)timeout; ++i2c_reads; memcpy(data, eeprom, length); return MC_OK; }
 static int can_send(void *ctx, uint32_t id, const uint8_t *data, size_t length, uint32_t timeout)
@@ -64,7 +66,7 @@ static int bad_stop(void *ctx, uint8_t value, uint32_t baud)
 static int break_tx(void *ctx, uint32_t bits, uint32_t baud)
 { (void)ctx; (void)bits; (void)baud; ++fault_calls; return MC_OK; }
 static int i2c_probe(void *ctx, uint8_t addr, uint32_t timeout)
-{ (void)ctx; (void)timeout; return addr == 0x50U ? MC_OK : MC_ERR_IO; }
+{ (void)ctx; (void)timeout; if (addr == 0x50U && busy_remaining != 0U) { --busy_remaining; ++busy_probe_failures; return MC_ERR_IO; } return addr == 0x50U ? MC_OK : MC_ERR_IO; }
 static int no_stop(void *ctx, uint8_t addr, uint32_t duration)
 { (void)ctx; (void)addr; (void)duration; ++fault_calls; return MC_OK; }
 static int log_text(void *ctx, const char *text, size_t length)
@@ -137,7 +139,7 @@ static void drain_mixed(void)
 static int test_mixed_board(void)
 {
     const mc_fault_id_t faults[] = {MC_FAULT_SPI_PARTIAL, MC_FAULT_SPI_SHORT, MC_FAULT_SPI_EXTRA,
-        MC_FAULT_UART_BAD_STOP, MC_FAULT_UART_BREAK, MC_FAULT_UART_MISSING_BYTES, MC_FAULT_I2C_ADDRESS_NACK, MC_FAULT_I2C_NO_STOP,
+        MC_FAULT_UART_BAD_STOP, MC_FAULT_UART_BREAK, MC_FAULT_UART_MISSING_BYTES, MC_FAULT_I2C_ADDRESS_NACK, MC_FAULT_I2C_BUSY_NACK, MC_FAULT_I2C_NO_STOP,
         MC_FAULT_CAN_STUFF, MC_FAULT_CAN_CRC, MC_FAULT_CAN_FORM};
     mc_mix_config_t config = {MC_FAULT_SPI_PARTIAL, MC_MIX_ONCE, 5U, 100U, 3U, 1U};
     unsigned int i, before;
@@ -174,6 +176,22 @@ static int test_mixed_board(void)
     tap(); g_fault_options = 0;
     run_command("fault select 18");
     CHECK(g_menu.protocol == MC_UI_CAN && !g_menu.in_submenu && g_selected_fault == MC_FAULT_CAN_FORM);
+    /* Busy NACK: SINGLE and preset use the EEPROM write/ACK-poll hook;
+       normal slots stay read-only and a missing NACK is reported as failure. */
+    run_command("fault select 10");
+    CHECK(g_menu.protocol == MC_UI_I2C && g_menu.in_submenu && g_selected_fault == MC_FAULT_I2C_BUSY_NACK);
+    before = busy_writes; i = busy_probe_failures; hold(); CHECK(g_fault_options); hold();
+    CHECK(busy_writes == before + 1U && busy_probe_failures == i + 2U && g_last_fault_result == MC_OK);
+    before = i2c_reads; i = busy_writes; g_fault_option = 1U; hold();
+    CHECK(g_mix_view && g_mixed.config.fault == MC_FAULT_I2C_BUSY_NACK);
+    drain_mixed();
+    CHECK(g_mixed.state == MC_MIX_DONE && i2c_reads == before + 99U && busy_writes == i + 1U);
+    tap(); g_fault_options = 0;
+    busy_simulated_nacks = 0U;
+    config.fault = MC_FAULT_I2C_BUSY_NACK; config.mode = MC_MIX_ONCE; config.value = 1U;
+    CHECK(start_mixed(&config) == MC_OK); drain_mixed();
+    CHECK(g_mixed.state == MC_MIX_ERROR && g_mixed.failed == 1U && !g_mixed.held);
+    tap(); busy_simulated_nacks = 2U;
     before = i2c_calls; config.fault = MC_FAULT_I2C_NO_STOP; config.mode = MC_MIX_NORMAL; config.value = 0U;
     CHECK(start_mixed(&config) == MC_OK); drain_mixed();
     CHECK(g_mixed.normal_ok == 5U && i2c_calls == before && i2c_reads >= 5U); /* no EEPROM writes */

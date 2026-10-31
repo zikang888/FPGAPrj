@@ -6,7 +6,7 @@ int mc_mix_fault_supported(mc_fault_id_t fault)
     switch (fault) {
     case MC_FAULT_SPI_PARTIAL: case MC_FAULT_SPI_SHORT: case MC_FAULT_SPI_EXTRA:
     case MC_FAULT_UART_BAD_STOP: case MC_FAULT_UART_BREAK: case MC_FAULT_UART_MISSING_BYTES:
-    case MC_FAULT_I2C_ADDRESS_NACK: case MC_FAULT_I2C_NO_STOP:
+    case MC_FAULT_I2C_ADDRESS_NACK: case MC_FAULT_I2C_BUSY_NACK: case MC_FAULT_I2C_NO_STOP:
     case MC_FAULT_CAN_STUFF: case MC_FAULT_CAN_CRC: case MC_FAULT_CAN_FORM: return 1;
     default: return 0;
     }

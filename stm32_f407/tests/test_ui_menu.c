@@ -12,9 +12,9 @@ int main(void)
     unsigned int seen[MC_FAULT_COUNT] = {0};
     const unsigned int expected[MC_FAULT_COUNT] = {
         1U, 1U, 1U, 0U, 1U, 1U, 0U, 1U, 0U, 1U,
-        0U, 0U, 0U, 1U, 0U, 0U, 1U, 1U, 0U, 0U
+        1U, 0U, 0U, 1U, 0U, 0U, 1U, 1U, 0U, 0U
     };
-    const unsigned int counts[] = {6U, 5U, 4U, 5U};
+    const unsigned int counts[] = {6U, 5U, 5U, 5U};
     mc_ui_menu_init(&menu);
     CHECK(menu.protocol == MC_UI_SPI && !menu.in_submenu);
     /* Parent navigation is always output-free, including wraparound. */
@@ -70,6 +70,6 @@ int main(void)
     CHECK(mc_ui_menu_entry(MC_UI_I2C, 0U).action == MC_UI_I2C_EEPROM);
     CHECK(mc_ui_menu_entry(MC_UI_CAN, 0U).action == MC_UI_CAN_TX);
     CHECK(mc_ui_menu_entry(MC_UI_CAN, 1U).action == MC_UI_CAN_ECHO);
-    puts("UI menu: four parents, six normal actions, exactly 10 visible faults, hidden CLI mapping and BACK PASS");
+    puts("UI menu: four parents, six normal actions, exactly 11 visible faults, hidden CLI mapping and BACK PASS");
     return 0;
 }

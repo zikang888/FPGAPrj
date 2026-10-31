@@ -26,7 +26,7 @@
 - AT24C256：I²C1 PB6/PB7，100 kHz。
 - CAN：CAN1 PD0/PD1，500 kbit/s，必须外接 SN65HVD230。
 - 用户 LED：PB2；用户按键：PA0；同步脉冲：PC6。
-- OLED：PB12/PB13/PB15、PC4/PC5；四协议母菜单、6 个正常项＋图片指定 10 个错误项，其他故障只从屏幕隐藏；[操作及接线](docs/hardware/stm32_fault_menu_oled.md)。
+- OLED：PB12/PB13/PB15、PC4/PC5；四协议母菜单、6 个正常项＋11 个错误项，其他故障只从屏幕隐藏；[操作及接线](docs/hardware/stm32_fault_menu_oled.md)。
 - 四协议混合测试：正常背景中指定/周期/可复现随机插入错误，屏幕预设与进度、长按停止、独立日志及离线核对；[命令与屏幕](docs/hardware/stm32_mixed_traffic.md)。
 - CAN 周期会话：normal/echo 默认可用；noack/bitrate 需显式启用故障宏。
 - CAN GPIO 位流：故障版可播放合法/CRC/填充/格式语料，复用 PD1；接线与命令见 [RAW 说明](docs/hardware/can_gpio_bitstream_usage.md)。
