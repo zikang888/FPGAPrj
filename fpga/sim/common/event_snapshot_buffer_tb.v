@@ -40,7 +40,7 @@ event_snapshot_buffer #(
     .rst_n(rst_n),
     .arm(arm),
     .ack(ack),
-    .freeze(freeze),
+    .retain_errors(1'b0), .freeze(freeze),
     .in_valid(in_valid),
     .in_event(in_event),
     .in_trigger(in_trigger),

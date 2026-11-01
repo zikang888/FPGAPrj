@@ -3,7 +3,7 @@ from PIL import Image,ImageFont,ImageDraw
 import sys
 root=Path(sys.argv[1]).resolve() if len(sys.argv)>1 else Path(__file__).resolve().parent.parent
 # Rasterize a local, fixed-size subset; no runtime filesystem/font dependencies.
-texts=(root/'software/src/ui_a_views.inc').read_text(encoding='utf8')
+texts=''.join(p.read_text(encoding='utf8') for p in (root/'software/src').glob('*views.inc'))
 chars=sorted(set(chr(i) for i in range(32,127))|set(c for c in texts if ord(c)>127))
 latin=ImageFont.truetype('C:/Windows/Fonts/consola.ttf',14)
 cjk=ImageFont.truetype('C:/Windows/Fonts/msyh.ttc',15)

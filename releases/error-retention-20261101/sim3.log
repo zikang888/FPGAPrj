@@ -1,0 +1,60 @@
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "C:/Users/11914/Documents/Codex/2026-09-22/wo/work/error-retention-20261031/fpga/rtl/common/event_snapshot_buffer.sv" into library work
+INFO: [VRFC 10-311] analyzing module event_snapshot_buffer
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "C:/Users/11914/Documents/Codex/2026-09-22/wo/work/error-retention-20261031/fpga/sim/common/error_retention_tb.sv" into library work
+INFO: [VRFC 10-311] analyzing module error_retention_tb
+INFO: [VRFC 10-2263] Analyzing SystemVerilog file "C:/Users/11914/Documents/Codex/2026-09-22/wo/work/error-retention-20261031/fpga/sim/common/event_snapshot_buffer_tb.v" into library work
+INFO: [VRFC 10-311] analyzing module event_snapshot_buffer_tb
+Vivado Simulator 2018.3
+Copyright 1986-1999, 2001-2018 Xilinx, Inc. All Rights Reserved.
+Running: D:/Vivado2018.3/Vivado/2018.3/bin/unwrapped/win64.o/xelab.exe error_retention_tb -s error_retention_tb 
+Multi-threading is on. Using 18 slave threads.
+Starting static elaboration
+Completed static elaboration
+Starting simulation data flow analysis
+Completed simulation data flow analysis
+Time Resolution for simulation is 1ps
+Compiling module work.event_snapshot_buffer(DEPTH=16)
+Compiling module work.error_retention_tb
+Built simulation snapshot error_retention_tb
+
+****** xsim v2018.3 (64-bit)
+  **** SW Build 2405991 on Thu Dec  6 23:38:27 MST 2018
+  **** IP Build 2404404 on Fri Dec  7 01:43:56 MST 2018
+    ** Copyright 1986-2018 Xilinx, Inc. All Rights Reserved.
+
+source xsim.dir/error_retention_tb/xsim_script.tcl
+# xsim {error_retention_tb} -autoloadwcfg -runall
+Vivado Simulator 2018.3
+Time resolution is 1 ps
+run -all
+ERROR_RETENTION_PASS: four protocols 1000 transactions, early error, overflow, missing END, INFO and SPI semantic
+$finish called at time : 241351 ns : File "C:/Users/11914/Documents/Codex/2026-09-22/wo/work/error-retention-20261031/fpga/sim/common/error_retention_tb.sv" Line 33
+exit
+INFO: [Common 17-206] Exiting xsim at Sun Nov  1 15:12:43 2026...
+Vivado Simulator 2018.3
+Copyright 1986-1999, 2001-2018 Xilinx, Inc. All Rights Reserved.
+Running: D:/Vivado2018.3/Vivado/2018.3/bin/unwrapped/win64.o/xelab.exe event_snapshot_buffer_tb -s event_snapshot_buffer_tb 
+Multi-threading is on. Using 18 slave threads.
+Starting static elaboration
+Completed static elaboration
+Starting simulation data flow analysis
+Completed simulation data flow analysis
+Time Resolution for simulation is 1ps
+Compiling module work.event_snapshot_buffer(DEPTH=8,PO...
+Compiling module work.event_snapshot_buffer_tb
+Built simulation snapshot event_snapshot_buffer_tb
+
+****** xsim v2018.3 (64-bit)
+  **** SW Build 2405991 on Thu Dec  6 23:38:27 MST 2018
+  **** IP Build 2404404 on Fri Dec  7 01:43:56 MST 2018
+    ** Copyright 1986-2018 Xilinx, Inc. All Rights Reserved.
+
+source xsim.dir/event_snapshot_buffer_tb/xsim_script.tcl
+# xsim {event_snapshot_buffer_tb} -autoloadwcfg -runall
+Vivado Simulator 2018.3
+Time resolution is 1 ps
+run -all
+PASS: event snapshot wrap, trigger, post-count, ACK and re-arm
+$finish called at time : 1090 ns : File "C:/Users/11914/Documents/Codex/2026-09-22/wo/work/error-retention-20261031/fpga/sim/common/event_snapshot_buffer_tb.v" Line 173
+exit
+INFO: [Common 17-206] Exiting xsim at Sun Nov  1 15:12:48 2026...

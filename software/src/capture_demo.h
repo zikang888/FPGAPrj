@@ -31,6 +31,7 @@ int capture_demo_cache_snapshot(CaptureDemoCache *cache,
                                 const CaptureDemoSnapshot *snapshot);
 int capture_live_arm(void);
 int capture_session_arm(u8 protocol);
+int capture_error_session_arm(u8 protocol);
 int capture_session_freeze(CaptureDemoSnapshot *snapshot);
 /* Returns 1 for a frozen snapshot, 0 while waiting, -1 on invalid metadata. */
 int capture_live_poll(CaptureDemoSnapshot *snapshot);

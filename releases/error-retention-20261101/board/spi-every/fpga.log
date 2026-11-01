@@ -1,0 +1,4 @@
+HOME CAPTURE ARMED protocol=SPI
+TEST START id=5 protocol=SPI errors=0
+TEST SAVED id=5 protocol=SPI events=580 retained=40 errors=10 tail=0 history=5
+TEST STATUS id=5 running=0 events=580 errors=10 history=5

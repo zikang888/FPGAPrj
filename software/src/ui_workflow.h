@@ -22,11 +22,11 @@ static inline unsigned int ui_error_catalog(UiProtocol protocol,
         {ERROR_SPI_PARTIAL_BYTE,ERROR_SPI_SHORT_TRANSACTION,ERROR_SPI_EXTRA_BYTES,
          ERROR_SPI_RESPONSE_MISMATCH,ERROR_CODE_COUNT,ERROR_CODE_COUNT},
         {ERROR_UART_STOP_BIT,ERROR_UART_BREAK,ERROR_UART_SHORT_TRANSACTION,
-         ERROR_UART_PARITY,ERROR_UART_BAUD_MISMATCH,ERROR_CODE_COUNT},
+         ERROR_CODE_COUNT,ERROR_CODE_COUNT,ERROR_CODE_COUNT},
         {ERROR_I2C_ADDRESS_NACK,ERROR_I2C_BUSY_NACK,ERROR_I2C_MISSING_STOP,
          ERROR_CODE_COUNT,ERROR_CODE_COUNT,ERROR_CODE_COUNT},
         {ERROR_CAN_ACK,ERROR_CAN_STUFF,ERROR_CAN_CRC,
-         ERROR_CAN_BUS_OFF,ERROR_CODE_COUNT,ERROR_CODE_COUNT}
+         ERROR_CODE_COUNT,ERROR_CODE_COUNT,ERROR_CODE_COUNT}
     };
     static const char *const names[4][6] = {
         {"INCOMPLETE BYTE","TOO FEW BYTES","TOO MANY BYTES","WRONG FLASH ID",
@@ -40,7 +40,7 @@ static inline unsigned int ui_error_catalog(UiProtocol protocol,
     };
     unsigned int i, n;
     if ((unsigned int)protocol >= UI_PROTOCOL_COUNT) return 0U;
-    n = protocol == UI_PROTOCOL_I2C ? 3U : protocol == UI_PROTOCOL_UART ? 5U : 4U;
+    n = protocol == UI_PROTOCOL_SPI ? 4U : 3U;
     for (i=0U;i<n;++i) { codes[i]=ids[protocol][i]; labels[i]=names[protocol][i]; }
     return n;
 }
@@ -58,7 +58,7 @@ static inline const char *ui_error_advice(const PlatformUiStatus *s)
     } else if (s->selected_protocol == UI_PROTOCOL_CAN) {
         if (s->can_ack_errors) return "CHECK PEER POWER, 500 KBIT/S, TERMINATION AND ACK MODE";
         if (error_model_has_fault(&s->error_model)) return "CHECK CAN H/L, COMMON GROUND, BITRATE AND FAULT MODE";
-        return "BUS-OFF NEEDS STM32 STATUS; IT IS NOT A ZERO HERE";
+        return "NO CAN ERRORS DETECTED";
     } else if (s->selected_protocol == UI_PROTOCOL_UART) {
         if (s->uart_break_errors) return "CHECK RX FOR A SHORT TO GROUND OR AN ACTIVE BREAK TEST";
         if (s->uart_stop_errors) return "CHECK 115200 / 8N1, COMMON GROUND AND SIGNAL QUALITY";

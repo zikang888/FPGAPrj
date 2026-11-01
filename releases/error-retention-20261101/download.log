@@ -1,0 +1,146 @@
+PLATFORM_BIT C:/Users/11914/Documents/Codex/2026-09-22/wo/work/error-retention-20261031/build/sdk/platform_hw/multi_protocol_bd_wrapper.bit
+PLATFORM_INIT C:/Users/11914/Documents/Codex/2026-09-22/wo/work/error-retention-20261031/build/sdk/platform_hw/ps7_init.tcl
+APP_ELF C:/Users/11914/Documents/Codex/2026-09-22/wo/work/error-retention-20261031/build/sdk/platform_app/Debug/platform_app.elf
+attempting to launch hw_server
+
+****** Xilinx hw_server v2018.3
+  **** Build date : Dec  7 2018-00:40:27
+    ** Copyright 1986-2018 Xilinx, Inc. All Rights Reserved.
+
+INFO: hw_server application started
+INFO: Use Ctrl-C to exit hw_server application
+
+
+
+****** Xilinx hw_server v2018.3
+
+  **** Build date : Dec  7 2018-00:40:27
+
+    ** Copyright 1986-2018 Xilinx, Inc. All Rights Reserved.
+
+
+
+INFO: hw_server application started
+
+INFO: Use Ctrl-C to exit hw_server application
+
+
+
+
+INFO: To connect to this hw_server instance use url: TCP:127.0.0.1:3121
+
+
+
+TARGETS_BEGIN
+  1  APU
+     2  ARM Cortex-A9 MPCore #0 (Running)
+     3  ARM Cortex-A9 MPCore #1 (Running)
+  4  xc7z020
+TARGETS_END
+STOP_CPU0
+RESET_SYSTEM_FOR_CLEAN_REDOWNLOAD
+PROGRAM_BITSTREAM C:/Users/11914/Documents/Codex/2026-09-22/wo/work/error-retention-20261031/build/sdk/platform_hw/multi_protocol_bd_wrapper.bit
+
+initializing
+  0%    0MB   0.0MB/s  ??:?? ETA
+ 28%    1MB   2.2MB/s  ??:?? ETA
+ 50%    1MB   1.9MB/s  ??:?? ETA
+ 72%    2MB   1.8MB/s  ??:?? ETA
+ 96%    3MB   1.8MB/s  ??:?? ETA
+100%    3MB   1.7MB/s  00:02    
+INIT_PS C:/Users/11914/Documents/Codex/2026-09-22/wo/work/error-retention-20261031/build/sdk/platform_hw/ps7_init.tcl
+SYS_ID 40000000:   4D505254
+
+VERSION 40000004:   00010009
+
+CAPABILITIES 4000000C:   000003FF
+
+DOWNLOAD_ELF C:/Users/11914/Documents/Codex/2026-09-22/wo/work/error-retention-20261031/build/sdk/platform_app/Debug/platform_app.elf
+
+Downloading Program -- C:/Users/11914/Documents/Codex/2026-09-22/wo/work/error-retention-20261031/build/sdk/platform_app/Debug/platform_app.elf
+	section, .text: 0x00100000 - 0x0011633b
+	section, .init: 0x0011633c - 0x00116353
+	section, .fini: 0x00116354 - 0x0011636b
+	section, .rodata: 0x0011636c - 0x0012480f
+	section, .data: 0x00124810 - 0x0012503f
+	section, .eh_frame: 0x00125040 - 0x00125043
+	section, .mmu_tbl: 0x00128000 - 0x0012bfff
+	section, .ARM.exidx: 0x0012c000 - 0x0012c007
+	section, .init_array: 0x0012c008 - 0x0012c00b
+	section, .fini_array: 0x0012c00c - 0x0012c00f
+	section, .bss: 0x0012c020 - 0x0013aca7
+	section, .heap: 0x0013aca8 - 0x0013ccaf
+	section, .stack: 0x0013ccb0 - 0x001404af
+
+  0%    0MB   0.0MB/s  ??:?? ETA
+ 72%    0MB   0.2MB/s  ??:?? ETA
+100%    0MB   0.3MB/s  00:00    
+
+Setting PC to Program Start Address 0x00100000
+Successfully downloaded C:/Users/11914/Documents/Codex/2026-09-22/wo/work/error-retention-20261031/build/sdk/platform_app/Debug/platform_app.elf
+RUN_CPU0
+STOP_CPU0_FOR_READBACK
+CPU_REGISTERS_BEGIN
+             r0: 0013e8c8               r1: 00000000               r2: 3b4b39fa
+             r3: f8f00000               r4: 3b575ecf               r5: 00000000
+             r6: 00001388               r7: 001350e4               r8: 00000000
+             r9: 0012c050              r10: 0013eb48              r11: 00123458
+            r12: 3b4b3a0d               sp: 0013e8c8               lr: 0010f05c
+             pc: 0010bd78             cpsr: 8007005f              usr          
+            fiq                        irq                        abt          
+            und                        svc                        mon          
+            vfp                       cp15                    Jazelle          
+ gpv_qos301_cpu            gpv_qos301_dmac             gpv_qos301_iou          
+  gpv_trustzone                    l2cache                     mpcore          
+
+CPU_REGISTERS_END
+SYS_ID 40000000:   4D505254
+
+VERSION 40000004:   00010009
+
+CAPABILITIES 4000000C:   000003FF
+
+SCRATCH 4000002C:   A5A55A5A
+
+ARB_STATUS 40000034:   00000000
+
+EXT_DROPPED 40000038:   00000000
+
+SPI_EVENTS 4000003C:   00000000
+
+SPI_STARTS 40000040:   00000000
+
+SPI_DATA 40000044:   00000000
+
+SPI_ENDS 40000048:   00000000
+
+SPI_FRAME_ERRORS 4000004C:   00000000
+
+SPI_BOUNDARY_ERRORS 40000050:   00000000
+
+SPI_DUPLICATES 40000054:   00000000
+
+SPI_SEQUENCE_ERRORS 40000058:   00000000
+
+SPI_LAST_TXN 4000005C:   00000000
+
+SPI_STATS_STATUS 40000060:   00000000
+
+CAPTURE_STATUS 40001004:   00000011
+
+SNAPSHOT_ID 40001008:   00000001
+
+SNAPSHOT_COUNT 4000100C:   00000000
+
+TRIGGER_INDEX 40001010:   FFFFFFFF
+
+DROPPED_COUNT 40001014:   00000000
+
+EVENT_0_WORD_0 40006000:   00000000
+
+EVENT_8_WORD_0 40006080:   00000000
+
+EVENT_24_WORD_0 40006180:   00000000
+
+RESUME_CPU0
+ZYNQ_JTAG_BOARD_TEST_DONE

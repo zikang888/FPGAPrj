@@ -233,7 +233,7 @@ static void begin_test(PlatformUiStatus *s, CaptureDemoSnapshot *snapshot)
     g_external_base = Xil_In32(REG_EXT_DROPPED);
     s->test_id = g_next_test++;
     XTime_GetTime(&g_test_start);
-    if (capture_session_arm(ui_protocol_event_id(s->selected_protocol))
+    if (capture_error_session_arm(ui_protocol_event_id(s->selected_protocol))
         != XST_SUCCESS) {
         xil_printf("TEST START FAILED: manual capture capability required\r\n");
         s->test_failed = 1U;

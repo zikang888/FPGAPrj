@@ -41,6 +41,9 @@ int main(void)
     change_id_after_read=2U;
     assert(capture_demo_cache_snapshot(&cache,&snapshot)==XST_FAILURE && !cache.valid);
     assert(capture_session_arm(2U)==XST_SUCCESS && last_arm==0x00020011U);
+    assert(capture_error_session_arm(2U)==XST_FAILURE);
+    regs[0xCU/4U]=0x3FFU;
+    assert(capture_error_session_arm(2U)==XST_SUCCESS && last_arm==0x00020031U);
     regs[REG_SNAPSHOT_COUNT/4U]=0U;
     assert(capture_session_freeze(&snapshot)==XST_SUCCESS && snapshot.count==0U);
     assert(capture_demo_cache_snapshot(&cache,&snapshot)==XST_SUCCESS && cache.valid && cache.count==0U);

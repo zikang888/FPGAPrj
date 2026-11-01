@@ -10,6 +10,7 @@
 #include "ui_workflow.h"
 
 #include "ui_a_font.h"
+#include "saved_error_trace.h"
 #include "touch.h"
 #ifdef PLATFORM_UI_HOST_PREVIEW
 #include "../tests/ui_preview_stubs.h"
@@ -79,6 +80,22 @@ static u32 g_history_scroll;
 static u32 g_history_list_scroll;
 static u8 g_history_detail;
 static u8 g_history_errors;
+static u8 g_history_trace;
+static u32 g_saved_selected,g_saved_id;
+static u8 g_home_saved;
+static SavedErrorTxn g_saved_txn[TEST_HISTORY_EVENTS];
+static const TestHistoryEntry *saved_record(const PlatformUiStatus *s)
+{
+    u32 i; const TestHistoryEntry *r;
+    if(g_requested_page==PLATFORM_UI_PAGE_HISTORY)
+        return g_history_detail&&g_history_trace?test_history_get(g_history,g_history_selected):0;
+    if(g_requested_page!=PLATFORM_UI_PAGE_HOME||s->test_running||!g_home_saved)return 0;
+    for(i=0;g_history&&i<g_history->count;++i){r=test_history_get(g_history,i);
+        if(r->protocol==(u32)s->selected_protocol)return r;}
+    return 0;
+}
+static void render_saved_trace(const PlatformUiStatus *s,const TestHistoryEntry *r);
+
 static EventAudit g_event_audit;
 static u8 g_event_audit_valid;
 static u32 g_scroll_px;
@@ -385,10 +402,12 @@ static u8 all_checks_passed(const PlatformUiStatus *status)
 }
 
 #include "ui_a_views.inc"
+#include "saved_waveform_views.inc"
 
 void platform_ui_set_history(const TestHistory *history)
 {
     g_history=history;
+    g_history_trace=0U;g_saved_id=0U;g_home_saved=0U;
     g_history_detail=0U;
     g_history_errors=0U;
     g_history_scroll=0U;
@@ -424,13 +443,18 @@ void platform_ui_tick(void)
         } else if (g_requested_page == PLATFORM_UI_PAGE_HISTORY) {
             render_history_page(&g_requested_status, snapshot);
         } else {
-            render_home_page(&g_requested_status, snapshot);
-            draw_home_fault_notice(&g_requested_status);
+            const TestHistoryEntry *saved=saved_record(&g_requested_status);
+            if(saved) render_saved_trace(&g_requested_status,saved);
+            else {render_home_page(&g_requested_status, snapshot);
+                  draw_home_fault_notice(&g_requested_status);}
         }
         draw_navigation(g_requested_page);
         present_status = present_frame_region(0U, FB_H - 1U);
     } else if (g_counter_render_pending != 0U) {
-        if(g_requested_page==PLATFORM_UI_PAGE_HOME){
+        if(g_requested_page==PLATFORM_UI_PAGE_HOME&&saved_record(&g_requested_status)){
+            render_saved_trace(&g_requested_status,saved_record(&g_requested_status));
+            present_status=present_frame_region(0U,479U);
+        }else if(g_requested_page==PLATFORM_UI_PAGE_HOME){
             draw_header("",&g_requested_status,snapshot);
             draw_home_status(&g_requested_status);
             present_status=present_frame_region(0U,171U);
@@ -583,7 +607,7 @@ PlatformUiAction platform_ui_poll_action(void)
             const TestHistoryEntry *record=test_history_get(g_history,row);
             if(row==pressed_history_row && record!=0 && record->id==pressed_history_id) {
                 g_history_selected=row;g_history_detail=1U;g_history_scroll=0U;
-                g_history_errors=0U;g_render_full=1U;g_render_pending=1U;
+                g_history_errors=0U;g_history_trace=0U;g_saved_id=0U;g_render_full=1U;g_render_pending=1U;
             }
         }
         tracking_history_list=0U;
@@ -652,17 +676,38 @@ PlatformUiAction platform_ui_poll_action(void)
         if((y-58U)%66U<=56U)return nav[row];
         return PLATFORM_UI_ACTION_NONE;
     }
+    {const TestHistoryEntry *record=saved_record(&g_requested_status);
+     if(record&&y>=451U&&y<=479U&&x>=108U){
+        u32 count=saved_error_transactions(record,g_saved_txn);
+        if(x<=296U&&g_saved_selected) --g_saved_selected;
+        if(x>=598U&&g_saved_selected+1U<count) ++g_saved_selected;
+        g_render_full=1U;g_render_pending=1U;return PLATFORM_UI_ACTION_NONE;
+     }
+     if(record&&g_requested_page==PLATFORM_UI_PAGE_HOME&&y>=54U&&y<=94U&&x>=626U){
+        g_home_saved=0U;g_render_full=1U;g_render_pending=1U;
+        return g_requested_status.capture_source==1U?PLATFORM_UI_ACTION_NONE:PLATFORM_UI_ACTION_CAPTURE_HOME;
+     }}
+    if(g_requested_page==PLATFORM_UI_PAGE_ERRORS&&y>=54U&&y<=94U&&x>=414U&&x<=610U){
+        g_home_saved=1U;g_saved_id=0U;return PLATFORM_UI_ACTION_HOME;}
+    if(g_requested_page==PLATFORM_UI_PAGE_HOME&&!g_requested_status.test_running&&y>=54U&&y<=94U&&x>=414U&&x<=610U){
+        g_home_saved^=1U;g_saved_id=0U;g_render_full=1U;g_render_pending=1U;
+        return PLATFORM_UI_ACTION_NONE;
+    }
+    if(g_requested_page==PLATFORM_UI_PAGE_HISTORY&&g_history_detail&&y>=54U&&y<=94U&&x>=414U&&x<=610U){
+        g_history_trace^=1U;g_saved_id=0U;g_render_full=1U;g_render_pending=1U;
+        return PLATFORM_UI_ACTION_NONE;
+    }
     if(g_requested_page!=PLATFORM_UI_PAGE_HISTORY&&!g_requested_status.test_running&&
        ui_protocol_from_touch(x,y,&selected))
         return (PlatformUiAction)(PLATFORM_UI_ACTION_SELECT_SPI+selected);
     if (g_requested_page == PLATFORM_UI_PAGE_HISTORY) {
         if (g_history_detail && y >= 54U && y <= 94U && x >= 626U && x <= 786U) {
-            g_history_errors^=1U; g_render_full=1U; g_render_pending=1U;
+            g_history_trace=0U;g_history_errors^=1U; g_render_full=1U; g_render_pending=1U;
             return PLATFORM_UI_ACTION_NONE;
         }
         if (y >= 54U && y <= 94U && x >= 108U && x <= 274U) {
             if (!g_history_detail) return PLATFORM_UI_ACTION_EVENTS;
-            g_history_detail=0U; g_render_full=1U; g_render_pending=1U;
+            g_history_trace=0U;g_history_detail=0U; g_render_full=1U; g_render_pending=1U;
             return PLATFORM_UI_ACTION_NONE;
         }
         if (!g_history_detail && x>=108U && x<=786U &&
@@ -675,7 +720,7 @@ PlatformUiAction platform_ui_poll_action(void)
             }
             return PLATFORM_UI_ACTION_NONE;
         }
-        if (g_history_detail && !g_history_errors && x >= 108U && y >= EVENTS_Y0 && y <= EVENTS_Y1) {
+        if (g_history_detail && !g_history_errors && !g_history_trace && x >= 108U && y >= EVENTS_Y0 && y <= EVENTS_Y1) {
             dragging_events=1U;
             return PLATFORM_UI_ACTION_NONE;
         }

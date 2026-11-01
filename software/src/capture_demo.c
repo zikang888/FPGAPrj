@@ -214,3 +214,11 @@ int capture_demo_run(CaptureDemoSnapshot *snapshot)
      * previous snapshot before issuing ARM. */
     return XST_SUCCESS;
 }
+
+int capture_error_session_arm(u8 protocol)
+{
+    if((Xil_In32(CORE_BASE+0xCU)&0x200U)==0U)return XST_FAILURE;
+    Xil_Out32(REG_CAPTURE_CTRL,CAPTURE_CTRL_ACK);
+    Xil_Out32(REG_CAPTURE_CTRL,0x31U|((u32)protocol<<16));
+    return (Xil_In32(REG_CAPTURE_STATUS)&CAPTURE_STATUS_ACTIVE)?XST_SUCCESS:XST_FAILURE;
+}

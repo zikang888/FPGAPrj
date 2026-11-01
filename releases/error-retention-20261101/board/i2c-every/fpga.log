@@ -1,0 +1,4 @@
+HOME CAPTURE ARMED protocol=I2C
+TEST START id=7 protocol=I2C errors=0
+TEST SAVED id=7 protocol=I2C events=2140 retained=40 errors=10 tail=0 history=7
+TEST STATUS id=7 running=0 events=2140 errors=10 history=7

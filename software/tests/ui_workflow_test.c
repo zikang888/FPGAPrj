@@ -29,9 +29,10 @@ int main(void)
            codes[1]==ERROR_I2C_BUSY_NACK && codes[2]==ERROR_I2C_MISSING_STOP);
     assert(strstr(labels[1],"INFO")!=0);
     n=ui_error_catalog(UI_PROTOCOL_CAN,codes,labels);
-    assert(n==4U && codes[0]==ERROR_CAN_ACK && codes[1]==ERROR_CAN_STUFF &&
-           codes[2]==ERROR_CAN_CRC && codes[3]==ERROR_CAN_BUS_OFF);
-    assert(strstr(labels[3],"STM32")!=0);
+    assert(n==3U && codes[0]==ERROR_CAN_ACK && codes[1]==ERROR_CAN_STUFF &&
+           codes[2]==ERROR_CAN_CRC);
+    n=ui_error_catalog(UI_PROTOCOL_UART,codes,labels);
+    assert(n==3U && codes[2]==ERROR_UART_SHORT_TRANSACTION);
     assert(ui_error_catalog(UI_PROTOCOL_COUNT,codes,labels)==0U);
     return 0;
 }

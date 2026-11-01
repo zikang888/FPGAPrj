@@ -137,10 +137,17 @@ static void render_home_page(const PlatformUiStatus *s,const CaptureDemoSnapshot
 {
     WaveSpi spi;I2cTrace i2c;CanTrace can;u32 i,b,n=0U,first=0U;int have=0;
     draw_header("",s,snap);draw_protocol_tabs(s);draw_home_status(s);
+    button(414U,610U,g_home_saved?"返回单次捕获":"测试波形回看",!s->test_running,0U);
     card(108U,182U,786U,447U,C_PANEL);
     text(122U,194U,ui_protocol_name(s->selected_protocol),C_CYAN,C_PANEL);
     text(170U,193U,"解码轨迹",C_TEXT,C_PANEL);
     text(596U,193U,"非原始采样",C_MUTED,C_PANEL);hline(122U,773U,219U,C_BORDER);
+    if(g_home_saved&&g_requested_page==PLATFORM_UI_PAGE_HOME&&!saved_record(s)){
+        text(146U,256U,"当前协议尚无已保存测试。",C_TEXT,C_PANEL);
+        text(146U,295U,"在测试页开始记录，结束并保存后再回看。",C_MUTED,C_PANEL);
+        text(146U,334U,"返回单次捕获仍可查看独立捕获结果。",C_MUTED,C_PANEL);
+        return;
+    }
     if(home_trace_available(s)){
         if(s->selected_protocol==UI_PROTOCOL_SPI)have=wave_spi_extract(&g_event_cache->event_word[0][0],g_event_cache->count,&spi);
         else if(s->selected_protocol==UI_PROTOCOL_I2C){
@@ -196,18 +203,18 @@ static const char *error_cn(ErrorCode code)
     case ERROR_SPI_PARTIAL_BYTE:return "不完整字节";case ERROR_SPI_SHORT_TRANSACTION:return "事务过短";
     case ERROR_SPI_EXTRA_BYTES:return "额外字节";case ERROR_SPI_RESPONSE_MISMATCH:return "响应不匹配";
     case ERROR_UART_STOP_BIT:return "停止位错误";case ERROR_UART_BREAK:return "持续低电平";
-    case ERROR_UART_SHORT_TRANSACTION:return "事务过短";case ERROR_UART_PARITY:return "奇偶校验 / 未启用";
-    case ERROR_UART_BAUD_MISMATCH:return "波特率 / 未测量";case ERROR_I2C_ADDRESS_NACK:return "地址无应答";
+    case ERROR_UART_SHORT_TRANSACTION:return "事务过短";
+    case ERROR_I2C_ADDRESS_NACK:return "地址无应答";
     case ERROR_I2C_BUSY_NACK:return "忙响应 / 提示";case ERROR_I2C_MISSING_STOP:return "缺少停止条件";
     case ERROR_CAN_ACK:return "缺少应答";case ERROR_CAN_STUFF:return "位填充错误";
-    case ERROR_CAN_CRC:return "CRC 校验错误";case ERROR_CAN_BUS_OFF:return "总线关闭 / 需 STM32";
+    case ERROR_CAN_CRC:return "CRC 校验错误";
     default:return "未分类";}
 }
 static void error_list(const ErrorModel *model,UiProtocol protocol,u16 y0)
 {
     ErrorCode codes[6];const char *labels[6];u32 i,n=ui_error_catalog(protocol,codes,labels);
     card(108U,y0,556U,447U,C_PANEL);text(122U,y0+11U,"错误明细",C_TEXT,C_PANEL);
-    for(i=0;i<n;++i){u16 y=(u16)(y0+38U+i*44U);ErrorObservation o=error_model_get(model,codes[i]);
+    for(i=0;i<n;++i){u16 y=(u16)(y0+38U+i*(n==3U?64U:52U));ErrorObservation o=error_model_get(model,codes[i]);
         u32 c=o.origin==ERROR_ORIGIN_NONE?C_MUTED:codes[i]==ERROR_I2C_BUSY_NACK?C_CYAN:o.count?C_RED:C_GREEN;
         fill(122U,y+8U,125U,y+30U,c);text(137U,y+3U,error_cn(codes[i]),C_TEXT,C_PANEL);
         text(137U,y+23U,labels[i],C_MUTED,C_PANEL);
@@ -219,7 +226,7 @@ static void error_list(const ErrorModel *model,UiProtocol protocol,u16 y0)
 static void render_errors_page(const PlatformUiStatus *s,const CaptureDemoSnapshot *snap)
 {
     draw_header("",s,snap);draw_protocol_tabs(s);test_metrics(s);
-    text(626U,65U,"当前测试结果",C_MUTED,C_BG);
+    button(414U,610U,"查看错误波形",1U,0U);
     error_list(&s->error_model,s->selected_protocol,182U);
     card(568U,182U,786U,447U,C_PANEL);text(582U,194U,"结果说明",C_TEXT,C_PANEL);
     text(582U,230U,s->test_failed?"捕获失败":s->test_id==0U?"尚未开始测试":
@@ -294,7 +301,7 @@ static void draw_event_row_at(const u32 *w,u32 index,u32 trigger,int pos,const u
 static void draw_events_region(const PlatformUiStatus *s,const CaptureDemoSnapshot *snap)
 {
     u32 i,visible=0U;int y=(int)EVENTS_Y0-(int)(g_scroll_px%EVENT_ROW_PX);u32 n=selected_event_count(s,snap);
-    fill(108U,EVENTS_Y0,786U,EVENTS_Y1,C_PANEL);if(!n){text(164U,282U,"没有匹配的协议事件",C_MUTED,C_PANEL);return;}
+    fill(108U,EVENTS_Y0,786U,EVENTS_Y1,C_PANEL);if(!n){text(164U,282U,"未保存异常事务；正常通信仅计数",C_MUTED,C_PANEL);return;}
     set_clip(108U,EVENTS_Y0,786U,EVENTS_Y1);
     for(i=0;i<g_event_cache->count&&y<=(int)EVENTS_Y1;++i){EventView e=event_view_decode(g_event_cache->event_word[i]);
         if(!ui_protocol_event_matches(s->selected_protocol,e.protocol,s->capture_source!=2U))continue;
@@ -310,18 +317,23 @@ static void render_events_page(const PlatformUiStatus *s,const CaptureDemoSnapsh
     fill(108U,EVENTS_Y0,786U,EVENTS_Y1,C_PANEL);
     if(s->test_failed)text(146U,260U,"捕获失败，请检查系统状态后重新测试。",C_RED,C_PANEL);
     else if(s->test_running){text(146U,247U,"正在记录本轮测试",C_CYAN,C_PANEL);text(146U,285U,"1. 从 STM32 发送测试数据",C_TEXT,C_PANEL);
-        text(146U,321U,"2. 完成后点击结束并保存",C_TEXT,C_PANEL);text(146U,357U,"3. 查看事件、错误或历史结果",C_TEXT,C_PANEL);}
+        text(146U,321U,"2. 完成后点击结束并保存",C_TEXT,C_PANEL);text(146U,357U,"3. 正常通信仅计数，异常事务独立保存",C_TEXT,C_PANEL);}
     else if(!s->test_id){text(146U,247U,"开始新测试后，从 STM32 发送数据。",C_TEXT,C_PANEL);
         text(146U,289U,"本轮计数会重置，历史结果保留。",C_MUTED,C_PANEL);}
     else draw_events_region(s,snap);
-    text(108U,457U,s->retained_tail?"仅保留最近 256 条事件":"上下拖动查看事件",C_MUTED,C_BG);
+    text(108U,457U,s->retained_tail?"异常存档已满，部分明细缺失":"仅归档异常事务，上下拖动查看",C_MUTED,C_BG);
     text(568U,457U,"历史记录见左侧导航",C_MUTED,C_BG);
 }
 static void render_history_page(const PlatformUiStatus *s,const CaptureDemoSnapshot *snap)
 {
     const TestHistoryEntry *r;u32 i;
+    if(g_history_detail&&g_history_trace){
+        const TestHistoryEntry *saved=test_history_get(g_history,g_history_selected);
+        if(saved){render_saved_trace(s,saved);return;}
+    }
     draw_header("",s,snap);button(108U,274U,g_history_detail?"返回列表":"查看当前测试",1U,0U);
-    text(302U,66U,"最近 8 轮 / RAM 保存",C_MUTED,C_BG);
+    if(!g_history_detail)text(302U,66U,"最近 8 轮 / RAM 保存",C_MUTED,C_BG);
+    else button(414U,610U,"波形回看",1U,0U);
     if(!g_history_detail){
         card(108U,106U,786U,145U,C_PANEL);text(122U,117U,"测试",C_MUTED,C_PANEL);text(197U,117U,"协议",C_MUTED,C_PANEL);
         text(281U,117U,"事件",C_MUTED,C_PANEL);text(392U,117U,"错误",C_MUTED,C_PANEL);text(490U,117U,"保留",C_MUTED,C_PANEL);text(594U,117U,"耗时 ms",C_MUTED,C_PANEL);

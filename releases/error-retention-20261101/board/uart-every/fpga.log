@@ -1,0 +1,4 @@
+HOME CAPTURE ARMED protocol=UART
+TEST START id=6 protocol=UART errors=0
+TEST SAVED id=6 protocol=UART events=920 retained=20 errors=10 tail=0 history=6
+TEST STATUS id=6 running=0 events=920 errors=10 history=6

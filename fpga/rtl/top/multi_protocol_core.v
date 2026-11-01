@@ -57,9 +57,9 @@ module multi_protocol_core (
 );
 
 localparam [31:0] SYS_ID_VALUE       = 32'h4D50_5254; // "MPRT"
-localparam [31:0] VERSION_VALUE      = 32'h0001_0008; // event format v1, platform 8
+localparam [31:0] VERSION_VALUE      = 32'h0001_0009; // event format v1, platform 8
 localparam [31:0] BUILD_ID_VALUE     = 32'h2026_1021;
-localparam [31:0] CAPABILITIES_VALUE = 32'h0000_01FF; // bit7 I2C, bit8 CAN monitor/ACK node
+localparam [31:0] CAPABILITIES_VALUE = 32'h0000_03FF; // bit7 I2C, bit8 CAN monitor/ACK node
 
 localparam [3:0] PROTOCOL_UART     = 4'h1;
 localparam [3:0] PROTOCOL_SPI      = 4'h2;
@@ -242,6 +242,7 @@ wire arm_command;
 wire soft_trigger_command;
 wire freeze_command;
 reg capture_manual_mode;
+reg capture_error_mode;
 reg [3:0] capture_protocol_filter;
 reg [31:0] capture_total;
 wire capture_protocol_match;
@@ -494,6 +495,7 @@ event_snapshot_buffer #(
     .arm(capture_arm_pulse),
     .ack(capture_ack_pulse),
     .freeze(freeze_command),
+    .retain_errors(capture_error_mode),
     .in_valid(snapshot_event_accept),
     .in_event(capture_event_data),
     .in_trigger(capture_event_trigger && !capture_manual_mode),
@@ -577,6 +579,7 @@ always @(posedge s_axi_aclk) begin
         can_last_transaction_id <= 24'd0;
         capture_arm_pulse <= 1'b0;
         capture_manual_mode <= 1'b0;
+        capture_error_mode <= 1'b0;
         capture_protocol_filter <= 4'd0;
         capture_total <= 32'd0;
         capture_ack_pulse <= 1'b0;
@@ -605,6 +608,7 @@ always @(posedge s_axi_aclk) begin
         if (arm_command) begin
             dropped_count_reg <= 32'd0;
             capture_manual_mode <= write_data[4];
+            capture_error_mode <= write_data[4] && write_data[5];
             capture_protocol_filter <= write_data[4] && write_strb[2] ? write_data[19:16] : 4'd0;
             capture_total <= 32'd0;
         end else begin

@@ -20,5 +20,10 @@ try {
     if($LASTEXITCODE -ne 0){throw 'UI preview compile failed'}
     & $previewExe (Join-Path $outputRoot 'preview')
     if($LASTEXITCODE -ne 0){throw 'UI preview/touch test failed'}
+    $replayExe=Join-Path $outputRoot 'saved_error_replay.exe'
+    & $Compiler -std=c99 -Wall -Wextra -Wpedantic -Werror -I software/tests/stubs software/tests/saved_error_replay_test.c -o $replayExe
+    if($LASTEXITCODE -ne 0){throw 'Saved replay compile failed'}
+    & $replayExe (Join-Path $outputRoot 'preview')
+    if($LASTEXITCODE -ne 0){throw 'Saved replay failed'}
     Write-Output 'SESSION_CHECKS_PASS'
 } finally { Pop-Location }

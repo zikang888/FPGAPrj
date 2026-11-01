@@ -1,0 +1,4 @@
+HOME CAPTURE ARMED protocol=CAN
+TEST START id=4 protocol=CAN errors=0
+TEST SAVED id=4 protocol=CAN events=1992 retained=12 errors=2 tail=0 history=4
+TEST STATUS id=4 running=0 events=1992 errors=2 history=4

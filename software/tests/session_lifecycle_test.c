@@ -19,6 +19,7 @@ int capture_session_arm(u8 protocol)
     mock_regs[0x1004U/4U]=0x11U;
     return 0;
 }
+int capture_error_session_arm(u8 protocol) {return capture_session_arm(protocol);}
 int capture_session_freeze(CaptureDemoSnapshot *snapshot)
 {
     snapshot->count=mock_count;

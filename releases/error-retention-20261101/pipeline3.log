@@ -1,0 +1,38 @@
+TIMING_PASSED
+ 165916	   2104	  83088	 251108	  3d4e4	platform_app.elf
+'Finished building: platform_app.elf.size'
+' '
+
+15:20:20 Build Finished (took 7s.152ms)
+
+Invoking scanner config builder on project 
+Building '/platform_hw'
+PS_BUILD_DONE
+ELF: C:/Users/11914/Documents/Codex/2026-09-22/wo/work/error-retention-20261031/build/sdk/platform_app/Debug/platform_app.elf
+NEW_PLATFORM_PROGRAMMED
+spi once
+TEST SAVED id=1 protocol=SPI events=598 retained=4 errors=1 tail=0 history=1
+TEST STATUS id=1 running=0 events=598 errors=1 history=1
+uart once
+TEST SAVED id=2 protocol=UART events=992 retained=2 errors=1 tail=0 history=2
+TEST STATUS id=2 running=0 events=992 errors=1 history=2
+i2c once
+TEST SAVED id=3 protocol=I2C events=2284 retained=4 errors=1 tail=0 history=3
+TEST STATUS id=3 running=0 events=2284 errors=1 history=3
+can once
+TEST SAVED id=4 protocol=CAN events=1992 retained=12 errors=2 tail=0 history=4
+TEST STATUS id=4 running=0 events=1992 errors=2 history=4
+spi every
+TEST SAVED id=5 protocol=SPI events=580 retained=40 errors=10 tail=0 history=5
+TEST STATUS id=5 running=0 events=580 errors=10 history=5
+uart every
+TEST SAVED id=6 protocol=UART events=920 retained=20 errors=10 tail=0 history=6
+TEST STATUS id=6 running=0 events=920 errors=10 history=6
+i2c every
+TEST SAVED id=7 protocol=I2C events=2140 retained=40 errors=10 tail=0 history=7
+TEST STATUS id=7 running=0 events=2140 errors=10 history=7
+can every
+TEST SAVED id=8 protocol=CAN events=1920 retained=120 errors=20 tail=0 history=8
+TEST STATUS id=8 running=0 events=1920 errors=20 history=8
+FOUR_PROTOCOL_LONG_DONE
+RETENTION_PIPELINE_DONE

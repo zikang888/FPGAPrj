@@ -1,0 +1,140 @@
+[
+  {
+    "case": "can-every",
+    "test": "8",
+    "protocol": "CAN",
+    "total": 1920,
+    "retained": 120,
+    "errors": 20,
+    "transactions": 10,
+    "full": 0,
+    "raw_error_reasons": [
+      4,
+      1,
+      4,
+      1,
+      4,
+      1,
+      4,
+      1,
+      4,
+      1,
+      4,
+      1,
+      4,
+      1,
+      4,
+      1,
+      4,
+      1,
+      4,
+      1
+    ]
+  },
+  {
+    "case": "can-once",
+    "test": "4",
+    "protocol": "CAN",
+    "total": 1992,
+    "retained": 12,
+    "errors": 2,
+    "transactions": 1,
+    "full": 0,
+    "raw_error_reasons": [
+      4,
+      1
+    ]
+  },
+  {
+    "case": "i2c-every",
+    "test": "7",
+    "protocol": "I2C",
+    "total": 2140,
+    "retained": 40,
+    "errors": 10,
+    "transactions": 10,
+    "full": 0,
+    "raw_error_reasons": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ]
+  },
+  {
+    "case": "i2c-once",
+    "test": "3",
+    "protocol": "I2C",
+    "total": 2284,
+    "retained": 4,
+    "errors": 1,
+    "transactions": 1,
+    "full": 0,
+    "raw_error_reasons": [
+      1
+    ]
+  },
+  {
+    "case": "spi-every",
+    "test": "5",
+    "protocol": "SPI",
+    "total": 580,
+    "retained": 40,
+    "errors": 10,
+    "transactions": 10,
+    "full": 0,
+    "raw_error_reasons": []
+  },
+  {
+    "case": "spi-once",
+    "test": "1",
+    "protocol": "SPI",
+    "total": 598,
+    "retained": 4,
+    "errors": 1,
+    "transactions": 1,
+    "full": 0,
+    "raw_error_reasons": []
+  },
+  {
+    "case": "uart-every",
+    "test": "6",
+    "protocol": "UART",
+    "total": 920,
+    "retained": 20,
+    "errors": 10,
+    "transactions": 10,
+    "full": 0,
+    "raw_error_reasons": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ]
+  },
+  {
+    "case": "uart-once",
+    "test": "2",
+    "protocol": "UART",
+    "total": 992,
+    "retained": 2,
+    "errors": 1,
+    "transactions": 1,
+    "full": 0,
+    "raw_error_reasons": [
+      1
+    ]
+  }
+]
