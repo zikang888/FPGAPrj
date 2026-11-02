@@ -193,12 +193,13 @@ initial begin
     end
 
     axi_read(16'h0004, value);
-    if (value !== 32'h0001_0008) begin
+    // The latest upstream platform adds retained abnormal-transaction capture.
+    if (value !== 32'h0001_0009) begin
         $fatal(1, "FAIL: VERSION = %h", value);
     end
 
     axi_read(16'h000C, value);
-    if (value !== 32'h0000_01FF) begin
+    if (value !== 32'h0000_03FF) begin
         $fatal(1, "FAIL: CAPABILITIES = %h", value);
     end
 

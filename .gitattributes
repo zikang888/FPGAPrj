@@ -2,3 +2,7 @@
 releases/session-candidate-20261020/ps7_init.tcl -text -diff
 # Tested release files are hashed as bytes; never rewrite their line endings.
 releases/ui-*/** -text
+
+# Keep this migration candidate byte-exact across Windows and Unix checkouts.
+releases/vivado-vitis-2026.1-memberC-20261102/** -text whitespace=cr-at-eol
+releases/vivado-vitis-2026.1-memberC-20261102/ps7_init.tcl -diff

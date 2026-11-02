@@ -7,8 +7,9 @@
 
 #include "xgpiops.h"
 #include "xparameters.h"
+#include "platform_bsp_compat.h"
 
-#define GPIO_DEV_ID   XPAR_XGPIOPS_0_DEVICE_ID
+#define GPIO_DEV_ID   MP_GPIO_LOOKUP_KEY
 
 #define OUTPUT  1
 #define INPUT   0

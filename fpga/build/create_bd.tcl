@@ -1,10 +1,4 @@
-set script_dir [file dirname [file normalize [info script]]]
-set source_dir [file dirname [file dirname $script_dir]]
-set build_dir $source_dir
-if {[info exists ::env(MULTI_PROTOCOL_BUILD_DIR)] &&
-    $::env(MULTI_PROTOCOL_BUILD_DIR) ne ""} {
-    set build_dir [file normalize $::env(MULTI_PROTOCOL_BUILD_DIR)]
-}
+source [file join [file dirname [file normalize [info script]]] migration_config.tcl]
 set proj_name "Multi_protocol"
 set xpr [file join $build_dir ${proj_name}.xpr]
 set bd_name "multi_protocol_bd"
@@ -51,6 +45,8 @@ if {$old_wrapper ne ""} {
 
 set bd_src_dir [file join $build_dir ${proj_name}.srcs sources_1 bd $bd_name]
 set bd_gen_dir [file join $build_dir ${proj_name}.gen sources_1 bd $bd_name]
+migration_assert_build_path $bd_src_dir
+migration_assert_build_path $bd_gen_dir
 if {[file exists $bd_src_dir]} { file delete -force $bd_src_dir }
 if {[file exists $bd_gen_dir]} { file delete -force $bd_gen_dir }
 
@@ -136,7 +132,7 @@ set_property -dict [list \
     CONFIG.c_mm2s_max_burst_length {64} \
     CONFIG.c_num_fstores {2} \
 ] $vdma
-set vtc [create_bd_cell -type ip -vlnv xilinx.com:ip:v_tc:6.1 v_tc_0]
+set vtc [create_bd_cell -type ip -vlnv xilinx.com:ip:v_tc:6.2 v_tc_0]
 set_property -dict [list \
     CONFIG.GEN_HACTIVE_SIZE {800} \
     CONFIG.GEN_HFRAME_SIZE {1056} \
@@ -157,7 +153,7 @@ set video_out [create_bd_cell -type ip -vlnv xilinx.com:ip:v_axi4s_vid_out:4.0 v
 set_property -dict [list CONFIG.C_HAS_ASYNC_CLK {1}] $video_out
 set hp_smc [create_bd_cell -type ip -vlnv xilinx.com:ip:smartconnect:1.0 axi_smc_0]
 set rgb565 [create_bd_cell -type module -reference rgb888torgb565 rgb888torgb565_0]
-set lcd_bl_const [create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 xlconstant_lcd_bl]
+set lcd_bl_const [create_bd_cell -type inline_hdl -vlnv xilinx.com:inline_hdl:ilconstant:1.0 xlconstant_lcd_bl]
 set_property -dict [list CONFIG.CONST_WIDTH {1} CONFIG.CONST_VAL {1}] $lcd_bl_const
 
 connect_bd_intf_net [get_bd_intf_pins processing_system7_0/M_AXI_GP0] [get_bd_intf_pins axi_protocol_converter_0/S_AXI]
@@ -266,7 +262,7 @@ set i2c_scl [create_bd_port -dir I I2C_SCL]
 set i2c_sda [create_bd_port -dir I I2C_SDA]
 set can_tx [create_bd_port -dir O CAN_TX]
 set can_rx [create_bd_port -dir I CAN_RX]
-set uart_tx_idle [create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 xlconstant_uart_tx]
+set uart_tx_idle [create_bd_cell -type inline_hdl -vlnv xilinx.com:inline_hdl:ilconstant:1.0 xlconstant_uart_tx]
 set_property -dict [list CONFIG.CONST_WIDTH {1} CONFIG.CONST_VAL {1}] $uart_tx_idle
 connect_bd_net $lcd_data [get_bd_pins rgb888torgb565_0/rgb565_data]
 connect_bd_net $lcd_hs [get_bd_pins v_axi4s_vid_out_0/vid_hsync]

@@ -154,7 +154,7 @@ int capture_demo_run(CaptureDemoSnapshot *snapshot)
     Xil_Out32(REG_CAPTURE_CTRL, CAPTURE_CTRL_ARM);
     status = Xil_In32(REG_CAPTURE_STATUS);
     if ((status & CAPTURE_STATUS_ACTIVE) == 0U) {
-        xil_printf("CAPTURE ARM ERROR: 0x%08lx\r\n", (unsigned long)status);
+        xil_printf("CAPTURE ARM ERROR: 0x%08x\r\n", (unsigned int)status);
         return XST_FAILURE;
     }
 
@@ -173,8 +173,8 @@ int capture_demo_run(CaptureDemoSnapshot *snapshot)
         if ((status & CAPTURE_STATUS_READY) != 0U) break;
     }
     if ((status & CAPTURE_STATUS_READY) == 0U) {
-        xil_printf("CAPTURE TIMEOUT: status=0x%08lx\r\n",
-                   (unsigned long)status);
+        xil_printf("CAPTURE TIMEOUT: status=0x%08x\r\n",
+                   (unsigned int)status);
         return XST_FAILURE;
     }
 
@@ -183,10 +183,10 @@ int capture_demo_run(CaptureDemoSnapshot *snapshot)
     snapshot->trigger_index = Xil_In32(REG_TRIGGER_INDEX);
     snapshot->dropped_count = Xil_In32(REG_DROPPED_COUNT);
     if (snapshot->count == 0U || snapshot->trigger_index >= snapshot->count) {
-        xil_printf("CAPTURE META ERROR: id=%lu count=%lu trigger=%lu\r\n",
-                   (unsigned long)snapshot->snapshot_id,
-                   (unsigned long)snapshot->count,
-                   (unsigned long)snapshot->trigger_index);
+        xil_printf("CAPTURE META ERROR: id=%u count=%u trigger=%u\r\n",
+                   (unsigned int)snapshot->snapshot_id,
+                   (unsigned int)snapshot->count,
+                   (unsigned int)snapshot->trigger_index);
         return XST_FAILURE;
     }
 
@@ -199,16 +199,16 @@ int capture_demo_run(CaptureDemoSnapshot *snapshot)
     shown = snapshot->count - first;
     if (shown > CAPTURE_DISPLAY_EVENTS) shown = CAPTURE_DISPLAY_EVENTS;
     if (capture_demo_read_window(snapshot, first) != XST_SUCCESS) {
-        xil_printf("CAPTURE WINDOW ERROR: first=%lu shown=%lu\r\n",
-                   (unsigned long)first, (unsigned long)shown);
+        xil_printf("CAPTURE WINDOW ERROR: first=%u shown=%u\r\n",
+                   (unsigned int)first, (unsigned int)shown);
         return XST_FAILURE;
     }
 
-    xil_printf("CAPTURE READY: id=%lu count=%lu trigger=%lu dropped=%lu\r\n",
-               (unsigned long)snapshot->snapshot_id,
-               (unsigned long)snapshot->count,
-               (unsigned long)snapshot->trigger_index,
-               (unsigned long)snapshot->dropped_count);
+    xil_printf("CAPTURE READY: id=%u count=%u trigger=%u dropped=%u\r\n",
+               (unsigned int)snapshot->snapshot_id,
+               (unsigned int)snapshot->count,
+               (unsigned int)snapshot->trigger_index,
+               (unsigned int)snapshot->dropped_count);
     /* Keep READY asserted so the frozen AXI snapshot remains readable while
      * the EVENTS page scrolls. The next capture_demo_run() acknowledges the
      * previous snapshot before issuing ARM. */

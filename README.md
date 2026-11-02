@@ -1,5 +1,9 @@
 # Zynq-7020 Multi Protocol Platform
 
+> **member C · 最新源码的 Vivado/Vitis 2026.1 迁移版（2026-11-02）**
+>
+> 本分支基于最新 FPGA 源码 `codex/ui-four-protocol-20261023` / `c5f44ff`，包含中文工作台、保存回放和异常事务保留。9 项 RTL、宿主回归及 2026.1 BIT/XSA/ARM 构建已通过。新版入口见 [迁移说明](README_MIGRATION_2026_1.md)，检查范围见 [本轮记录](docs/test-results/2026-11-02-latest-vivado-2026.1-migration.md)。本轮未连接板卡，实板验收待交叉验证；10 月 24 日的实板通过记录属于上一版本。下文为继承的 2018.3 历史流程。
+
 本工程适用于 Vivado/SDK 2018.3 和 `xc7z020clg484-2`。从 2026-10-18 起统一使用 `build/vivado` 和 `build/sdk` 作为开发工作区。完整目录说明见 [PROJECT_PATHS.md](PROJECT_PATHS.md)。
 
 ## 克隆后使用

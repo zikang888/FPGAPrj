@@ -1,10 +1,4 @@
-set script_dir [file dirname [file normalize [info script]]]
-set source_dir [file dirname [file dirname $script_dir]]
-set build_dir $source_dir
-if {[info exists ::env(MULTI_PROTOCOL_BUILD_DIR)] &&
-    $::env(MULTI_PROTOCOL_BUILD_DIR) ne ""} {
-    set build_dir [file normalize $::env(MULTI_PROTOCOL_BUILD_DIR)]
-}
+source [file join [file dirname [file normalize [info script]]] migration_config.tcl]
 set xpr [file join $build_dir Multi_protocol.xpr]
 
 if {![file exists $xpr]} {
@@ -26,8 +20,11 @@ proc run_test {build_dir top_name pass_text} {
     set log_handle [open $sim_log r]
     set log_text [read $log_handle]
     close $log_handle
-    if {[string first $pass_text $log_text] < 0} {
-        error "$top_name did not report PASS"
+    file mkdir [file join $build_dir reports simulation]
+    file copy -force $sim_log [file join $build_dir reports simulation ${top_name}.log]
+    if {[string first $pass_text $log_text] < 0 ||
+        [regexp -nocase {Fatal:|FATAL_ERROR} $log_text]} {
+        error "$top_name failed or did not report PASS"
     }
     puts "PASS: $top_name"
 }
@@ -57,6 +54,8 @@ run_test $build_dir i2c_passive_monitor_tb \
     "PASS: I2C ACK/NACK, busy window and missing STOP monitor"
 run_test $build_dir can_passive_monitor_tb \
     "PASS: CAN 2.0A receive, ACK, CRC and echo node"
+run_test $build_dir error_retention_tb \
+    "ERROR_RETENTION_PASS: four protocols 1000 transactions, early error, overflow, missing END, INFO and SPI semantic"
 set_property top multi_protocol_core_tb [get_filesets sim_1]
 close_project
 puts "SIMULATION_COMPLETED"

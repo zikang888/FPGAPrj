@@ -4,9 +4,14 @@
 #include "ps_gpio.h"
 #include "xil_exception.h"
 #include "xscugic.h"
+#ifdef SDT
+#include "xinterrupt_wrap.h"
+#endif
 
 static XGpioPs GpioPs;
+#ifndef SDT
 static XScuGic GicInst;
+#endif
 static volatile u8 GpioInterruptPending;
 static u8 GpioInterruptPin;
 
@@ -58,9 +63,12 @@ u8 gpio_read(u8 pin)
 
 int gpio_interrupt_init(u8 pin, u8 irq_type)
 {
+#ifndef SDT
     XScuGic_Config *gic_config;
+#endif
     int status;
 
+#ifndef SDT
     gic_config = XScuGic_LookupConfig(XPAR_SCUGIC_0_DEVICE_ID);
     if (gic_config == 0) return XST_FAILURE;
 
@@ -70,6 +78,7 @@ int gpio_interrupt_init(u8 pin, u8 irq_type)
         gic_config->CpuBaseAddress
     );
     if (status != XST_SUCCESS) return status;
+#endif
 
     GpioInterruptPin = pin;
     GpioInterruptPending = 0U;
@@ -83,6 +92,14 @@ int gpio_interrupt_init(u8 pin, u8 irq_type)
         gpio_interrupt_callback
     );
 
+#ifdef SDT
+    status = XSetupInterruptSystem(
+        &GpioPs, (void *)XGpioPs_IntrHandler,
+        GpioPs.GpioConfig.IntrId, GpioPs.GpioConfig.IntrParent,
+        XINTERRUPT_DEFAULT_PRIORITY
+    );
+    if (status != XST_SUCCESS) return status;
+#else
     status = XScuGic_Connect(
         &GicInst,
         XPAR_XGPIOPS_0_INTR,
@@ -109,6 +126,7 @@ int gpio_interrupt_init(u8 pin, u8 irq_type)
         (Xil_ExceptionHandler)XScuGic_InterruptHandler,
         &GicInst
     );
+#endif
 
     XGpioPs_IntrClearPin(&GpioPs, pin);
     XGpioPs_IntrEnablePin(&GpioPs, pin);
