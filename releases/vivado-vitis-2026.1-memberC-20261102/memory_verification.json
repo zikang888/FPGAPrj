@@ -1,0 +1,19 @@
+{
+  "xsa_sha256": "a9d468898d3d4a76a90eaca1e22338a3fc1ba09760b64bf38fc30ae6a9c6d6e6",
+  "ddr_base": "0x100000",
+  "framebuffer_0": "0x1100000",
+  "framebuffer_1": "0x1220000",
+  "reserved_end": "0x1340000",
+  "load_segments": [
+    {
+      "address": "0x100000",
+      "memory_size": "0x36df4"
+    },
+    {
+      "address": "0x138000",
+      "memory_size": "0x34e90"
+    }
+  ],
+  "elf_sha256": "3e2894d52c60bdd143009d9645d5ccf6c574ffa78b6c1f0539b3cc959e3368b1",
+  "overlap": false
+}

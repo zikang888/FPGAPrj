@@ -1,0 +1,91 @@
+{
+  "status": "latest_source_offline_migration_verified_board_not_connected",
+  "responsible_member": "member C",
+  "created_at": "2026-11-02T20:22:09.361279+08:00",
+  "baseline_branch": "codex/ui-four-protocol-20261023",
+  "baseline_commit": "c5f44ff57ff1b551ba32569f4a2103a1b1cf35be",
+  "migration_commit": "9de2a15011eb2200200767de52c619d776c924bf",
+  "part": "xc7z020clg484-2",
+  "expected_registers": {
+    "SYS_ID": "0x4D505254",
+    "VERSION": "0x00010009",
+    "BUILD_ID": "0x20261021",
+    "CAPABILITIES": "0x000003FF"
+  },
+  "rtl_tests": [
+    "can_passive_monitor_tb",
+    "error_retention_tb",
+    "event_arbiter_2_tb",
+    "event_snapshot_buffer_tb",
+    "i2c_passive_monitor_tb",
+    "multi_protocol_core_tb",
+    "spi_mode0_monitor_tb",
+    "spi_snapshot_path_tb",
+    "uart_rx_monitor_tb"
+  ],
+  "host_tests": [
+    "test_history",
+    "session_lifecycle",
+    "manual_capture",
+    "ui_protocol_select",
+    "spi_trace",
+    "protocol_trace",
+    "waveform_view",
+    "event_audit",
+    "error_model",
+    "event_view",
+    "pixel_scroll",
+    "ui_counter_semantics",
+    "ui_workflow",
+    "history_gesture",
+    "home_trace_hold",
+    "workbench_a",
+    "saved_error_replay"
+  ],
+  "ui_preview": "host rendering and touch-action regression passed; not physical board evidence",
+  "timing": {
+    "wns_ns": 0.738,
+    "tns_ns": 0.0,
+    "whs_ns": 0.026,
+    "ths_ns": 0.0,
+    "bus_skew_min_ns": 9.301,
+    "external_io_timing_complete": false
+  },
+  "cdc": {
+    "endpoints": 87,
+    "safe": 87,
+    "unsafe": 0,
+    "unknown": 0
+  },
+  "production_rtl_and_xdc_match_latest_baseline": true,
+  "ps7_parameters_match_latest_baseline": true,
+  "memory": {
+    "xsa_sha256": "a9d468898d3d4a76a90eaca1e22338a3fc1ba09760b64bf38fc30ae6a9c6d6e6",
+    "ddr_base": "0x100000",
+    "framebuffer_0": "0x1100000",
+    "framebuffer_1": "0x1220000",
+    "reserved_end": "0x1340000",
+    "load_segments": [
+      {
+        "address": "0x100000",
+        "memory_size": "0x36df4"
+      },
+      {
+        "address": "0x138000",
+        "memory_size": "0x34e90"
+      }
+    ],
+    "elf_sha256": "3e2894d52c60bdd143009d9645d5ccf6c574ffa78b6c1f0539b3cc959e3368b1",
+    "overlap": false
+  },
+  "legacy_files_unchanged_by_size_mtime": 1203,
+  "previous_migration_preserved": true,
+  "board_tested_this_run": false,
+  "remaining": [
+    "JTAG and physical LCD/touch regression of this image",
+    "four-protocol normal/error traffic and retained-transaction replay",
+    "2026.1 hw_server enumeration compatibility",
+    "external LCD/CAN timing budgets",
+    "long-run stability and SD boot if required"
+  ]
+}
